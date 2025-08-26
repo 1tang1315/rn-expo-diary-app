@@ -10,8 +10,7 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  PanResponder,
-  Animated
+  PanResponder
 } from 'react-native';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';

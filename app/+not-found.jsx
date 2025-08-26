@@ -1,19 +1,16 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { StyleSheet, View, Text } from 'react-native';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
-      <ThemedView style={styles.container}>
-        <ThemedText type="title">页面不存在</ThemedText>
-        <Link href="/views/home" style={styles.link}>
-          <ThemedText type="link">返回首页</ThemedText>
+      <View style={styles.container}>
+        <Text>页面不存在</Text>
+        <Link href="/" style={styles.link}>
+          <Text>返回首页</Text>
         </Link>
-      </ThemedView>
+      </View>
     </>
   );
 }

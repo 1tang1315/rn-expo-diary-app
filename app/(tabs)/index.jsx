@@ -5,11 +5,12 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import Calendar from "./components/Calendar";
-import Editor from "./components/Editor";
+import Calendar from "@/components/Calendar";
+import Editor from "@/components/Editor";
 
-export default function HomeScreen() {
+export default function Home() {
   // 示例数据
   const [selectedDate, setSelectedDate] = useState('2023-08-20');
   const diaryList = [
@@ -23,7 +24,7 @@ export default function HomeScreen() {
   ];
   
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{flex: 1}}>
       {/* 顶部栏 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>清新日记</Text>
@@ -32,6 +33,9 @@ export default function HomeScreen() {
       <ScrollView>
         {/* 日历 */}
         <Calendar />
+        
+        {/* 编辑器 */}
+        <Editor />
         
         {/* 日期与时间 */}
         <View style={styles.dateBox}>
@@ -66,7 +70,7 @@ export default function HomeScreen() {
           <Text style={styles.addBtnText}>+</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
