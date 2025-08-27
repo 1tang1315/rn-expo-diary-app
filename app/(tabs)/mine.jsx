@@ -1,9 +1,10 @@
-import { View, Text } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Demo from '@/components/Demo'
 
-export default function Mine() {
+export default function Home() {
   return (
-    <View style={{ flex:1, justifyContent:"center", alignItems:"center" }}>
-      <Text>这里是我的页面</Text>
-    </View>
+    <SafeAreaView style={{flex: 1}}>
+      <Demo />
+    </SafeAreaView>
   );
 }
