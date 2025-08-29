@@ -21,7 +21,7 @@ export default function Home() {
         value={selectedDate}
         onChange={(d) => setSelectedDate(d)}
       />
-      <TimelinePanel />
+      <TimelinePanel selectedDate={selectedDate} />
     </SafeAreaView>
   );
 }

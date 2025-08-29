@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
-import { lightTheme, darkTheme } from '../constants/themes';
+import { lightTheme, darkTheme } from '@/constants/themes';
 
-const ThemeContext = createContext();
+const ThemeContext = createContext(undefined);
 
 export const ThemeProvider = ({ children }) => {
   const [themeName, setThemeName] = useState('light'); // 默认 light
@@ -19,3 +19,5 @@ export const ThemeProvider = ({ children }) => {
 };
 
 export const useTheme = () => useContext(ThemeContext);
+
+export default ThemeContext;

@@ -1,7 +1,18 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, PanResponder, Dimensions } from 'react-native';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect
+} from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  PanResponder,
+  Dimensions
+} from 'react-native';
 import dayjs from 'dayjs';
-import 'dayjs/locale/zh-cn';
 import solarLunar from 'solarlunar';
 
 const screenWidth = Dimensions.get('window').width;
@@ -19,6 +30,7 @@ const COLORS = {
   modalBg: 'rgba(0, 0, 0, 0.5)',
 };
 
+// 公历节日
 const SOLAR_HOLIDAYS = {
   '1-1': '元旦',
   '2-14': '情人节',
@@ -36,6 +48,7 @@ const SOLAR_HOLIDAYS = {
   '12-25': '圣诞节'
 };
 
+// 农历节日
 const LUNAR_HOLIDAYS = {
   '1-1': '春节',
   '1-15': '元宵节',
@@ -103,7 +116,7 @@ function lunarInfo(d) {
   }
 }
 
-// 构建月视图矩阵
+// 构建月视图矩阵(6行7列)
 function buildMonthMatrix(baseMonth) {
   if(!baseMonth.isValid()) return [];
   const startOfMonth = baseMonth.startOf('month');
@@ -128,10 +141,13 @@ export default function Calendar({
   value,
   onChange
 }) {
+  // 当天日期
   const [base, setBase] = useState(() => value ? dayjs(value) : dayjs());
+  // 选中的日期
   const [anchor, setAnchor] = useState(() => value ? dayjs(value) : dayjs());
   const [expanded, setExpanded] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
+  // 视图数据(周/月)
   const [currentData, setCurrentData] = useState(() => {
     const initialDate = value ? dayjs(value) : dayjs();
     return expanded ? buildMonthMatrix(initialDate) : getWeekData(initialDate);
@@ -140,11 +156,13 @@ export default function Calendar({
   const today = dayjs();
   const isSwipingRef = useRef(false);
   const combinedPanResponder = useRef(null);
+  // 保持用户切换 周/月 选中日期
   const selectedPosRef = useRef({
     row: null,
     col: null
   });
   
+  // 选中位置更新(月: 行 + 列; 周: 列)
   useEffect(() => {
     const targetDate = anchor;
     if(!targetDate.isValid()) return;
@@ -165,19 +183,23 @@ export default function Calendar({
     }
   }, [base, anchor, expanded]);
   
-  // 切换到上一周期
-  const handlePrev = useCallback(() => {
-    if(expanded) {
+  // 切换 上/下 一个 周/月, 接收(prev, next)作为方向
+  const handlePeriodChange = useCallback((direction) => {
+    if (!['prev', 'next'].includes(direction)) return; // 校验参数合法性
+    
+    const adjustMethod = direction === 'next' ? 'add' : 'subtract';
+    const unit = expanded ? 'month' : 'week'; // 根据视图模式自动判断单位
+    
+    if (expanded) {
+      // 月视图逻辑
       setBase(prev => {
-        const next = prev.subtract(1, 'month');
-        const {
-          row,
-          col
-        } = selectedPosRef.current;
-        if(row != null && col != null) {
+        const next = prev[adjustMethod](1, unit);
+        const { row, col } = selectedPosRef.current;
+        
+        if (row != null && col != null) {
           const newData = buildMonthMatrix(next);
           const target = newData[row * 7 + col];
-          if(target?.isValid()) {
+          if (target?.isValid()) {
             setAnchor(target);
             onChange?.(target);
           }
@@ -185,13 +207,15 @@ export default function Calendar({
         return next;
       });
     } else {
+      // 周视图逻辑
       setAnchor(prev => {
-        const next = prev.subtract(1, 'week');
+        const next = prev[adjustMethod](1, unit);
         const { col } = selectedPosRef.current;
-        if(col != null) {
+        
+        if (col != null) {
           const newData = getWeekData(next);
           const target = newData[col];
-          if(target?.isValid()) {
+          if (target?.isValid()) {
             setBase(target);
             onChange?.(target);
           }
@@ -199,45 +223,9 @@ export default function Calendar({
         return next;
       });
     }
-  }, [expanded]);
+  }, [expanded, onChange]);
   
-  // 切换到下一周期
-  const handleNext = useCallback(() => {
-    if(expanded) {
-      setBase(prev => {
-        const next = prev.add(1, 'month');
-        const {
-          row,
-          col
-        } = selectedPosRef.current;
-        if(row != null && col != null) {
-          const newData = buildMonthMatrix(next);
-          const target = newData[row * 7 + col];
-          if(target?.isValid()) {
-            setAnchor(target);
-            onChange?.(target);
-          }
-        }
-        return next;
-      });
-    } else {
-      setAnchor(prev => {
-        const next = prev.add(1, 'week');
-        const { col } = selectedPosRef.current;
-        if(col != null) {
-          const newData = getWeekData(next);
-          const target = newData[col];
-          if(target?.isValid()) {
-            setBase(target);
-            onChange?.(target);
-          }
-        }
-        return next;
-      });
-    }
-  }, [expanded]);
-  
-  // 初始化/更新手势
+  // 初始化/更新手势(上下 折叠/展开; 左右 上/下 一个月)
   useEffect(() => {
     combinedPanResponder.current = PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) => {
@@ -256,9 +244,9 @@ export default function Calendar({
         const dyAbs = Math.abs(gesture.dy);
         const triggerThreshold = expanded ? 30 : 40;
         if(dxAbs > dyAbs * 1.2 && dxAbs > triggerThreshold) {
-          gesture.dx > 0 ? handlePrev() : handleNext();
+          gesture?.dx > 0 ? handlePeriodChange('prev') : handlePeriodChange('next');
         } else if(dyAbs > dxAbs * 1.5 && dyAbs > 40) {
-          gesture.dy > 0 ? setExpanded(true) : setExpanded(false);
+          gesture?.dy > 0 ? setExpanded(true) : setExpanded(false);
         }
         isSwipingRef.current = false;
         setTimeout(() => setIsSwiping(false), 100);
@@ -272,7 +260,7 @@ export default function Calendar({
     return () => {
       combinedPanResponder.current = null;
     };
-  }, [expanded, handlePrev, handleNext]);
+  }, [expanded]);
   
   const getCurrentData = useCallback(() => {
     const targetDate = expanded ? base : anchor;
@@ -296,8 +284,8 @@ export default function Calendar({
     if(!d.isValid() || isSwiping) return;
     const newDate = d.clone();
     setAnchor(newDate);
-    setBase(newDate);
-    onChange?.(newDate);
+    setBase(newDate); // 更新选中锚点
+    onChange?.(newDate); // 更新月视图基准（确保月视图显示选中日期所在月)
     selectedPosRef.current = {
       row,
       col
@@ -375,6 +363,7 @@ export default function Calendar({
   
   return (
     <View style={styles.container} {...(combinedPanResponder.current ? combinedPanResponder.current.panHandlers : {})}>
+      {/* 星期标签栏 */}
       <View style={styles.row}>
         {WEEK_LABELS.map((label, idx) => (
           <View key={`week-${idx}`} style={styles.weekCell}>
@@ -382,7 +371,9 @@ export default function Calendar({
           </View>
         ))}
       </View>
+      
       <View style={styles.pageContainer}>{renderPageRows(currentData)}</View>
+      
       <View style={styles.footer}><View style={styles.lineIcon} /></View>
     </View>
   );
@@ -393,15 +384,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
     backgroundColor: COLORS.bg,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
+    elevation: 2,
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
   },
   pageContainer: {
     width: screenWidth - 20,

@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.tangliuyu1314.rnexpodiaryapp"
     },
     "web": {
       "bundler": "metro",
@@ -34,17 +35,25 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      ["expo-sqlite", {
-        "enableFTS": true,
-        "useSQLCipher": true,
-        "android": {
-          "enableFTS": false,
-          "useSQLCipher": false
-        },
-        "ios": {
-          "customBuildFlags": ["-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"]
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": false,
+          "android": {
+            "enableFTS": false,
+            "useSQLCipher": false,
+            "permissions": [
+              "INTERNET"
+            ]
+          },
+          "ios": {
+            "customBuildFlags": [
+              "-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"
+            ]
+          }
         }
-      }]
+      ]
     ],
     "experiments": {
       "typedRoutes": true
