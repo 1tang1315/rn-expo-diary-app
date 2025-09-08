@@ -1,4 +1,4 @@
-import { getDB } from './db';
+import { getDB } from './index';
 
 /**
  * 创建新事件

@@ -21,7 +21,7 @@ import {
   getEventsByDate,
   updateEvent,
   deleteEvent as deleteEventApi
-} from '@/db/eventOperations';
+} from '@/db/eventDB';
 
 // 分类与图标列表（固定配置）
 const baseTabCategories = [
