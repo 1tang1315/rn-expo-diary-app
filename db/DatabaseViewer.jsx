@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { getDB, getBusinessTables, exportTable } from "@/db/index";
+import { getDB, getAllTables, exportTable } from "@/db/index";
 
 export default function DatabaseViewer() {
   const [tables, setTables] = useState([]);
@@ -30,13 +30,7 @@ export default function DatabaseViewer() {
     const fetchTables = async () => {
       try {
         setLoadingTables(true);
-        const businessTables = await getBusinessTables();
-        const allTables = [
-          { name: "user" },
-          { name: "cloud_drive_config" },
-          { name: "sync_checkpoint" },
-          ...businessTables,
-        ];
+        const allTables = await getAllTables();
         setTables(allTables);
         if (allTables.length > 0) {
           setSelectedTable(allTables[0].name);
@@ -306,11 +300,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 8,
     backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 2,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 1)',
   },
   headerScroll: { backgroundColor: "#fafafa" },
   tableContainer: { backgroundColor: "white" },

@@ -25,6 +25,7 @@ export async function getDB() {
   }
   
   // 事件表(一天 多条事件)
+  // 为已有表新增 duration 字段（仅执行一次）
   await index.execAsync(`
   CREATE TABLE IF NOT EXISTS event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,15 +126,14 @@ export async function importTable(tableName, rows, mode = 'merge') {
 }
 
 /**
- * 获取所有业务表（排除系统表和配置表）
+ * 获取所有表（排除系统表）
  * @returns {Promise<Array<Object>>} 表信息数组，每个对象包含name字段
  */
-export async function getBusinessTables() {
+export async function getAllTables() {
   const db = await getDB();
   return await db.getAllAsync(`
     SELECT name FROM sqlite_master
     WHERE type='table'
       AND name NOT LIKE 'sqlite_%'
-      AND name NOT IN ('sync_checkpoint', 'cloud_drive_config', 'user')
   `);
 }

@@ -15,7 +15,7 @@ import {
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import CategoryTab from './CategoryTab';
+import CategoryTab from './TimelinePanel/CategoryTab';
 import {
   createEvent,
   getEventsByDate,

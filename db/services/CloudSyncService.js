@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import { getDB, exportTable, importTable, getBusinessTables } from '@/db/index';
+import { getDB, exportTable, importTable, getAllTables } from '@/db/index';
 import {
   getAllCloudDriveConfigs,
   getSyncCheckpoint,
@@ -507,7 +507,7 @@ export class CloudSyncService {
       
         try {
           // 使用封装的业务表查询方法
-          const tables = await getBusinessTables();
+          const tables = await getAllTables();
           // 逐个同步表
           for (const { name: tableName } of tables) {
             try {
