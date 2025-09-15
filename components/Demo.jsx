@@ -1,45 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, Button, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React from 'react';
+import { View, Text } from 'react-native';
+import { PolarChart, Pie, useSlicePath } from "victory-native";
+import { Path, Group, Line, Text as SkiaText } from "@shopify/react-native-skia";
 
-export default function Demo() {
-  const [date, setDate] = useState(new Date());
-  const [show, setShow] = useState(false);
-  const [mode, setMode] = useState('date'); // 'date' or 'time'
+// 自定义切片组件，添加安全检查
+// 自定义切片组件，修复Hooks调用顺序问题
+const CustomPieSlice = ({ slice }) => {
+  // 关键点：将Hooks调用移到条件判断之前
+  const path = slice ? useSlicePath(slice) : null;
   
-  const onChange = (event, selectedDate) => {
-    // Android 点击取消时 selectedDate 为 undefined
-    const current = selectedDate || date;
-    setShow(Platform.OS === 'ios'); // iOS 保持展示，Android 选择后自动隐藏
-    setDate(current);
-  };
+  // 提前计算圆环路径（仍在条件判断前调用Hooks）
+  const ringPath = slice ? useSlicePath({
+    ...slice,
+    outerRadius: slice.outerRadius || 100,
+    innerRadius: (slice.outerRadius || 100) * 0.6
+  }) : null;
   
-  const showMode = (m) => {
-    setMode(m);
-    setShow(true);
-  };
+  // 条件检查移到Hooks调用之后
+  if (!slice || !path || !ringPath) return null;
+  
+  // 确保内外半径有合理的默认值
+  const outerRadius = slice.outerRadius || 100;
+  const innerRadius = outerRadius * 0.6;
+  
+  // 后续代码保持不变...
+  const midAngle = (slice.startAngle + slice.endAngle) / 2;
+  const center = slice.center || { x: 0, y: 0 };
+  
+  const centerX = center.x + Math.cos(midAngle) * outerRadius * 0.7;
+  const centerY = center.y + Math.sin(midAngle) * outerRadius * 0.7;
+  
+  const labelRadius = outerRadius * 1.2;
+  const labelX = center.x + Math.cos(midAngle) * labelRadius;
+  const labelY = center.y + Math.sin(midAngle) * labelRadius;
+  
+  const textAnchor = midAngle > Math.PI ? "end" : "start";
   
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      <Text>选择的日期时间：</Text>
-      <Text style={{ marginVertical: 8 }}>{date.toLocaleString()}</Text>
-      
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Button title="选择日期" onPress={() => showMode('date')} />
-        <Button title="选择时间" onPress={() => showMode('time')} />
-        <Button title="选择日期和时间" onPress={() => showMode('datetime')} />
-      </View>
-      
-      {show && (
-        <DateTimePicker
-          value={date}
-          mode={mode}
-          display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-          onChange={onChange}
-          maximumDate={new Date(2100, 12, 31)}
-          minimumDate={new Date(2000, 0, 1)}
+    <Group>
+      <Path
+        path={ringPath}
+        color={slice.color || "#000000"}
+        style="stroke"
+        strokeWidth={outerRadius * 0.4}
+      />
+      <Line
+        x1={centerX}
+        y1={centerY}
+        x2={labelX - (midAngle > Math.PI ? 10 : -10)}
+        y2={labelY}
+        color={slice.color || "#000000"}
+        strokeWidth={2}
+      />
+      {slice.label && (
+        <SkiaText
+          x={labelX}
+          y={labelY}
+          text={slice.label}
+          color={slice.color || "#000000"}
+          fontSize={12}
+          textAnchor={textAnchor}
+          alignmentBaseline="middle"
         />
       )}
+    </Group>
+  );
+};
+
+// 主图表组件
+export const RingChart = ({ data, totalMinutes, formatDurationByMinutes }) => {
+  return (
+    <View style={{ height: 300, marginBottom: 20, padding: 20 }}>
+      <PolarChart
+        data={data || []} // 确保数据有默认值
+        labelKey="label"
+        valueKey="value"
+        colorKey="color"
+      >
+        <Pie.Chart>
+          {/* 传递slice时添加安全检查 */}
+          {({ slice }) => <CustomPieSlice slice={slice} />}
+        </Pie.Chart>
+      </PolarChart>
+      
+      {/* 总完成时长 */}
+      <Text style={{
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 20
+      }}>
+        总完成时长: {totalMinutes !== undefined ? formatDurationByMinutes(totalMinutes) : "0分钟"}
+      </Text>
     </View>
   );
 };

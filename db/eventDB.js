@@ -1,4 +1,5 @@
 import { getDB } from './index';
+import { formatDate } from "@/utils/formatTimeUtils";
 
 /**
  * 创建新事件
@@ -43,20 +44,37 @@ export async function getEventById(id) {
 }
 
 /**
- * 根据日期获取所有事件
- * @param {string} date - 日期，格式：YYYY-MM-DD
+ * 根据日期或日期范围获取所有事件，包括跨天事件
+ * (只要结束时间还在用户传入的开始时间内就会被返回)
+ * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
+ * @param {string} [endDate] - 可选，结束日期，格式：YYYY-MM-DD
  * @returns {Promise<Array>} 事件对象数组
  */
-export async function getEventsByDate(date) {
+export async function getEventsByDateRange(startDate, endDate) {
+  // 格式化日期参数
+  const formattedStartDate = formatDate(startDate);
+  const formattedEndDate = formatDate(endDate) || formattedStartDate;
+  
   const db = await getDB();
-  // 查找开始时间在指定日期的事件
-  const result = await db.getAllAsync(
+
+  // 事件开始于查询范围内，或结束于查询范围内，或完全覆盖查询范围
+  return  await db.getAllAsync(
     `SELECT * FROM event
-     WHERE DATE(start_datetime) = ?
+     WHERE
+        -- 事件开始在查询范围内
+         (DATE(start_datetime) BETWEEN ? AND ?)
+        OR
+        -- 事件结束在查询范围内
+         (DATE(end_datetime) BETWEEN ? AND ?)
+        OR
+        -- 事件开始在查询范围前且结束在查询范围后（完全覆盖）
+         (DATE(start_datetime) <= ? AND DATE(end_datetime) >= ?)
      ORDER BY start_datetime`,
-    [date]
+    // 参数按查询条件顺序传递
+    [formattedStartDate, formattedEndDate,
+     formattedStartDate, formattedEndDate,
+     formattedStartDate, formattedEndDate]
   );
-  return result;
 }
 
 /**
@@ -67,13 +85,12 @@ export async function getEventsByDate(date) {
  */
 export async function getEventsByDateAndCategory(date, category) {
   const db = await getDB();
-  const result = await db.getAllAsync(
+  return await db.getAllAsync(
     `SELECT * FROM event
      WHERE DATE(start_datetime) = ? AND category = ?
      ORDER BY start_datetime`,
     [date, category]
   );
-  return result;
 }
 
 /**
@@ -106,6 +123,28 @@ export async function updateEvent(id, updates) {
 }
 
 /**
+ * 更新事件的状态字段
+ * @param {number} id - 事件ID
+ * @param {string} newStatus - 新的状态值（如 'completed'/'inProgress' 等）
+ * @returns {Promise<boolean>} 是否更新成功
+ */
+export async function updateEventStatus(id, newStatus) {
+  // 状态值合法性校验（避免无效状态写入数据库）
+  const validStatus = ['planned', 'completed', 'canceled', 'inProgress', 'upcoming', 'early', 'notCompleted'];
+  if (!validStatus.includes(newStatus)) {
+    throw new Error(`无效的事件状态: ${newStatus}，仅允许：${validStatus.join(', ')}`);
+  }
+  
+  const db = await getDB();
+  const result = await db.runAsync(
+    `UPDATE event SET status = ? WHERE id = ?`,
+    [newStatus, id]
+  );
+  
+  return result.changes > 0; // 有数据修改则返回 true
+}
+
+/**
  * 删除事件
  * @param {number} id - 事件ID
  * @returns {Promise<boolean>} 是否删除成功
@@ -117,20 +156,6 @@ export async function deleteEvent(id) {
     [id]
   );
   return result.changes > 0;
-}
-
-/**
- * 获取跨天事件（开始日期和结束日期不同的事件）
- * @returns {Promise<Array>} 跨天事件数组
- */
-export async function getCrossDayEvents() {
-  const db = await getDB();
-  const result = await db.getAllAsync(
-    `SELECT * FROM event
-     WHERE DATE(start_datetime) != DATE(end_datetime)
-     ORDER BY start_datetime`
-  );
-  return result;
 }
 
 /**

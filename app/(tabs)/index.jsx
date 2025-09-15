@@ -1,10 +1,8 @@
-import {
-  StyleSheet
-} from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import Header from "@/components/Header";
-import Calendar from "@/components/Calendar";
+import Header from "@/components/common/Header";
+import Calendar from "@/components/common/Calendar";
 import TimelinePanel from "@/components/TimelinePanel";
 import dayjs from 'dayjs';
 
@@ -30,17 +28,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f7fafd'
-  },
-  header: {
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    elevation: 2
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffb300'
   }
 });

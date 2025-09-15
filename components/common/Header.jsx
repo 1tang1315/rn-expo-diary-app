@@ -14,12 +14,18 @@ import { CloudSyncService } from '@/db/services/CloudSyncService';
 import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
 import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
 import { getAllCloudDriveConfigs } from "@/db/cloudSyncDb";
+import SettingsMenu from '@/components/common/SettingsMenu';
+import { useNavigation } from "expo-router";
 
 const Header = ({ selectedDate, onToday, userId = 1 }) => {
+  const navigation = useNavigation();
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDriveSelector, setShowDriveSelector] = useState(false);
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [selectedDriveType, setSelectedDriveType] = useState('');
+  
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   
   const formatCurrentDate = () => {
     const date = dayjs(selectedDate);
@@ -77,11 +83,15 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
   
   return (
     <View style={styles.headerContainer}>
+      {/* 时间 日期 */}
       <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+      {/* 回到今日 */}
       <TouchableOpacity onPress={onToday} activeOpacity={0.8}>
         <Ionicons name="today-outline" size={22} color="#000" />
       </TouchableOpacity>
+      
       <View style={styles.headerRightButtons}>
+        {/* 同步 */}
         <TouchableOpacity
           style={styles.headerButton}
           onPress={handleSync}
@@ -95,11 +105,17 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           )}
         </TouchableOpacity>
         
+        {/* 搜索 */}
         <TouchableOpacity style={styles.headerButton}>
           <Ionicons name="search-outline" size={22} color="#000" />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.headerButton}>
+        {/* 设置 */}
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setShowSettingsMenu(true)}
+          activeOpacity={0.8}
+        >
           <Ionicons name="settings-outline" size={22} color="#000" />
         </TouchableOpacity>
       </View>
@@ -116,6 +132,33 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
         driveType={selectedDriveType}
         onConfigSuccess={handleConfigSuccess}
         userId={userId}
+      />
+      
+      <SettingsMenu
+        visible={showSettingsMenu}
+        onClose={() => setShowSettingsMenu(false)}
+        onSelectOption={(optionId) => {
+          switch(optionId) {
+            case 'account':
+              console.log('处理账户设置');
+              // 导航到账户设置页面等逻辑
+              break;
+            case 'notifications':
+              console.log('处理通知设置');
+              break;
+            case 'data-generation':
+              navigation.navigate('data-generation-page');
+              break;
+            case 'about':
+              console.log('处理关于我们');
+              break;
+            case 'help':
+              console.log('处理帮助中心');
+              break;
+            default:
+              break;
+          }
+        }}
       />
     </View>
   );
@@ -145,7 +188,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center'
   },
-  headerButton: { marginLeft: 20 },
+  headerButton: { marginLeft: 20 }
 });
 
 export default Header;

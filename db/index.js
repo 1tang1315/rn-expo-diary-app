@@ -25,7 +25,6 @@ export async function getDB() {
   }
   
   // 事件表(一天 多条事件)
-  // 为已有表新增 duration 字段（仅执行一次）
   await index.execAsync(`
   CREATE TABLE IF NOT EXISTS event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +33,7 @@ export async function getDB() {
     title TEXT,                     /* 标题可空；为空时显示分类 */
     category TEXT,                  /* work, life, health... */
     description TEXT,
-    status TEXT,                    /* planned / completed / canceled */
+    status TEXT,                    /* early / upcoming / inProgress / completed / notCompleted */
     icon TEXT
   );
 `);

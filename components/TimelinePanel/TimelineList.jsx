@@ -1,7 +1,43 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { statusColors, statusTextMap } from '@/constants/timelineConstants';
+import { updateEventStatus } from "@/db/eventDB";
+import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
+
+const getFinalStatus = (item) => {
+  const ONE_HOUR = 60 * 60 * 1000;
+  const now = new Date();
+  const startTime = new Date(item.startDatetime);
+  const endTime = new Date(item.endDatetime);
+  const timeToStart = startTime - now;
+  
+  let finalStatus = item.status;
+  
+  if (now > endTime && finalStatus !== 'completed') {
+    finalStatus = 'completed';
+  } else if (now >= startTime && now <= endTime && finalStatus !== 'inProgress') {
+    finalStatus = 'inProgress';
+  } else if (
+    timeToStart > 0 &&
+    timeToStart <= ONE_HOUR &&
+    !['upcoming', 'inProgress', 'completed'].includes(finalStatus)
+  ) {
+    finalStatus = 'upcoming';
+  } else if (
+    timeToStart > ONE_HOUR &&
+    !['early', 'upcoming', 'inProgress', 'completed'].includes(finalStatus)
+  ) {
+    finalStatus = 'early';
+  }
+  
+  return finalStatus;
+};
+
+const formatDuration = (item) => {
+  const totalMinutes = getTotalMinutes(item.startDatetime, item.endDatetime);
+  return formatDurationByMinutes(totalMinutes);
+}
 
 /**
  * 时间线列表组件
@@ -10,7 +46,6 @@ import { statusColors, statusTextMap } from '@/constants/timelineConstants';
  * @props {string} currentTab - 当前选中分类
  * @props {Array} tabOrder - 分类标签顺序
  * @props {Function} openEditModal - 打开编辑弹窗的回调
- * @props {Function} formatDuration - 格式化时长的工具函数
  */
 const TimelineList = ({
   categorizedData,
@@ -18,35 +53,52 @@ const TimelineList = ({
   currentTab,
   tabOrder,
   openEditModal,
-  formatDuration,
 }) => {
+  const handleStatusUpdate = useCallback(async (item) => {
+    const newStatus = getFinalStatus(item);
+    if (item.status !== newStatus) {
+      try {
+        await updateEventStatus(item.id, newStatus);
+        console.log(`事件 ${item.id} 状态更新为：${newStatus}`);
+      } catch (err) {
+        console.error('更新失败:', err);
+      }
+    }
+  }, []);
+  
+  // 优化状态更新逻辑：使用 requestAnimationFrame 减少更新频率
+  useEffect(() => {
+    const updateQueue = categorizedData.map(item => () => handleStatusUpdate(item));
+    
+    // 批量处理更新，避免同时触发多个更新
+    const processUpdates = async () => {
+      for (const update of updateQueue) {
+        await update();
+        // 每处理一个更新，给一点时间让UI呼吸
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+    
+    const animationFrameId = requestAnimationFrame(processUpdates);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [categorizedData, handleStatusUpdate]);
+  
+  useEffect(() => {
+    categorizedData.forEach(item => {
+      const newStatus = getFinalStatus(item);
+      if (item.status !== newStatus) {
+        updateEventStatus(item.id, newStatus)
+          .then(() => console.log(`事件 ${item.id} 状态更新为：${newStatus}`))
+          .catch(err => console.error('更新失败:', err));
+      }
+    });
+  }, [categorizedData]);
+  
   // 渲染单个事件项
   const renderTimelineItem = ({ item }) => {
     const tabName = tabOrder.find(cat => cat.id === item.category)?.name || '未分类';
     const displayTitle = item.title || tabName;
-    
-    // 自动计算事件状态
-    const ONE_HOUR = 60 * 60 * 1000;
-    const now = new Date();
-    const startTime = new Date(item.startDatetime);
-    const endTime = new Date(item.endDatetime);
-    const timeToStart = startTime - now;
-    
-    let finalStatus;
-    if (item.status === 'notCompleted') {
-      finalStatus = 'notCompleted';
-    } else if (now > endTime) {
-      finalStatus = 'completed';
-    } else if (now >= startTime && now <= endTime) {
-      finalStatus = 'inProgress';
-    } else if (timeToStart > 0 && timeToStart <= ONE_HOUR) {
-      finalStatus = 'upcoming';
-    } else if (timeToStart > ONE_HOUR) {
-      finalStatus = 'early';
-    } else {
-      finalStatus = 'upcoming';
-    }
-    
+    const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
     const statusText = statusTextMap[finalStatus];
     
@@ -61,7 +113,7 @@ const TimelineList = ({
           <View style={[styles.timelineLine, { backgroundColor: finalStatusColor }]} />
           <Text style={styles.startTimeText}>{item.startTime}</Text>
         </View>
-        
+
         {/* 事件内容卡片（点击触发编辑） */}
         <TouchableOpacity
           style={[styles.contentCard, { borderLeftColor: finalStatusColor }]}
@@ -90,7 +142,7 @@ const TimelineList = ({
     </View>
   );
   
-  // 3. 渲染 FlatList 核心
+  // 渲染 FlatList 核心
   return (
     <FlatList
       data={categorizedData}

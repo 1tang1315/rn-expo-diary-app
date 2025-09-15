@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, StyleSheet, Alert, Platform
 } from 'react-native';
@@ -8,15 +8,13 @@ import AddEventButton from './AddEventButton';
 import EventModal from './EventModal';
 import {
   createEvent,
-  getEventsByDate,
   updateEvent,
   deleteEvent as deleteEventApi,
-  getCommonTitlesByCategory
+  getCommonTitlesByCategory,
+  getEventsByDateRange
 } from '@/db/eventDB';
-import {
-  baseTabCategories,
-  categoryIcons,
-} from '@/constants/timelineConstants';
+import { categoryIcons } from '@/constants/timelineConstants';
+import { categories } from "@/constants/commonConstans";
 
 // 工具函数：合并日期和时间
 const mergeDateAndTime = (baseDate, timeDate) => {
@@ -28,30 +26,11 @@ const mergeDateAndTime = (baseDate, timeDate) => {
   return newDate;
 };
 
-// 工具函数：格式化数据库日期（YYYY-MM-DD）
-const formatDbDate = (date) => date?.toISOString().split('T')[0];
-
-// 格式化持续时间（总分钟数 -> xx小时 xx分钟 或者 xx分钟）
-const formatDuration = (event) => {
-  const start = new Date(event.displayStartDatetime || event.startDatetime);
-  const end = new Date(event.displayEndDatetime || event.endDatetime);
-  const durationMs = end - start;
-  const totalMinutes = Math.floor(durationMs / (1000 * 60)); // 转总分钟数
-  
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}小时${minutes}分钟` : `${hours}小时`;
-  }
-  return `${minutes}分钟`;
-};
-
 const TimelinePanel = ({ selectedDate }) => {
   // 状态管理
   const [tabOrder, setTabOrder] = useState(() => [
     { id: 'all', name: '全部', icon: 'view-list', isFixed: true },
-    ...baseTabCategories
+    ...categories
   ]);
   const [currentTab, setCurrentTab] = useState('all');
   const [timelineData, setTimelineData] = useState([]);
@@ -163,37 +142,13 @@ const TimelinePanel = ({ selectedDate }) => {
   }, [formData.category]);
   
   // 拉取事件数据
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const baseDate = new Date(selectedDate);
-      
-      // 获取当前日期
-      const currentDate = formatDbDate(baseDate);
-      
-      // 获取前一天
-      const prevDate = new Date(baseDate);
-      prevDate.setDate(prevDate.getDate() - 1);
-      const prevDbDate = formatDbDate(prevDate);
-      
-      // 获取后一天
-      const nextDate = new Date(baseDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-      const nextDbDate = formatDbDate(nextDate);
-      
-      // 并行获取三天的数据
-      const [currentEvents, prevEvents, nextEvents] = await Promise.all([
-        getEventsByDate(currentDate),
-        getEventsByDate(prevDbDate),
-        getEventsByDate(nextDbDate)
-      ]);
-      
-      // 合并所有事件并去重
-      const allEvents = [...currentEvents, ...prevEvents, ...nextEvents];
-      const uniqueEvents = Array.from(new Map(allEvents.map(item => [item.id, item])).values());
+      const events = await getEventsByDateRange(selectedDate);
       
       // 格式化事件
-      const formattedEvents = uniqueEvents.map(event => ({
+      const formattedEvents = events.map(event => ({
         id: event.id.toString(),
         startTime: event.start_datetime.split(' ')[1]?.slice(0, 5) || '00:00',
         endTime: event.end_datetime.split(' ')[1]?.slice(0, 5) || '00:00',
@@ -206,18 +161,14 @@ const TimelinePanel = ({ selectedDate }) => {
         category: event.category
       }));
       
-      // 按开始时间排序
-      const sortedEvents = formattedEvents.sort((a, b) => {
-        return new Date(b.startDatetime) - new Date(a.startDatetime);
-      });
-      setTimelineData(sortedEvents);
+      setTimelineData(formattedEvents);
     } catch (error) {
       console.error('拉取日程失败:', error);
       Alert.alert('错误', '获取日程数据失败，请稍后再试');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedDate]);
   
   // 拉取常用标题
   const fetchCommonTitles = async (category) => {
@@ -231,13 +182,13 @@ const TimelinePanel = ({ selectedDate }) => {
   
   // 选中日期变化时重新拉取事件
   useEffect(() => {
-    fetchEvents();
-  }, [selectedDate]);
+    fetchEvents().then();
+  }, [fetchEvents, selectedDate]);
   
   // 分类变化时更新常用标题和默认图标
   useEffect(() => {
     if (modalVisible) {
-      fetchCommonTitles(formData.category);
+      fetchCommonTitles(formData.category).then();
       // 切换分类时自动选择第一个图标（如果当前图标不在新分类中）
       if (categoryIcons[formData.category]?.length &&
         !categoryIcons[formData.category].includes(formData.icon)) {
@@ -247,7 +198,7 @@ const TimelinePanel = ({ selectedDate }) => {
         }));
       }
     }
-  }, [formData.category, modalVisible]);
+  }, [formData.category, formData.icon, modalVisible]);
   
   // 日期选择变更
   const handleDatetimeChange = (event, selectedDate) => {
@@ -321,7 +272,7 @@ const TimelinePanel = ({ selectedDate }) => {
         await createEvent(eventParams);
         Alert.alert('成功', '新日程添加完成');
       }
-      fetchEvents(); // 重新拉取数据
+      await fetchEvents(); // 重新拉取数据
       setModalVisible(false);
     } catch (error) {
       console.error(currentEvent ? '更新事件失败:' : '新增事件失败:', error);
@@ -343,7 +294,7 @@ const TimelinePanel = ({ selectedDate }) => {
             const isSuccess = await deleteEventApi(eventId);
             if (!isSuccess) throw new Error('删除失败');
             Alert.alert('成功', '日程已删除');
-            fetchEvents();
+            await fetchEvents();
             setModalVisible(false);
           } catch (error) {
             console.error('删除事件失败:', error);
@@ -428,7 +379,6 @@ const TimelinePanel = ({ selectedDate }) => {
         currentTab={currentTab}
         tabOrder={tabOrder}
         openEditModal={openEditModal} // 传递编辑回调
-        formatDuration={formatDuration} // 传递时长格式化工具
       />
       
       {/* 导入的独立组件：浮动添加按钮 */}

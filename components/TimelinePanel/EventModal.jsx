@@ -405,6 +405,8 @@ const styles = StyleSheet.create({
     color: '#555'
   },
   formInput: {
+    minHeight: 30,
+    lineHeight: 30,
     padding: 12,
     borderWidth: 1,
     borderColor: '#ddd',

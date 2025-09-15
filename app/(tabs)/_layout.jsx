@@ -14,6 +14,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="statistics"
+        options={{
+          title: "统计",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="pie-chart" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="mine"
         options={{
           title: "我的",
