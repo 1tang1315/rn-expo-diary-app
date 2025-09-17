@@ -143,6 +143,9 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
               console.log('处理账户设置');
               // 导航到账户设置页面等逻辑
               break;
+            case 'cloud':
+              navigation.navigate('cloud-drive-settings');
+              break;
             case 'notifications':
               console.log('处理通知设置');
               break;

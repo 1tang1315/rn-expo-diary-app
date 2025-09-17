@@ -1,5 +1,4 @@
 // 时间/日期/时长 处理工具函数
-
 import dayjs from "dayjs";
 
 /**
@@ -41,4 +40,34 @@ export const formatDurationByMinutes = (minutes) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}小时` : `${h}小时${m}分钟`;
+};
+
+/**
+ * 生成本地时区时间字符串（格式：YYYY-MM-DD HH:mm:ss）
+ * @returns {string} 本地时间字符串（如：2025-09-17 15:44:22）
+ */
+export function getLocalDateTimeByDayjs() {
+  return dayjs().format('YYYY-MM-DD HH:mm:ss');
+}
+
+/**
+ * 格式化时间（HH:mm）
+ * @param date - Date对象或时间字符串
+ * @returns {string|null} 格式化后的时间（如"15:30"），无效输入返回null
+ */
+export const formatTime = (date) => {
+  if (!date) return null;
+  const dayjsObj = dayjs(date);
+  return dayjsObj.isValid() ? dayjsObj.format("HH:mm") : null;
+};
+
+/**
+ * 格式化日期时间（YYYY-MM-DD HH:mm）
+ * @param date - Date对象或时间字符串
+ * @returns {string|null} 格式化后的日期时间（如"2025-09-17 15:30"），无效输入返回null
+ */
+export const formatDatetime = (date) => {
+  if (!date) return null;
+  const dayjsObj = dayjs(date);
+  return dayjsObj.isValid() ? dayjsObj.format("YYYY-MM-DD HH:mm") : null;
 };

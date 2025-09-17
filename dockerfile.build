@@ -1,0 +1,14 @@
+FROM mobiledevops/android-sdk-image:latest
+
+RUN apt update \
+    && apt install -y nodejs npm
+RUN npm i -g eas-cli expo yarn
+
+COPY ./ /WWW/APP
+WORKDIR /WWW/APP
+
+ENV EXPO_TOKEN=这里替换成你的token
+ENV NODE_ENV=production
+
+RUN npm i
+CMD eas build --platform android --profile release --local

@@ -1,30 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, StyleSheet, Alert, Platform
+  View, StyleSheet, Alert
 } from 'react-native';
 import CategoryTab from './CategoryTab';
 import TimelineList from './TimelineList';
 import AddEventButton from './AddEventButton';
 import EventModal from './EventModal';
-import {
-  createEvent,
-  updateEvent,
-  deleteEvent as deleteEventApi,
-  getCommonTitlesByCategory,
-  getEventsByDateRange
-} from '@/db/eventDB';
-import { categoryIcons } from '@/constants/timelineConstants';
+import { getEventsByDateRange } from '@/db/eventDB';
 import { categories } from "@/constants/commonConstans";
-
-// 工具函数：合并日期和时间
-const mergeDateAndTime = (baseDate, timeDate) => {
-  const newDate = new Date(baseDate);
-  newDate.setHours(timeDate.getHours());
-  newDate.setMinutes(timeDate.getMinutes());
-  newDate.setSeconds(0);
-  newDate.setMilliseconds(0);
-  return newDate;
-};
 
 const TimelinePanel = ({ selectedDate }) => {
   // 状态管理
@@ -39,27 +22,6 @@ const TimelinePanel = ({ selectedDate }) => {
   // 弹窗相关状态
   const [modalVisible, setModalVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState(null);
-  
-  // 表单数据状态
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    startDatetime: new Date(),
-    endDatetime: new Date(new Date().getTime() + 10 * 60 * 1000),
-    icon: 'event-note',
-    category: 'daily',
-    status: 'upcoming'
-  });
-  
-  // 常用标题状态
-  const [commonTitles, setCommonTitles] = useState([]);
-  
-  // 日期选择器状态
-  const [showDatetimePicker, setShowDatetimePicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState('date'); // date/time
-  const [targetDatetime, setTargetDatetime] = useState('start'); // start/end
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [tempSelectedCategory, setTempSelectedCategory] = useState('');
   
   // 工具函数：仅在显示层处理跨日事件，返回当前选中日期应显示的事件片段（不修改原始数据）
   const getEventForCurrentDate = (event, currentViewDate) => {
@@ -134,13 +96,6 @@ const TimelinePanel = ({ selectedDate }) => {
       : eventsForCurrentDate.filter(item => item.category === currentTab);
   }, [timelineData, currentTab, selectedDate]);
   
-  // 当前分类的图标列表
-  const currentIconOptions = useMemo(() => {
-    return formData.category && categoryIcons[formData.category]
-      ? categoryIcons[formData.category]
-      : ['group', 'video-call', 'code', 'design-services', 'event-note'];
-  }, [formData.category]);
-  
   // 拉取事件数据
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
@@ -170,193 +125,21 @@ const TimelinePanel = ({ selectedDate }) => {
     }
   }, [selectedDate]);
   
-  // 拉取常用标题
-  const fetchCommonTitles = async (category) => {
-    try {
-      const titles = await getCommonTitlesByCategory(category, 5);
-      setCommonTitles(titles);
-    } catch (error) {
-      console.error('获取常用标题失败:', error);
-    }
-  };
-  
   // 选中日期变化时重新拉取事件
   useEffect(() => {
     fetchEvents().then();
   }, [fetchEvents, selectedDate]);
   
-  // 分类变化时更新常用标题和默认图标
-  useEffect(() => {
-    if (modalVisible) {
-      fetchCommonTitles(formData.category).then();
-      // 切换分类时自动选择第一个图标（如果当前图标不在新分类中）
-      if (categoryIcons[formData.category]?.length &&
-        !categoryIcons[formData.category].includes(formData.icon)) {
-        setFormData(prev => ({
-          ...prev,
-          icon: categoryIcons[formData.category][0]
-        }));
-      }
-    }
-  }, [formData.category, formData.icon, modalVisible]);
-  
-  // 日期选择变更
-  const handleDatetimeChange = (event, selectedDate) => {
-    // iOS取消逻辑
-    if (!selectedDate) {
-      setShowDatetimePicker(Platform.OS === 'ios');
-      return;
-    }
-    
-    const currentTarget = targetDatetime === 'start' ? 'startDatetime' : 'endDatetime';
-    const originalDate = new Date(formData[currentTarget]);
-    let newDate;
-    
-    if (pickerMode === 'date') {
-      // 仅修改日期，保留时间
-      newDate = mergeDateAndTime(selectedDate, originalDate);
-    } else {
-      // 仅修改时间，保留日期
-      newDate = new Date(originalDate);
-      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-    }
-    
-    setFormData(prev => ({ ...prev, [currentTarget]: newDate }));
-    setShowDatetimePicker(Platform.OS === 'ios');
-  };
-  
-  // 表单值修改
-  const handleInputChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  // 保存/更新事件
-  const saveEvent = async () => {
-    // 校验时间
-    const startDatetime = new Date(formData.startDatetime);
-    const endDatetime = new Date(formData.endDatetime);
-    if (startDatetime >= endDatetime) {
-      Alert.alert('时间错误', '结束日期时间必须晚于开始日期时间');
-      return;
-    }
-    
-    // 格式化时间为数据库格式（YYYY-MM-DD HH:MM）
-    const formatDatetime = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day} ${hours}:${minutes}`;
-    };
-    
-    const eventParams = {
-      start_datetime: formatDatetime(startDatetime),
-      end_datetime: formatDatetime(endDatetime),
-      title: formData.title,
-      category: formData.category,
-      description: formData.description,
-      status: formData.status,
-      icon: formData.icon
-    };
-    
-    try {
-      if (currentEvent) {
-        // 更新事件
-        const eventId = parseInt(currentEvent.id);
-        const isSuccess = await updateEvent(eventId, eventParams);
-        if (!isSuccess) throw new Error('更新失败');
-        Alert.alert('成功', '日程更新完成');
-      } else {
-        // 新增事件
-        await createEvent(eventParams);
-        Alert.alert('成功', '新日程添加完成');
-      }
-      await fetchEvents(); // 重新拉取数据
-      setModalVisible(false);
-    } catch (error) {
-      console.error(currentEvent ? '更新事件失败:' : '新增事件失败:', error);
-      Alert.alert('错误', currentEvent ? '更新日程失败' : '添加日程失败');
-    }
-  };
-  
-  // 删除事件
-  const handleDeleteEvent = async () => {
-    if (!currentEvent) return;
-    Alert.alert('确认删除', '此操作不可恢复，确定要删除吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const eventId = parseInt(currentEvent.id);
-            const isSuccess = await deleteEventApi(eventId);
-            if (!isSuccess) throw new Error('删除失败');
-            Alert.alert('成功', '日程已删除');
-            await fetchEvents();
-            setModalVisible(false);
-          } catch (error) {
-            console.error('删除事件失败:', error);
-            Alert.alert('错误', '删除日程失败，请稍后再试');
-          }
-        }
-      }
-    ]);
-  };
-  
-  // 确认分类选择
-  const confirmCategorySelect = () => {
-    if (tempSelectedCategory) {
-      setFormData(prev => ({ ...prev, category: tempSelectedCategory }));
-      fetchCommonTitles(tempSelectedCategory); // 立即更新常用标题
-    }
-    setShowCategoryPicker(false);
-  };
-  
   // 打开添加弹窗
   const openAddModal = () => {
-    const defaultCategory = currentTab !== 'all'
-      ? currentTab
-      : tabOrder.find(tab => !tab.isFixed)?.id || 'daily';
-    const defaultIcon = categoryIcons[defaultCategory]?.[0] || 'event-note';
-    
-    // 初始化表单（日期为selectedDate，时间为当前）
-    const baseDate = new Date(selectedDate);
-    const now = new Date();
-    const defaultStart = mergeDateAndTime(baseDate, now);
-    const defaultEnd = mergeDateAndTime(baseDate, new Date(now.getTime() + 10 * 60 * 1000));
-    
     setCurrentEvent(null);
-    setFormData({
-      title: '',
-      description: '',
-      startDatetime: defaultStart,
-      endDatetime: defaultEnd,
-      icon: defaultIcon,
-      category: defaultCategory,
-      status: 'upcoming'
-    });
-    setTempSelectedCategory(defaultCategory);
     setModalVisible(true);
-    fetchCommonTitles(defaultCategory);
   };
   
   // 打开编辑弹窗
   const openEditModal = (event) => {
     setCurrentEvent(event);
-    setFormData({
-      title: event.title,
-      description: event.description,
-      startDatetime: new Date(event.startDatetime),
-      endDatetime: new Date(event.endDatetime),
-      icon: event.icon,
-      category: event.category,
-      status: event.status || 'upcoming'
-    });
-    setTempSelectedCategory(event.category);
     setModalVisible(true);
-    fetchCommonTitles(event.category);
   };
   
   return (
@@ -389,28 +172,9 @@ const TimelinePanel = ({ selectedDate }) => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         currentEvent={currentEvent}
-        formData={formData}
-        onFormChange={handleInputChange}
-        onSave={saveEvent}
-        onDelete={handleDeleteEvent}
         tabOrder={tabOrder}
-        commonTitles={commonTitles}
-        showDatetimePicker={showDatetimePicker}
-        pickerMode={pickerMode}
-        targetDatetime={targetDatetime}
-        onShowDatetimePicker={(target, mode) => {
-          setShowDatetimePicker(mode !== 'category');
-          setPickerMode(mode);
-          setTargetDatetime(target);
-          setShowCategoryPicker(mode === 'category');
-        }}
-        onDatetimeChange={handleDatetimeChange}
-        showCategoryPicker={showCategoryPicker}
-        tempSelectedCategory={tempSelectedCategory}
-        onTempCategoryChange={setTempSelectedCategory}
-        onConfirmCategory={confirmCategorySelect}
-        currentIconOptions={currentIconOptions}
         selectedDate={selectedDate}
+        onRefresh={fetchEvents}
       />
     </View>
   );

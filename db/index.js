@@ -1,31 +1,33 @@
 import * as SQLite from 'expo-sqlite';
 
-let index = null;
+let db = null;
 
 export async function getDB() {
-  if(index) return index; // 已经打开过就直接返回
+  if(db) return db; // 已经打开过就直接返回
   
-  index = await SQLite.openDatabaseAsync('RNExpoDiaryApp');
+  db = await SQLite.openDatabaseAsync('RNExpoDiaryApp');
   
-  await index.execAsync(`PRAGMA journal_mode = WAL;`);
+  await db.execAsync(`PRAGMA journal_mode = WAL;`);
   
   // 用户表
-  await index.execAsync(`
+  await db.execAsync(`
   CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT DEFAULT 'default_user',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT DEFAULT NULL    /* 软删除字段，NULL表示未删除 */
   );
 `);
   
   // 初始化默认用户（如果不存在）
-  const userCount = await index.getFirstAsync(`SELECT COUNT(*) as count FROM user`);
+  const userCount = await db.getFirstAsync(`SELECT COUNT(*) as count FROM user`);
   if(userCount.count === 0) {
-    await index.runAsync(`INSERT INTO user (username) VALUES ('default_user')`);
+    await db.runAsync(`INSERT INTO user (username) VALUES ('default_user')`);
   }
   
   // 事件表(一天 多条事件)
-  await index.execAsync(`
+  await db.execAsync(`
   CREATE TABLE IF NOT EXISTS event (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     start_datetime TEXT NOT NULL,   /* 2025-08-28 23:00 */
@@ -34,12 +36,14 @@ export async function getDB() {
     category TEXT,                  /* work, life, health... */
     description TEXT,
     status TEXT,                    /* early / upcoming / inProgress / completed / notCompleted */
-    icon TEXT
+    icon TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT DEFAULT NULL    /* 软删除字段，NULL表示未删除 */
   );
 `);
   
   // 网盘配置表
-  await index.execAsync(`
+  await db.execAsync(`
      CREATE TABLE IF NOT EXISTS cloud_drive_config (
        id INTEGER PRIMARY KEY AUTOINCREMENT,
        user_id INTEGER NOT NULL,
@@ -49,12 +53,13 @@ export async function getDB() {
        root_path TEXT NOT NULL DEFAULT 'RNExpoDiaryApp', /* 云盘存储路径 */
        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+       deleted_at TEXT DEFAULT NULL,              /* 软删除字段，NULL表示未删除 */
        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
     );
 `);
   
   // 同步状态表
-  await index.execAsync(`
+  await db.execAsync(`
     CREATE TABLE IF NOT EXISTS sync_checkpoint (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -65,13 +70,14 @@ export async function getDB() {
       sync_status TEXT DEFAULT 'idle', /* idle / syncing / failed */
       error_message TEXT,              /* 最近一次错误 */
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TEXT DEFAULT NULL,    /* 软删除字段，NULL表示未删除 */
       FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
       FOREIGN KEY (drive_id) REFERENCES cloud_drive_config(id) ON DELETE CASCADE,
       UNIQUE(drive_id, path)
     );
   `);
   
-  return index;
+  return db;
 }
 
 /**
@@ -81,6 +87,7 @@ export async function getDB() {
  * @throws {Error} 非法表名时抛出错误
  */
 export async function exportTable(tableName) {
+  console.log(tableName, "tableName");
   const db = await getDB();
   // 表名合法性校验（防SQL注入）
   if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {

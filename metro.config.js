@@ -2,6 +2,10 @@ const { getDefaultConfig } = require('@expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
+const {
+  wrapWithReanimatedMetroConfig,
+} = require('react-native-reanimated/metro-config');
+
 // 让 Metro 识别 .wasm 文件（视为二进制资源）
 config.resolver.assetExts.push('wasm');
 
@@ -13,4 +17,4 @@ config.transformer.getTransformOptions = async () => ({
   },
 });
 
-module.exports = config;
+module.exports = wrapWithReanimatedMetroConfig(config);

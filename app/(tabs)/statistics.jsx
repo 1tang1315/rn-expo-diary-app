@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { getEventsByDateRange } from "@/db/eventDB";
 import dayjs from "dayjs";
 import DateSelector from "@/components/statistics/DateSelector";
-import Platform from 'react-native';
+import Platform from "react-native";
 import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import PieChartWithLabels from "@/components/chart/PieChartWithLabels";

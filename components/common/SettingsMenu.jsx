@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // 设置选项列表
 const SETTINGS_OPTIONS = [
   { id: 'account', name: '账户设置', icon: 'person-outline' },
+  { id: 'cloud', name: '网盘设置', icon: 'cloud' },
   { id: 'notifications', name: '通知设置', icon: 'notifications-outline' },
   { id: 'data-generation', name: '数据生成', icon: 'create-outline' },
   { id: 'about', name: '关于我们', icon: 'information-circle-outline' },

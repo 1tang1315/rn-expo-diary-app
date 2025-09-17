@@ -1,70 +1,236 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Modal, Button, StyleSheet
+  KeyboardAvoidingView, Platform, Modal, Button, StyleSheet, Alert
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { statusColors, statusTextMap } from '@/constants/timelineConstants';
+import { categoryIcons, statusColors, statusTextMap } from '@/constants/timelineConstants';
+import {
+  createEvent,
+  getCommonTitlesByCategory,
+  updateEvent,
+  deleteEvent as deleteEventApi,
+} from "@/db/eventDB";
+import {
+  formatDate,
+  formatTime
+} from "@/utils/formatTimeUtils";
 
 /**
  * 事件添加/编辑弹窗
  * @props {boolean} visible - 弹窗显示状态
  * @props {Function} onClose - 关闭弹窗回调
  * @props {Object|null} currentEvent - 当前编辑的事件（null 为新增）
- * @props {Object} formData - 表单数据（标题、时间、分类等）
- * @props {Function} onFormChange - 表单值修改回调（name, value）
- * @props {Function} onSave - 保存/更新事件回调
- * @props {Function} onDelete - 删除事件回调（仅编辑时生效）
  * @props {Array} tabOrder - 分类列表（用于分类选择）
- * @props {Array} commonTitles - 常用标题列表
- * @props {boolean} showDatetimePicker - 日期时间选择器显示状态
- * @props {string} pickerMode - 选择器模式（date/time）
- * @props {string} targetDatetime - 目标时间（start/end）
- * @props {Function} onShowDatetimePicker - 打开选择器回调（target, mode）
- * @props {Function} onDatetimeChange - 时间选择变更回调
- * @props {boolean} showCategoryPicker - 分类选择弹窗显示状态
- * @props {string} tempSelectedCategory - 临时选中的分类
- * @props {Function} onTempCategoryChange - 临时分类修改回调
- * @props {Function} onConfirmCategory - 确认分类选择回调
- * @props {Array} currentIconOptions - 当前分类的图标列表
  * @props {Date} selectedDate - 父组件选中的日期（用于默认日期）
+ * @props {Function} onRefresh - 通知父组件刷新数据
  */
 const EventModal = ({
   visible,
   onClose,
   currentEvent,
-  formData,
-  onFormChange,
-  onSave,
-  onDelete,
   tabOrder,
-  commonTitles,
-  showDatetimePicker,
-  pickerMode,
-  targetDatetime,
-  onShowDatetimePicker,
-  onDatetimeChange,
-  showCategoryPicker,
-  tempSelectedCategory,
-  onTempCategoryChange,
-  onConfirmCategory,
-  currentIconOptions,
-  selectedDate
+  selectedDate,
+  onRefresh
 }) => {
-  // 内部工具函数：本地化日期格式化
-  const formatLocalDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startDatetime: new Date(),
+    endDatetime: new Date(new Date().getTime() + 10 * 60 * 1000),
+    icon: 'event-note',
+    category: 'daily',
+    status: 'upcoming'
+  });
+  
+  // 表单初始化逻辑
+  useEffect(() => {
+    if (!visible) return;
+    
+    if (currentEvent) {
+      // 编辑模式初始化
+      const initData = {
+        title: currentEvent.title,
+        description: currentEvent.description,
+        startDatetime: new Date(currentEvent.startDatetime),
+        endDatetime: new Date(currentEvent.endDatetime),
+        icon: currentEvent.icon,
+        category: currentEvent.category,
+        status: currentEvent.status || 'upcoming'
+      };
+      
+      setFormData(initData);
+      fetchCommonTitles(initData.category).then();
+    } else {
+      // 新增模式初始化
+      const defaultCategory = tabOrder.find(tab => !tab.isFixed)?.id || 'daily';
+      const defaultIcon = categoryIcons[defaultCategory]?.[0] || 'event-note';
+      const baseDate = new Date(selectedDate);
+      const now = new Date();
+      const defaultStart = new Date(baseDate);
+      defaultStart.setHours(now.getHours(), now.getMinutes(), 0, 0);
+      const defaultEnd = new Date(defaultStart.getTime() + 10 * 60 * 1000);
+      
+      const initData = {
+        title: '',
+        description: '',
+        startDatetime: defaultStart,
+        endDatetime: defaultEnd,
+        icon: defaultIcon,
+        category: defaultCategory,
+        status: 'upcoming'
+      };
+      setFormData(initData);
+      fetchCommonTitles(initData.category).then();
+    }
+  }, [visible, currentEvent, selectedDate, tabOrder]);
+  
+  // 表单修改方法
+  const handleInputChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  // 内部工具函数：本地化时间格式化
-  const formatLocalTime = (date) => {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+  // 分类
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [tempSelectedCategory, setTempSelectedCategory] = useState(formData.category || '');
+  const confirmCategorySelect = () => {
+    if (tempSelectedCategory) {
+      handleInputChange('category', tempSelectedCategory);
+      const defaultIcon = categoryIcons[tempSelectedCategory]?.[0] || 'event-note';
+      handleInputChange('icon', defaultIcon);
+    }
+    setShowCategoryPicker(false);
+  };
+  
+  // 标题
+  const [commonTitles, setCommonTitles] = useState([]);
+  const fetchCommonTitles = async (category) => {
+    try {
+      const titles = await getCommonTitlesByCategory(category, 5);
+      setCommonTitles(titles);
+    } catch (error) {
+      console.error('获取常用标题失败:', error);
+      setCommonTitles([]); // 失败时重置，避免显示旧数据
+    }
+  };
+  useEffect(() => {
+    if (visible && formData?.category) {
+      fetchCommonTitles(formData.category).then();
+    }
+  }, [visible, formData.category]);
+  
+  // 日期事件选择
+  const [pickerMode, setPickerMode] = useState('date');
+  const [targetDatetime, setTargetDatetime] = useState('start');
+  const [showDatetimePicker, setShowDatetimePicker] = useState(false);
+  const onShowDatetimePicker = (target, mode) => {
+    if (mode === 'category') {
+      setShowCategoryPicker(true);
+      setShowDatetimePicker(false);
+    } else {
+      setShowDatetimePicker(true);
+      setShowCategoryPicker(false);
+      setPickerMode(mode);
+      setTargetDatetime(target);
+    }
+  };
+  const handleDatetimeChange = (event, selectedDate) => {
+    if (!selectedDate) {
+      setShowDatetimePicker(Platform.OS === 'ios');
+      return;
+    }
+    
+    const currentTarget = targetDatetime === 'start' ? 'startDatetime' : 'endDatetime';
+    const originalDate = new Date(formData[currentTarget]);
+    let newDate;
+    
+    if (pickerMode === 'date') {
+      newDate = new Date(selectedDate);
+      newDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
+    } else {
+      newDate = new Date(originalDate);
+      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+    }
+    
+    handleInputChange(currentTarget, newDate);
+    setShowDatetimePicker(Platform.OS === 'ios');
+  };
+  
+  // 当前分类的图标列表
+  const currentIconOptions = useMemo(() => {
+    return formData.category && categoryIcons[formData.category]
+      ? categoryIcons[formData.category]
+      : ['group', 'video-call', 'code', 'design-services', 'event-note'];
+  }, [formData.category]);
+  
+  // 保存事件逻辑
+  const handleSave = async () => {
+    // 时间校验
+    const startDatetime = new Date(formData.startDatetime);
+    const endDatetime = new Date(formData.endDatetime);
+    if (startDatetime >= endDatetime) {
+      Alert.alert('时间错误', '结束日期时间必须晚于开始日期时间');
+      return;
+    }
+    
+    // 格式化时间
+    const formatDatetime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    };
+    
+    const eventParams = {
+      start_datetime: formatDatetime(startDatetime),
+      end_datetime: formatDatetime(endDatetime),
+      title: formData.title,
+      category: formData.category,
+      description: formData.description,
+      status: formData.status,
+      icon: formData.icon
+    };
+    
+    try {
+      if (currentEvent) {
+        await updateEvent(parseInt(currentEvent.id), eventParams);
+        Alert.alert('成功', '日程更新完成');
+      } else {
+        await createEvent(eventParams);
+        Alert.alert('成功', '新日程添加完成');
+      }
+      onRefresh();
+      onClose();
+    } catch (error) {
+      console.error('保存事件失败:', error);
+      Alert.alert('错误', currentEvent ? '更新日程失败' : '添加日程失败');
+    }
+  };
+  
+  // 删除事件逻辑
+  const handleDelete = async () => {
+    if (!currentEvent) return;
+    Alert.alert('确认删除', '此操作不可恢复，确定要删除吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteEventApi(parseInt(currentEvent.id));
+            Alert.alert('成功', '日程已删除');
+            onRefresh();
+            onClose();
+          } catch (error) {
+            console.error('删除事件失败:', error);
+            Alert.alert('错误', '删除日程失败，请稍后再试');
+          }
+        }
+      }
+    ]);
   };
   
   // 内部工具函数：获取平台本地化标识
@@ -77,7 +243,7 @@ const EventModal = ({
         <Text style={styles.formLabel}>所属分类</Text>
         <TouchableOpacity
           style={styles.categoryDisplay}
-          onPress={() => onShowDatetimePicker(false, 'category')} // 兼容关闭其他选择器
+          onPress={() => onShowDatetimePicker(false, 'category')}
         >
           <MaterialIcons
             name={tabOrder.find(cat => cat.id === formData.category)?.icon || 'category'}
@@ -105,7 +271,7 @@ const EventModal = ({
               <Text style={styles.categoryModalTitle}>选择分类</Text>
               <TouchableOpacity
                 style={styles.categoryModalClose}
-                onPress={() => onShowDatetimePicker(false, 'category')}
+                onPress={() => setShowCategoryPicker(false)}
               >
                 <MaterialIcons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -122,7 +288,7 @@ const EventModal = ({
                       styles.categoryItem,
                       tempSelectedCategory === category.id && styles.selectedCategoryItem
                     ]}
-                    onPress={() => onTempCategoryChange(category.id)}
+                    onPress={() => setTempSelectedCategory(category.id)}
                   >
                     <MaterialIcons
                       name={category.icon}
@@ -146,7 +312,7 @@ const EventModal = ({
             {/* 确认按钮 */}
             <TouchableOpacity
               style={styles.categoryConfirmButton}
-              onPress={onConfirmCategory}
+              onPress={confirmCategorySelect}
             >
               <Text style={styles.categoryConfirmText}>确认选择</Text>
             </TouchableOpacity>
@@ -165,7 +331,7 @@ const EventModal = ({
           <TouchableOpacity
             key={icon}
             style={[styles.iconOption, formData.icon === icon && styles.selectedIcon]}
-            onPress={() => onFormChange('icon', icon)}
+            onPress={() => handleInputChange('icon', icon)}
           >
             <MaterialIcons name={icon} size={24} color="#333" />
           </TouchableOpacity>
@@ -213,7 +379,7 @@ const EventModal = ({
                         <TouchableOpacity
                           key={index}
                           style={styles.commonTitleTag}
-                          onPress={() => onFormChange('title', title)}
+                          onPress={() => handleInputChange('title', title)}
                         >
                           <Text style={styles.commonTitleTagText}>{title}</Text>
                         </TouchableOpacity>
@@ -227,7 +393,7 @@ const EventModal = ({
                   multiline={false}
                   maxLength={50}
                   value={formData.title}
-                  onChangeText={(val) => onFormChange('title', val)}
+                  onChangeText={(val) => handleInputChange('title', val)}
                   placeholder="请输入事件标题"
                 />
               </View>
@@ -238,7 +404,7 @@ const EventModal = ({
                 <TextInput
                   style={[styles.formInput, styles.multilineInput]}
                   value={formData.description}
-                  onChangeText={(val) => onFormChange('description', val)}
+                  onChangeText={(val) => handleInputChange('description', val)}
                   placeholder="请输入日程详情（如：会议主题、任务内容）"
                   multiline
                   numberOfLines={4}
@@ -250,7 +416,7 @@ const EventModal = ({
                 <Text style={styles.formLabel}>
                   开始时间:
                   <Text style={styles.datetimeDisplayText}>
-                    {formatLocalDate(formData.startDatetime)} {formatLocalTime(formData.startDatetime)}
+                    {formatDate(formData.startDatetime)} {formatTime(formData.startDatetime)}
                   </Text>
                 </Text>
                 <View style={styles.datetimeButtonGroup}>
@@ -268,7 +434,7 @@ const EventModal = ({
                     value={pickerMode === 'date' ? new Date(selectedDate) : formData.startDatetime}
                     mode={pickerMode}
                     display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-                    onChange={onDatetimeChange}
+                    onChange={handleDatetimeChange}
                     maximumDate={new Date(2100, 11, 31)}
                     minimumDate={new Date(1900, 0, 1)}
                     locale={getLocale()}
@@ -281,7 +447,7 @@ const EventModal = ({
                 <Text style={styles.formLabel}>
                   结束时间:
                   <Text style={styles.datetimeDisplayText}>
-                    {formatLocalDate(formData.endDatetime)} {formatLocalTime(formData.endDatetime)}
+                    {formatDate(formData.endDatetime)} {formatTime(formData.endDatetime)}
                   </Text>
                 </Text>
                 <View style={styles.datetimeButtonGroup}>
@@ -299,7 +465,7 @@ const EventModal = ({
                     value={pickerMode === 'date' ? new Date(selectedDate) : formData.endDatetime}
                     mode={pickerMode}
                     display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-                    onChange={onDatetimeChange}
+                    onChange={handleDatetimeChange}
                     maximumDate={new Date(2100, 11, 31)}
                     minimumDate={new Date(1900, 0, 1)}
                     locale={getLocale()}
@@ -318,7 +484,7 @@ const EventModal = ({
                         styles.statusOption,
                         formData.status === value && styles.selectedStatusOption
                       ]}
-                      onPress={() => onFormChange('status', value)}
+                      onPress={() => handleInputChange('status', value)}
                     >
                       <Text style={[
                         styles.statusOptionText,
@@ -338,14 +504,14 @@ const EventModal = ({
             {/* 弹窗底部按钮 */}
             <View style={styles.modalFooter}>
               {currentEvent && (
-                <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+                <TouchableOpacity style={styles.deleteButton}  onPress={handleDelete}>
                   <Text style={styles.deleteButtonText}>删除</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
                 <Text style={styles.cancelButtonText}>取消</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <Text style={styles.saveButtonText}>
                   {currentEvent ? '更新' : '保存'}
                 </Text>

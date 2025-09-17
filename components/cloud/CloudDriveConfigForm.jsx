@@ -33,6 +33,7 @@ const CloudDriveConfigForm = ({
           // 显示第一个配置（可根据需求调整为列表选择）
           const config = configs[0];
           setAccount(config.account || '');
+          setPassword(config.credential || '');
           setRootPath(config.root_path || 'RNExpoDiaryApp');
         } else {
           setAccount('');
