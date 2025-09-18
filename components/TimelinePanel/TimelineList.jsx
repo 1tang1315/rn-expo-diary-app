@@ -101,6 +101,10 @@ const TimelineList = ({
     const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
     const statusText = statusTextMap[finalStatus];
+
+    const startDate = new Date(item.startDatetime);
+    const endDate = new Date(item.endDatetime);
+    const isDifferentDate = startDate.getDate() !== endDate.getDate();
     
     return (
       <View style={styles.timelineItemContainer}>
@@ -109,9 +113,17 @@ const TimelineList = ({
           <View style={[styles.timelineDot, { backgroundColor: finalStatusColor }]}>
             <MaterialIcons name={item.icon} size={14} color="white" />
           </View>
-          <Text style={styles.endTimeText}>{item.endTime}</Text>
+          {isDifferentDate ? (
+            <Text style={styles.endTimeText}>{(item.endDatetime).slice(5)} </Text>
+          ) : (
+            <Text style={styles.endTimeText}>{item.endTime}</Text>
+          )}
           <View style={[styles.timelineLine, { backgroundColor: finalStatusColor }]} />
-          <Text style={styles.startTimeText}>{item.startTime}</Text>
+          {isDifferentDate ? (
+            <Text style={styles.startTimeText}>{(item.startDatetime).slice(5)} </Text>
+          ) : (
+            <Text style={styles.startTimeText}>{item.startTime}</Text>
+          )}
         </View>
 
         {/* 事件内容卡片（点击触发编辑） */}
@@ -121,9 +133,17 @@ const TimelineList = ({
         >
           <Text style={styles.title}>{displayTitle}</Text>
           <Text style={styles.description}>{item.description}</Text>
-          <Text style={styles.timeRange}>
-            {item.startTime} - {item.endTime}({formatDuration(item)})
-          </Text>
+          
+          {isDifferentDate ? (
+              <Text style={styles.timeRange}>
+                {item.startDatetime.slice(8)} - {item.endDatetime.slice(8)}({formatDuration(item)})
+              </Text>
+          ) : (
+            <Text style={styles.timeRange}>
+              {item.startTime} - {item.endTime}({formatDuration(item)})
+            </Text>
+          )}
+          
           <View style={[styles.statusBadge, { backgroundColor: `${finalStatusColor}20` }]}>
             <Text style={[styles.statusText, { color: finalStatusColor }]}>
               {statusText}

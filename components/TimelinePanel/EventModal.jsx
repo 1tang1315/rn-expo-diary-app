@@ -12,10 +12,6 @@ import {
   updateEvent,
   deleteEvent as deleteEventApi,
 } from "@/db/eventDB";
-import {
-  formatDate,
-  formatTime
-} from "@/utils/formatTimeUtils";
 
 /**
  * 事件添加/编辑弹窗
@@ -136,25 +132,10 @@ const EventModal = ({
     }
   };
   const handleDatetimeChange = (event, selectedDate) => {
-    if (!selectedDate) {
-      setShowDatetimePicker(Platform.OS === 'ios');
-      return;
-    }
-    
     const currentTarget = targetDatetime === 'start' ? 'startDatetime' : 'endDatetime';
-    const originalDate = new Date(formData[currentTarget]);
-    let newDate;
     
-    if (pickerMode === 'date') {
-      newDate = new Date(selectedDate);
-      newDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
-    } else {
-      newDate = new Date(originalDate);
-      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-    }
-    
-    handleInputChange(currentTarget, newDate);
-    setShowDatetimePicker(Platform.OS === 'ios');
+    handleInputChange(currentTarget, selectedDate);
+    setShowDatetimePicker(false);
   };
   
   // 当前分类的图标列表
@@ -232,9 +213,6 @@ const EventModal = ({
       }
     ]);
   };
-  
-  // 内部工具函数：获取平台本地化标识
-  const getLocale = () => Platform.OS === 'ios' ? 'zh-Hans-CN' : 'zh_CN';
   
   // 内部渲染：分类选择器（含子弹窗）
   const renderCategorySelector = () => (
@@ -416,7 +394,7 @@ const EventModal = ({
                 <Text style={styles.formLabel}>
                   开始时间:
                   <Text style={styles.datetimeDisplayText}>
-                    {formatDate(formData.startDatetime)} {formatTime(formData.startDatetime)}
+                    {(formData.startDatetime).toLocaleString()}
                   </Text>
                 </Text>
                 <View style={styles.datetimeButtonGroup}>
@@ -431,13 +409,13 @@ const EventModal = ({
                 </View>
                 {showDatetimePicker && targetDatetime === 'start' && (
                   <DateTimePicker
-                    value={pickerMode === 'date' ? new Date(selectedDate) : formData.startDatetime}
+                    value={formData.startDatetime}
                     mode={pickerMode}
                     display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
                     onChange={handleDatetimeChange}
                     maximumDate={new Date(2100, 11, 31)}
                     minimumDate={new Date(1900, 0, 1)}
-                    locale={getLocale()}
+                    is24Hour={true}
                   />
                 )}
               </View>
@@ -447,7 +425,7 @@ const EventModal = ({
                 <Text style={styles.formLabel}>
                   结束时间:
                   <Text style={styles.datetimeDisplayText}>
-                    {formatDate(formData.endDatetime)} {formatTime(formData.endDatetime)}
+                    {(formData.endDatetime).toLocaleString()}
                   </Text>
                 </Text>
                 <View style={styles.datetimeButtonGroup}>
@@ -462,13 +440,13 @@ const EventModal = ({
                 </View>
                 {showDatetimePicker && targetDatetime === 'end' && (
                   <DateTimePicker
-                    value={pickerMode === 'date' ? new Date(selectedDate) : formData.endDatetime}
+                    value={formData.endDatetime}
                     mode={pickerMode}
                     display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
                     onChange={handleDatetimeChange}
                     maximumDate={new Date(2100, 11, 31)}
                     minimumDate={new Date(1900, 0, 1)}
-                    locale={getLocale()}
+                    is24Hour={true}
                   />
                 )}
               </View>

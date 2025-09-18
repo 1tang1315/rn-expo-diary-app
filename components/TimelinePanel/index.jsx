@@ -23,78 +23,12 @@ const TimelinePanel = ({ selectedDate }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState(null);
   
-  // 工具函数：仅在显示层处理跨日事件，返回当前选中日期应显示的事件片段（不修改原始数据）
-  const getEventForCurrentDate = (event, currentViewDate) => {
-    const eventStart = new Date(event.startDatetime);
-    const eventEnd = new Date(event.endDatetime);
-    const viewDate = new Date(currentViewDate);
-    viewDate.setHours(0, 0, 0, 0); // 当前查看日期的0点
-    
-    const nextDay = new Date(viewDate);
-    nextDay.setDate(nextDay.getDate() + 1); // 下一天的0点
-    
-    // 情况1：事件完全在当前查看日期内 → 直接返回原事件
-    if (eventStart >= viewDate && eventEnd < nextDay) {
-      return event;
-    }
-    
-    // 情况2：事件开始于前一天，结束于当前查看日期 → 显示当前日期部分
-    if (eventStart < viewDate && eventEnd >= viewDate && eventEnd < nextDay) {
-      const displayStart = new Date(viewDate);
-      return {
-        ...event,
-        displayOnlyId: `${event.id}_${displayStart.getTime()}`,
-        startTime: "00:00",
-        endTime: eventEnd.toTimeString().slice(0, 5),
-        displayStartDatetime: displayStart.toISOString().slice(0, 16).replace('T', ' '),
-        displayEndDatetime: eventEnd.toISOString().slice(0, 16).replace('T', ' ')
-      };
-    }
-    
-    // 情况3：事件开始于当前查看日期，结束于第二天 → 显示当前日期部分
-    if (eventStart >= viewDate && eventStart < nextDay && eventEnd >= nextDay) {
-      const displayEnd = new Date(nextDay);
-      displayEnd.setMilliseconds(-1); // 当天23:59:59
-      return {
-        ...event,
-        displayOnlyId: `${event.id}_${displayEnd.getTime()}`,
-        startTime: eventStart.toTimeString().slice(0, 5),
-        endTime: "23:59",
-        displayStartDatetime: eventStart.toISOString().slice(0, 16).replace('T', ' '),
-        displayEndDatetime: displayEnd.toISOString().slice(0, 16).replace('T', ' ')
-      };
-    }
-    
-    // 情况4：事件跨越多天且包含当前查看日期 → 显示完整的当前日期
-    if (eventStart < viewDate && eventEnd >= nextDay) {
-      const displayStart = new Date(viewDate);
-      const displayEnd = new Date(nextDay);
-      displayEnd.setMilliseconds(-1); // 当天23:59:59
-      return {
-        ...event,
-        displayOnlyId: `${event.id}_${displayStart.getTime()}`,
-        startTime: "00:00",
-        endTime: "23:59",
-        displayStartDatetime: displayStart.toISOString().slice(0, 16).replace('T', ' '),
-        displayEndDatetime: displayEnd.toISOString().slice(0, 16).replace('T', ' ')
-      };
-    }
-    
-    // 不匹配当前日期的事件，返回null
-    return null;
-  };
-  
   // 过滤当前分类的事件
   const categorizedData = useMemo(() => {
-    // 处理跨日事件，生成当前日期应显示的片段
-    const eventsForCurrentDate = timelineData
-      .map(event => getEventForCurrentDate(event, selectedDate))
-      .filter(Boolean);
-    
     return currentTab === 'all'
-      ? eventsForCurrentDate
-      : eventsForCurrentDate.filter(item => item.category === currentTab);
-  }, [timelineData, currentTab, selectedDate]);
+      ? timelineData
+      : timelineData.filter(item => item.category === currentTab);
+  }, [timelineData, currentTab]);
   
   // 拉取事件数据
   const fetchEvents = useCallback(async () => {

@@ -411,11 +411,10 @@ export class CloudSyncService {
       const localData = await this.#fetchLocalData(db, tableName);
       
       const mergedData = this.#mergeData(localData, remoteData, updatedAtKey);
-      const changed = await this.#writeLocalIfChanged(db, tableName, localData, mergedData, updatedAtKey);
-      
-      if (!changed) return this.#buildResult(tableName, localData);
+      await this.#writeLocalIfChanged(db, tableName, localData, mergedData, updatedAtKey);
       
       await this.#uploadIfChanged(config, tableName, syncPath, mergedData, checkpoint);
+      
       return this.#buildResult(tableName, mergedData);
     } catch (err) {
       await this.#updateCheckpointError(config.id, syncPath, err);
