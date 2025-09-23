@@ -49,7 +49,7 @@ const wrapText = (text, maxChars = 12) => {
  * @props {Array} data - 格式：[{ label, value, color }]
  * @props {number} size - 饼图尺寸（宽高）
  */
-const PieChartWithLabels = ({ data, title, subtitle, width = screenWidth - 40, height = 250 }) => {
+const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 250 }) => {
   // 计算总和 & 每个扇形的角度
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const sectors = data.map((item, index) => {
@@ -277,4 +277,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PieChartWithLabels;
+export default PieChart;

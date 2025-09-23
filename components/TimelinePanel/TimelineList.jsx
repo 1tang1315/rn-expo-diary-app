@@ -1,9 +1,18 @@
 import React, { useCallback, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
-import { statusColors, statusTextMap } from '@/constants/timelineConstants';
+import { statusColors, statusTextMap, categories } from '@/constants/commonConstans';
 import { updateEventStatus } from "@/db/eventDB";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
+
+// 判断两个日期是否为同一天（只比较年/月/日）
+const isSameDate = (date1, date2) => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+};
 
 const getFinalStatus = (item) => {
   const ONE_HOUR = 60 * 60 * 1000;
@@ -12,23 +21,45 @@ const getFinalStatus = (item) => {
   const endTime = new Date(item.endDatetime);
   const timeToStart = startTime - now;
   
+  // 若用户手动设置为「未完成（notCompleted）」，直接返回，不允许自动修改
+  if (item.status === 'notCompleted') {
+    return item.status;
+  }
+  
+  // 提取核心日期判断结果（避免重复计算）
+  const isStartToday = isSameDate(startTime, now);
+  const isEndToday = isSameDate(endTime, now);
+  const isStartFuture = startTime > now && !isStartToday; // 开始日期在未来（非今天）
+  const isEndPast = endTime < now && !isEndToday; // 结束日期在过去（非今天）
+  
   let finalStatus = item.status;
   
-  if (now > endTime && finalStatus !== 'completed') {
+  // 事件已完全结束（结束日期在过去，或今天已结束）→ 自动设为 completed
+  if (
+    (isEndPast) || // 结束日期在昨天及之前
+    (isEndToday && now > endTime) // 结束日期是今天，但当前时间已过结束时间
+  ) {
     finalStatus = 'completed';
-  } else if (now >= startTime && now <= endTime && finalStatus !== 'inProgress') {
+  }
+  
+  // 事件正在进行（跨天事件/今天内事件）→ 自动设为 inProgress
+  else if (
+    (startTime < now && endTime > now) || // 跨天事件（如昨天开始→今天结束）
+    (isStartToday && isEndToday && now >= startTime && now <= endTime) // 今天内事件，且在时间范围内
+  ) {
     finalStatus = 'inProgress';
-  } else if (
-    timeToStart > 0 &&
-    timeToStart <= ONE_HOUR &&
-    !['upcoming', 'inProgress', 'completed'].includes(finalStatus)
-  ) {
-    finalStatus = 'upcoming';
-  } else if (
-    timeToStart > ONE_HOUR &&
-    !['early', 'upcoming', 'inProgress', 'completed'].includes(finalStatus)
-  ) {
-    finalStatus = 'early';
+  }
+  
+  // 事件未开始（今天/未来）→ 按时间差细分 early/upcoming
+  else if (timeToStart > 0) {
+    // 今天的事件，1小时内开始 → upcoming
+    if (isStartToday && timeToStart <= ONE_HOUR) {
+      finalStatus = 'upcoming';
+    }
+    // 未来日期事件，或今天超过1小时后开始 → early
+    else if (isStartFuture || (isStartToday && timeToStart > ONE_HOUR)) {
+      finalStatus = 'early';
+    }
   }
   
   return finalStatus;
@@ -44,14 +75,12 @@ const formatDuration = (item) => {
  * @props {Array} categorizedData - 过滤后的事件数据
  * @props {boolean} isLoading - 加载状态
  * @props {string} currentTab - 当前选中分类
- * @props {Array} tabOrder - 分类标签顺序
  * @props {Function} openEditModal - 打开编辑弹窗的回调
  */
 const TimelineList = ({
   categorizedData,
   isLoading,
   currentTab,
-  tabOrder,
   openEditModal,
 }) => {
   const handleStatusUpdate = useCallback(async (item) => {
@@ -96,7 +125,7 @@ const TimelineList = ({
   
   // 渲染单个事件项
   const renderTimelineItem = ({ item }) => {
-    const tabName = tabOrder.find(cat => cat.id === item.category)?.name || '未分类';
+    const tabName = categories.find(cat => cat.id === item.category)?.name || '未分类';
     const displayTitle = item.title || tabName;
     const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
@@ -176,13 +205,13 @@ const TimelineList = ({
         return (
           <View style={styles.emptyState}>
             <MaterialIcons
-              name={currentTab === 'all' ? 'event' : tabOrder.find(tab => tab.id === currentTab)?.icon}
+              name={currentTab === 'all' ? 'event' : categories.find(tab => tab.id === currentTab)?.icon}
               size={48} color="#ccc"
             />
             <Text style={styles.emptyText}>
               {currentTab === 'all'
                 ? '今日暂无任何日程'
-                : `当前「${tabOrder.find(tab => tab.id === currentTab)?.name}」分类无日程`}
+                : `当前「${categories.find(tab => tab.id === currentTab)?.name}」分类无日程`}
             </Text>
           </View>
         );

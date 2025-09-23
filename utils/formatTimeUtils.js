@@ -8,13 +8,17 @@ import dayjs from "dayjs";
  */
 export const formatDate = (date) => {
   if (!date) return null;
-  // 如果是字符串且格式正确，直接返回
+  // 若已是 YYYY-MM-DD 字符串，直接返回
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return date;
   }
-  // 否则尝试转换为日期对象处理
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toISOString().split('T')[0];
+  // 转换为日期对象（处理 dayjs 对象或字符串）
+  const dateObj = date instanceof Date ? date : new Date(date);
+  // 按本地时区获取年/月/日（补零处理）
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // 月份从0开始
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 /**

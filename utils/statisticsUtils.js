@@ -1,14 +1,14 @@
 import dayjs from "dayjs";
-import { statisticsColors as colors } from "@/constants/statisticsConstants";
-import { categories } from "@/constants/commonConstans";
+import { statisticsColors as colors } from "@/constants/commonConstans";
 import { getTotalMinutes } from "@/utils/formatTimeUtils";
+import { getCategoryName } from "@/utils/categoryUtils";
 
 export const processStatistics = (data) => {
   const completedEvents = data.filter(item => item.status === 'completed');
   
   const groupedData = {};
   completedEvents.forEach(item => {
-    const key = item.title && item.title.trim() !== '' ? item.title : item.category;
+    const key = item.title && item.title.trim() !== '' ? item.title : getCategoryName(item.category);
     
     // 计算时长（分钟）
     const durationMinutes = getTotalMinutes(item.start_datetime, item.end_datetime);
@@ -25,14 +25,8 @@ export const processStatistics = (data) => {
     groupedData[key].useCount += 1;
   });
   
-  // 分类id->name映射
-  const categoryMap = categories.reduce((acc, cur) => {
-    acc[cur.id] = cur.name;
-    return acc;
-  }, {});
-  
   const chartData = Object.keys(groupedData).map((key, index) => ({
-    label: categoryMap[key] || key,
+    label: key,
     value: groupedData[key].durationMinutes,
     color: colors[index % colors.length],
     useCount: groupedData[key].useCount

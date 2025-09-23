@@ -1,9 +1,9 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { categories } from "@/constants/commonConstans";
 
 const CategoryTab = ({
-  tabOrder,
   currentTab,
   setCurrentTab
 }) => {
@@ -12,8 +12,8 @@ const CategoryTab = ({
   
   // 过滤出非固定标签
   const sortableTabs = useMemo(() => {
-    return tabOrder.filter(tab => !tab.isFixed);
-  }, [tabOrder]);
+    return categories.filter(tab => !tab.isFixed);
+  }, []);
   
   // 处理标签点击
   const handleTabPress = useCallback((tabId) => {
@@ -78,6 +78,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    boxShadow: '0 -2px 2px rgba(0, 0, 0, 0.1)',
     zIndex: 10
   },
   tabScrollView: {

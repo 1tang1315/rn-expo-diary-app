@@ -106,7 +106,10 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
         </TouchableOpacity>
         
         {/* 搜索 */}
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.navigate('search-page')}
+        >
           <Ionicons name="search-outline" size={22} color="#000" />
         </TouchableOpacity>
         

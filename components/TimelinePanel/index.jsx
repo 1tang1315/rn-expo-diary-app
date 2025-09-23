@@ -1,20 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import {
-  View, StyleSheet, Alert
-} from 'react-native';
-import CategoryTab from './CategoryTab';
+import { View, StyleSheet, Alert } from 'react-native';
+import CategoryTab from '@/components/common/CategoryTab';
 import TimelineList from './TimelineList';
 import AddEventButton from './AddEventButton';
 import EventModal from './EventModal';
 import { getEventsByDateRange } from '@/db/eventDB';
-import { categories } from "@/constants/commonConstans";
 
 const TimelinePanel = ({ selectedDate }) => {
-  // 状态管理
-  const [tabOrder, setTabOrder] = useState(() => [
-    { id: 'all', name: '全部', icon: 'view-list', isFixed: true },
-    ...categories
-  ]);
   const [currentTab, setCurrentTab] = useState('all');
   const [timelineData, setTimelineData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +26,7 @@ const TimelinePanel = ({ selectedDate }) => {
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const events = await getEventsByDateRange(selectedDate);
+      const events = await getEventsByDateRange(selectedDate.startOf('day'));
       
       // 格式化事件
       const formattedEvents = events.map(event => ({
@@ -80,13 +72,8 @@ const TimelinePanel = ({ selectedDate }) => {
     <View style={styles.container}>
       {/* 分类标签栏 */}
       <CategoryTab
-        tabOrder={tabOrder}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        onTabOrderUpdate={(sortedTabs) => setTabOrder([
-          { id: 'all', name: '全部', icon: 'view-list', isFixed: true },
-          ...sortedTabs
-        ])}
       />
       
       {/* 事件列表 */}
@@ -94,7 +81,6 @@ const TimelinePanel = ({ selectedDate }) => {
         categorizedData={categorizedData}
         isLoading={isLoading}
         currentTab={currentTab}
-        tabOrder={tabOrder}
         openEditModal={openEditModal} // 传递编辑回调
       />
       
@@ -106,8 +92,8 @@ const TimelinePanel = ({ selectedDate }) => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         currentEvent={currentEvent}
-        tabOrder={tabOrder}
         selectedDate={selectedDate}
+        currentTab={currentTab}
         onRefresh={fetchEvents}
       />
     </View>
@@ -122,7 +108,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 4,
     backgroundColor: '#fff',
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)'
+    boxShadow: '0px 2px 2px rgba(0, 0, 0, 0.05)'
   }
 });
 

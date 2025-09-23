@@ -3,7 +3,7 @@ import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import { categories } from "@/constants/commonConstans";
 import { Text, View } from "react-native";
-import PieChartWithLabels from "@/components/chart/PieChartWithLabels";
+import PieChart from "@/components/chart/PieChart";
 
 // 分类ID转中文名称
 export const getCategoryName = (categoryId) => {
@@ -58,7 +58,7 @@ export const formatPreviewContent = (selectedFormat, eventsByDate, queryStart, q
             <Text style={styles.imageDailyHeader}>📅 日期：{date}</Text>
             <Text style={styles.imageDailySubHeader}>事件总数：{dayEvents.length} 个 | 总时长：{dayTotalDuration}</Text>
             <Text style={styles.imageDailyEvents}>{dayEventsText}</Text>
-            <PieChartWithLabels data={dayStats.chartData} title="当日事件分类统计" style={styles.imageDailyChart} />
+            <PieChart data={dayStats.chartData} title="当日事件分类统计" style={styles.imageDailyChart} />
           </View>
         );
       });
@@ -69,7 +69,7 @@ export const formatPreviewContent = (selectedFormat, eventsByDate, queryStart, q
         <View style={styles.imageTotalBlock}>
           <Text style={styles.imageTotalHeader}>📊 总范围统计（{dateRangeText}）</Text>
           <Text style={styles.imageTotalSubHeader}>事件总数：{events.length} 个 | 总时长：{imageTotalDuration}</Text>
-          <PieChartWithLabels data={imageTotalStats.chartData} title="总范围事件分类统计" style={styles.imageTotalChart} />
+          <PieChart data={imageTotalStats.chartData} title="总范围事件分类统计" style={styles.imageTotalChart} />
         </View>
       );
       

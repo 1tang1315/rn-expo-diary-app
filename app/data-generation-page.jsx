@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Platform, Alert, ActivityIndicator
@@ -8,7 +8,6 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import { getEventsByDateRange } from '@/db/eventDB';
 import { useNavigation } from "expo-router";
@@ -18,80 +17,40 @@ import FormatSelector from "@/components/statistics/FormatSelector";
 import PreviewBox from "@/components/statistics/PreviewBox";
 import { captureRef } from 'react-native-view-shot';
 
-// 支持的导出格式配置
-const SUPPORTED_FORMATS = [
-  {
-    id: 'txt',
-    name: '纯文本 (TXT)',
-    icon: 'envelope-open-text'
-  },
-  {
-    id: 'markdown',
-    name: 'Markdown',
-    icon: 'markdown'
-  },
-  {
-    id: 'image',
-    name: '图片 (PNG)',
-    icon: 'image'
-  }
-];
-
 const DataGenerationPage = () => {
   const navigation = useNavigation();
   
   // 状态管理
-  const [dateType, setDateType] = useState('single');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [datePickerTarget, setDatePickerTarget] = useState('single');
   const [selectedFormat, setSelectedFormat] = useState('txt');
   const [previewData, setPreviewData] = useState('请选择日期和格式生成预览...');
   const [isLoading, setIsLoading] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    start: dayjs(new Date()),
+    end: dayjs(new Date())
+  });
+  const [events, setEvents] = useState([]);
+  
+  const handleDateChange = useCallback(async (startDate, endDate) => {
+    setIsLoading(true);
+    setDateRange({
+      start: dayjs(startDate),
+      end: dayjs(endDate)
+    });
+    const events = (await getEventsByDateRange(startDate, endDate))?.filter(item => item.status === 'completed');
+    
+    if(events.length > 0) setEvents(events);
+    setIsLoading(false);
+  }, [])
   
   // 存储纯文本内容（用于TXT/Markdown文件生成）
   const [plainTextContent, setPlainTextContent] = useState('');
   
   const previewRef = useRef(null);
   
-  // 显示日期选择器
-  const handleShowDatePicker = (target) => {
-    setDatePickerTarget(target);
-    setShowDatePicker(true);
-  };
-  
-  // 处理日期选择变更
-  const handleDateChange = (event, newDate) => {
-    setShowDatePicker(Platform.OS === 'ios'); // iOS保持显示，Android选择后关闭
-    if(!newDate) return;
-    
-    // 更新对应日期状态
-    if(datePickerTarget === 'single') {
-      setSelectedDate(newDate);
-    } else if(datePickerTarget === 'start') {
-      setStartDate(newDate);
-    } else if(datePickerTarget === 'end') {
-      setEndDate(newDate);
-    }
-  };
-  
   // 生成预览数据（调用事件查询接口）
-  const generatePreview = async () => {
-    setIsLoading(true);
+  const generatePreview = useCallback(async () => {
     try {
-      // 直接传递day.js对象到查询接口
-      const queryStart = dateType === 'single'
-        ? dayjs(selectedDate)
-        : dayjs(startDate);
-      const queryEnd = dateType === 'single'
-        ? dayjs(selectedDate)
-        : dayjs(endDate);
-      
-      // 查询事件数据
-      const originalEvents = await getEventsByDateRange(queryStart, queryEnd);
-      const events = originalEvents.filter(item => item.status === 'completed')
+      const { start: queryStart, end: queryEnd } = dateRange;
       const dateRangeText = queryStart.isSame(queryEnd, 'day')
         ? queryStart.format('YYYY-MM-DD')
         : `${queryStart.format('YYYY-MM-DD')} 至 ${queryEnd.format('YYYY-MM-DD')}`;
@@ -150,7 +109,7 @@ const DataGenerationPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange, events, selectedFormat]);
   
   // 内容到剪贴板
   const copyToClipboard = async (text) => {
@@ -224,7 +183,7 @@ const DataGenerationPage = () => {
   // 依赖变化时自动生成预览
   useEffect(() => {
     generatePreview().then();
-  }, [dateType, selectedDate, startDate, endDate, selectedFormat]);
+  }, [dateRange, generatePreview, selectedFormat]);
   
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
@@ -242,22 +201,12 @@ const DataGenerationPage = () => {
       {/* 主内容区 */}
       <ScrollView style={styles.content}>
         {/* 日期选择区域 */}
-        <DateSelector
-          dateType={dateType}
-          setDateType={setDateType}
-          selectedDate={selectedDate}
-          startDate={startDate}
-          endDate={endDate}
-          handleShowDatePicker={handleShowDatePicker}
-          styles={styles}
-        />
+        <DateSelector onDataChange={ handleDateChange } />
         
         {/* 格式选择区域 */}
         <FormatSelector
-          formats={SUPPORTED_FORMATS}
           selectedFormat={selectedFormat}
           setSelectedFormat={setSelectedFormat}
-          styles={styles}
         />
         
         {/* 预览区域 */}
@@ -265,7 +214,6 @@ const DataGenerationPage = () => {
           ref={previewRef}
           isLoading={isLoading}
           previewData={previewData}
-          styles={styles}
           showCopyBtn={['txt', 'markdown'].includes(selectedFormat)}
           onCopy={() => copyToClipboard(plainTextContent)}
           plainTextContent={plainTextContent}
@@ -289,20 +237,6 @@ const DataGenerationPage = () => {
           )}
         </View>
       </TouchableOpacity>
-      
-      {/* 日期选择器（跨平台兼容） */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={
-            datePickerTarget === 'single' ? selectedDate :
-              datePickerTarget === 'start' ? startDate : endDate
-          }
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()} // 禁止选择未来日期（可根据需求调整）
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -338,118 +272,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16
-  },
-  sectionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  copyBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  copyBtnIcon: {
-    color: '#4A6CF7',
-  },
-  dateTypeSwitcher: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  dateTypeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-    alignItems: 'center',
-  },
-  dateTypeBtnActive: {
-    backgroundColor: '#4A6CF7',
-  },
-  dateTypeText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  dateTypeTextActive: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  datePickerContainer: {
-    gap: 8,
-  },
-  dateSelectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  dateIcon: {
-    marginRight: 12,
-  },
-  dateText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  formatGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  formatCard: {
-    width: '46%',
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  formatCardActive: {
-    backgroundColor: '#4A6CF7',
-  },
-  formatText: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  formatTextActive: {
-    color: '#fff',
-  },
-  
-  previewContainer: {
-    minHeight: 200,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  previewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 22,
-    whiteSpace: 'pre-wrap', // 保留换行符
   },
   
   // Image 格式预览样式
@@ -507,15 +329,6 @@ const styles = StyleSheet.create({
     height: 200,
   },
   
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#666',
-  },
   exportBtnContainer: {
     padding: 10,
     paddingBottom: 25,

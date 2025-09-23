@@ -87,6 +87,50 @@ export async function getEventsByDateRange(startDate, endDate) {
 }
 
 /**
+ * 按标题和详情模糊搜索事件（排除已删除，按匹配度和开始时间排序）
+ * @param {string} keyword - 搜索关键词
+ * @returns {Promise<Array>} 匹配的事件数组
+ */
+export async function getEventsByTitleOrDescriptionSearch(keyword) {
+  const db = await getDB();
+  // 改进权重计算，优先完全匹配、开头匹配和更精确的匹配
+  return await db.getAllAsync(
+    `SELECT *,
+       CASE
+         -- 标题完全匹配权重最高
+         WHEN title = ? THEN 1
+         -- 标题以关键词开头
+         WHEN title LIKE ? THEN 2
+         -- 标题包含关键词
+         WHEN title LIKE ? THEN 3
+         -- 描述完全匹配
+         WHEN description = ? THEN 4
+         -- 描述以关键词开头
+         WHEN description LIKE ? THEN 5
+         -- 描述包含关键词
+         WHEN description LIKE ? THEN 6
+         ELSE 7
+         END AS search_priority
+     FROM event
+     WHERE
+       deleted_at IS NULL
+       AND (title LIKE ? OR description LIKE ?)
+     -- 先按匹配优先级，再按开始时间倒序
+     ORDER BY search_priority ASC, start_datetime DESC`,
+    [
+      keyword,                   // 标题完全匹配
+      `${keyword}%`,             // 标题以关键词开头
+      `%${keyword}%`,            // 标题包含关键词
+      keyword,                   // 描述完全匹配
+      `${keyword}%`,             // 描述以关键词开头
+      `%${keyword}%`,            // 描述包含关键词
+      `%${keyword}%`,            // 用于WHERE子句的标题匹配
+      `%${keyword}%`             // 用于WHERE子句的描述匹配
+    ]
+  );
+}
+
+/**
  * 更新事件
  * @param {number} id - 事件ID
  * @param {Object} updates - 要更新的字段

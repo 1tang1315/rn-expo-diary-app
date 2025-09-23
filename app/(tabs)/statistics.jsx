@@ -1,14 +1,15 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator, ScrollView, StyleSheet, Text, View, Button
+} from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { getEventsByDateRange } from "@/db/eventDB";
-import dayjs from "dayjs";
 import DateSelector from "@/components/statistics/DateSelector";
-import Platform from "react-native";
 import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
-import PieChartWithLabels from "@/components/chart/PieChartWithLabels";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import PieChart from "@/components/chart/PieChart";
+import CategoryTab from "@/components/common/CategoryTab";
+import BarChart from "@/components/chart/BarChart";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -97,136 +98,114 @@ function precisionMultiply(num1, num2, decimalPlaces) {
 }
 
 export default function Statistics() {
-  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [statsData, setStatsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const [dateType, setDateType] = useState('single');
-  const [startDate, setStartDate] = useState(dayjs());
-  const [endDate, setEndDate] = useState(dayjs());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [datePickerTarget, setDatePickerTarget] = useState('single');
-  
-  useEffect(() => {
+  const handleDateChange = useCallback((startDate, endDate) => {
     setLoading(true);
-    const queryStart = dateType === 'single' ? selectedDate : startDate;
-    const queryEnd = dateType === 'single' ? selectedDate : endDate;
     
-    getEventsByDateRange(queryStart, queryEnd)
+    getEventsByDateRange(startDate, endDate)
       .then(data => setStatsData(data))
       .catch(err => setError(err))
       .finally(() => setLoading(false));
-  }, [dateType, endDate, selectedDate, startDate]);
+  }, []);
   
-  const handleShowDatePicker = (target) => {
-    setDatePickerTarget(target);
-    setShowDatePicker(true);
-  };
-  
-  const handleDateChange = (event, newDate) => {
-    setShowDatePicker(Platform.OS === 'ios'); // iOS保持显示，Android选择后关闭
-    if (!newDate) return;
-    
-    // 转换为dayjs对象处理
-    const dayjsDate = dayjs(newDate);
-    
-    if (datePickerTarget === 'single') {
-      setSelectedDate(dayjsDate);
-    } else if (datePickerTarget === 'start') {
-      setStartDate(dayjsDate);
-    } else if (datePickerTarget === 'end') {
-      setEndDate(dayjsDate);
-    }
-  };
+  const [currentTab, setCurrentTab] = useState('all');
+  // 根据当前选中的分类筛选数据
+  const filteredStatsData = currentTab === 'all'
+    ? statsData
+    : statsData.filter(item => item.category === currentTab);
   
   const {
     chartData,
     totalMinutes,
     completedEvents
-  } = processStatistics(statsData);
+  } = processStatistics(filteredStatsData);
   
+  const [chartType, setChartType] = useState('pie'); // 'bar' 或 'pie'
+  const [chartTypeName, setChartTypeName] = useState('饼'); // 'bar' 或 'pie'
+  const toggleChart = () => {
+    setChartType(prev => (prev === 'pie' ? 'bar' : 'pie'));
+    setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.contentContainer}>
-        <DateSelector
-          dateType={dateType}
-          setDateType={setDateType}
-          selectedDate={selectedDate.toDate()} // 转换为Date对象供组件使用
-          startDate={startDate.toDate()}
-          endDate={endDate.toDate()}
-          handleShowDatePicker={handleShowDatePicker}
-          styles={styles}
-        />
+        <DateSelector hasRadius={false} onDataChange={handleDateChange} />
         
-        {loading ? (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator size="large" color="#3498db" />
-            <Text style={styles.loadingText}>加载统计数据中...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.statusContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : completedEvents.length === 0 ? (
-          <View style={styles.statusContainer}>
-            <Text style={styles.noDataText}>暂无已完成的事件数据</Text>
-          </View>
-        ) : (
-          <View>
-            {/* 饼图区域 */}
-            <View style={styles.chartContainer}>
-              <PieChartWithLabels data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
+        {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
+        <View>
+          <CategoryTab
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
+          />
+          
+          {loading ? (
+            <View style={styles.statusContainer}>
+              <ActivityIndicator size="large" color="#3498db" />
+              <Text style={styles.loadingText}>加载统计数据中...</Text>
             </View>
-            
-            {/* 图例区域 */}
-            <View style={styles.legendContainer}>
-              {chartData.map((item, index) => {
-                const progress = precisionDivide(item.value, totalMinutes, 4);
-                
-                return (<View key={index} style={styles.legendItem}>
-                  {/* 右边颜色块 */}
-                  <View style={[styles.colorBox, { backgroundColor: item.color }]} />
+          ) : error ? (
+            <View style={styles.statusContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : completedEvents.length === 0 ? (
+            <View style={styles.statusContainer}>
+              <Text style={styles.noDataText}>暂无已完成的事件数据</Text>
+            </View>
+          ) : (
+            <>
+              {/* 饼图区域 */}
+              <View style={styles.chartContainer}>
+                <View style={styles.toggleButton}>
+                  <Button title={chartTypeName} onPress={toggleChart} />
+                </View>
+                {chartType === 'pie' ? (
+                  <PieChart data={chartData} title={`总完成时长: ${totalMinutes}`} />
+                ) : (
+                  <BarChart data={chartData} title={`总完成时长: ${totalMinutes}`}/>
+                )}
+              </View>
+              
+              {/* 图例区域 */}
+              <View style={styles.legendContainer}>
+                {chartData.map(item => {
+                  const progress = precisionDivide(item.value, totalMinutes, 4);
                   
-                  <View style={styles.legendRightContainer}>
-                    <Text style={styles.legendText}>
-                      {item.label}
-                      ({item.useCount}次,
-                      {formatDurationByMinutes(item.value)},
-                      {precisionMultiply(progress, 100, 2)}%
-                      )
-                    </Text>
-                    <View style={styles.progressBarContainer}>
-                      <View
-                        style={[
-                          styles.progressBar,
-                          {
-                            backgroundColor: item.color,
-                            width: `${precisionMultiply(progress, 100, 2)}%`
-                          }
-                        ]}
-                      />
+                  return (
+                    <View key={item.label} style={styles.legendItem}>
+                      {/* 右边颜色块 */}
+                      <View style={[styles.colorBox, { backgroundColor: item.color }]} />
+                      
+                      <View style={styles.legendRightContainer}>
+                        <Text style={styles.legendText}>
+                          {item.label}
+                          ({item.useCount}次,
+                          {formatDurationByMinutes(item.value)},
+                          {precisionMultiply(progress, 100, 2)}%
+                          )
+                        </Text>
+                        <View style={styles.progressBarContainer}>
+                          <View
+                            style={[
+                              styles.progressBar,
+                              {
+                                backgroundColor: item.color,
+                                width: `${precisionMultiply(progress, 100, 2)}%`
+                              }
+                            ]}
+                          />
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </View>)
-              })}
-            </View>
-          </View>
-        )}
+                  )
+                })}
+              </View>
+            </>
+          )}
+        </View>
       </ScrollView>
-      
-      {showDatePicker && (
-        <DateTimePicker
-          value={
-            datePickerTarget === 'single' ? selectedDate.toDate() :
-              datePickerTarget === 'start' ? startDate.toDate() : endDate.toDate()
-          }
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()} // 禁止选择未来日期
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -243,8 +222,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    minHeight: 450,
     padding: 20,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    boxShadow: '0 2px 2px rgba(0, 0, 0, 0.05)'
   },
   loadingText: {
     fontSize: 16,
@@ -262,62 +243,6 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
   },
-  dateTypeSwitcher: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  dateTypeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-    alignItems: 'center',
-  },
-  dateTypeBtnActive: {
-    backgroundColor: '#4A6CF7',
-  },
-  dateTypeText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  dateTypeTextActive: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  datePickerContainer: {
-    gap: 8,
-  },
-  dateSelectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  dateIcon: {
-    marginRight: 12,
-  },
-  dateText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  sectionCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
   chartContainer: {
     display: "flex",
     justifyContent: "center",
@@ -326,11 +251,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)'
   },
-  totalTimeText: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "600",
-    textAlign: "center"
+  toggleButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 35,
+    height: 35,
+    borderRadius: '50%',
+    fontSize: 12,
+    overflow: "hidden",
+    zIndex: 10,
   },
   legendContainer: {
     marginVertical: 10,
