@@ -4,46 +4,6 @@ import Svg, { Path, G, Text as SvgText, Circle } from "react-native-svg";
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// 文本换行处理函数
-const wrapText = (text, maxChars = 12) => {
-  if (!text) return [];
-  
-  // 先按空格分割
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
-  
-  words.forEach(word => {
-    // 如果单词本身超过最大长度，强制分割
-    if (word.length > maxChars) {
-      if (currentLine) {
-        lines.push(currentLine.trim());
-        currentLine = '';
-      }
-      // 分割长单词
-      for (let i = 0; i < word.length; i += maxChars) {
-        const chunk = word.substring(i, i + maxChars);
-        if (i + maxChars < word.length) {
-          lines.push(chunk);
-        } else {
-          currentLine = chunk + ' ';
-        }
-      }
-    } else if (currentLine.length + word.length > maxChars) {
-      lines.push(currentLine.trim());
-      currentLine = word + ' ';
-    } else {
-      currentLine += word + ' ';
-    }
-  });
-  
-  if (currentLine) {
-    lines.push(currentLine.trim());
-  }
-  
-  return lines;
-};
-
 /**
  * SVG 饼图组件
  * @props {Array} data - 格式：[{ label, value, color }]
@@ -105,8 +65,8 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
     const radMid = degreesToRadians(midAngle);
     
     // 折线的两段长度定义
-    const radialLength = 15; // 径向延伸长度
-    const horizontalLength = 20; // 水平延伸长度
+    const radialLength = 8; // 径向延伸长度
+    const horizontalLength = 10; // 水平延伸长度
     
     // 扇形边缘的引导线起点
     const guideStartX = centerX + radius * Math.cos(radMid);
@@ -162,30 +122,25 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
   
   // 渲染标签文本
   const renderLabel = (sector, midAngle) => {
-    const {
-      labelX,
-      labelY,
-      isLeft
-    } = calculateGuideLines(midAngle);
+    const { labelX, labelY, isLeft } = calculateGuideLines(midAngle);
     
-    const lines = wrapText(sector.label);
-    const totalLines = lines.length;
-    // 单行文字偏移量
-    const singleLineOffset = totalLines === 1 ? 4 : 0;
+    // 限制文字长度，超出添加省略号
+    const label = sector.label.length > 6
+      ? sector.label.slice(0, 6) + '...'
+      : sector.label;
     
     return (
       <G key={`label-${sector.index}`}>
-        {wrapText(sector.label).map((line, lineIndex) => (
-          <SvgText
-            key={lineIndex}
-            x={labelX}
-            y={labelY - ((totalLines - 1) * 6) + (lineIndex * 16) + singleLineOffset}
-            fontSize={12}
-            fill={sector.color}
-            textAnchor={isLeft ? "end" : "start"}
-            dominantBaseline="ideographic"
-          >{line}</SvgText>
-        ))}
+        <SvgText
+          x={labelX}
+          y={labelY + 4}
+          fontSize={12}
+          fill={sector.color}
+          textAnchor={isLeft ? "end" : "start"}
+          dominantBaseline="ideographic"
+        >
+          {label}
+        </SvgText>
       </G>
     );
   };
