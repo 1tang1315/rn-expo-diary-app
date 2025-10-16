@@ -13,6 +13,7 @@ import {
   deleteEvent as deleteEventApi,
 } from "@/db/eventDB";
 import { formatDatetime } from "@/utils/formatTimeUtils";
+import CategoryModal from "@/components/common/CategoryModal";
 
 /**
  * 事件添加/编辑弹窗
@@ -227,65 +228,6 @@ const EventModal = ({
           </Text>
         </TouchableOpacity>
       </View>
-      
-      {/* 分类选择子弹窗 */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showCategoryPicker}
-        onRequestClose={() => setShowCategoryPicker(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowCategoryPicker(false)}>
-          <View style={styles.categoryModalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.categoryModalContent}>
-                {/* 弹窗头部 */}
-                <View style={styles.categoryModalHeader}>
-                  <Text style={styles.categoryModalTitle}>选择分类</Text>
-                  <TouchableOpacity
-                    style={styles.categoryModalClose}
-                    onPress={() => setShowCategoryPicker(false)}
-                  >
-                    <MaterialIcons name="close" size={24} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                {/* 分类列表 */}
-                <ScrollView style={styles.categoryList}>
-                  {categories
-                    .filter(tab => !tab.isFixed) // 排除"全部"分类
-                    .map(category => (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[
-                          styles.categoryItem,
-                          formData.category === category.id && styles.selectedCategoryItem
-                        ]}
-                        onPress={() => confirmCategorySelect(category.id)}
-                      >
-                        <MaterialIcons
-                          name={category.icon}
-                          size={20}
-                          color={formData.category === category.id ? "#2196F3" : "#666"}
-                          style={styles.categoryItemIcon}
-                        />
-                        <Text style={[
-                          styles.categoryItemText,
-                          formData.category === category.id && styles.selectedCategoryItemText
-                        ]}>
-                          {category.name}
-                        </Text>
-                        {formData.category === category.id && (
-                          <MaterialIcons name="check" size={18} color="#2196F3" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </>
   );
   
@@ -340,8 +282,19 @@ const EventModal = ({
                 </View>
                 
                 {/* 表单内容区 */}
-                <ScrollView style={styles.formScrollView}>
+                <ScrollView
+                  style={styles.formScrollView}
+                  showsVerticalScrollIndicator={false}
+                >
                   {renderCategorySelector()}
+                  
+                  <CategoryModal
+                    visible={showCategoryPicker}
+                    onClose={() => setShowCategoryPicker(false)}
+                    selectedCategory={formData.category}
+                    categories={categories}
+                    onSelect={confirmCategorySelect}
+                  />
                   
                   {/* 事件标题 + 常用标题 */}
                   <View style={styles.formGroup}>
