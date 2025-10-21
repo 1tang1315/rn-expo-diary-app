@@ -218,16 +218,16 @@ export async function deleteEvent(id) {
 /**
  * 获取指定分类下的常用标题（按使用次数排序，排除空标题）
  * @param {string} category - 事件分类
- * @param {number} limit - 最多返回数量，默认5个
+ * @param {number} limit - 最多返回数量，默认10个
  * @returns {Promise<Array<string>>} 常用标题数组
  */
-export async function getCommonTitlesByCategory(category, limit = 5) {
+export async function getCommonTitlesByCategory(category, limit = 10) {
   const db = await getDB();
   const result = await db.getAllAsync(
     `SELECT title, COUNT(title) AS useCount
      FROM event
      WHERE title IS NOT NULL
-       AND title != '' AND category = ?
+       AND title != '' AND category = ? AND deleted_at IS NULL
      GROUP BY title
      ORDER BY useCount DESC LIMIT ? `,
     [category, limit]
