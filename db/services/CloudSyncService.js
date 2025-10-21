@@ -1,7 +1,9 @@
 import { Buffer } from 'buffer';
-import { getDB, getAllTables } from '@/db';
+import { getAllTables, getDB } from '@/db';
 import { getAllCloudDriveConfigs, getSyncCheckpoint, upsertSyncCheckpoint } from '@/db/cloudSyncDb';
 import { getCurrentUserId } from "@/db/userDB";
+import * as FileSystem from "expo-file-system";
+import { BASE_IMAGE_DIR } from "@/constants/commonConstans";
 
 // 云盘类型
 export const DriveType = {
@@ -16,8 +18,8 @@ export const DRIVE_CONFIGS = {
   [DriveType.NUTSTORE]: {
     displayName: '坚果云盘',
     webdavEndpoint: 'https://dav.jianguoyun.com/dav/',
-    getRequestUrl: (method, path) => `${DRIVE_CONFIGS[DriveType.NUTSTORE].webdavEndpoint}${path}`,
-    getRequestHeaders: (method, path) => {
+    getRequestUrl: (_method, path) => `${DRIVE_CONFIGS[DriveType.NUTSTORE].webdavEndpoint}${path}`,
+    getRequestHeaders: (method) => {
       const headers = {};
       if(method === 'PROPFIND') {
         headers['Depth'] = '0';
@@ -79,7 +81,7 @@ export const DRIVE_CONFIGS = {
   [DriveType.ONEDRIVE]: {
     displayName: 'OneDrive',
     webdavEndpoint: 'https://graph.microsoft.com/v1.0/me/drive/root:',
-    getRequestUrl: (method, path) => `${DRIVE_CONFIGS[DriveType.ONEDRIVE].webdavEndpoint}/${path}:/content`,
+    getRequestUrl: (_, path) => `${DRIVE_CONFIGS[DriveType.ONEDRIVE].webdavEndpoint}/${path}:/content`,
     getRequestHeaders: (method) => {
       if(method === 'PUT') {
         return { 'Content-Type': 'application/json' };
@@ -103,7 +105,7 @@ export const DRIVE_CONFIGS = {
   [DriveType.BAIDU]: {
     displayName: '百度网盘',
     webdavEndpoint: 'https://dav.baidu.com/',
-    getRequestUrl: (method, path) => `${DRIVE_CONFIGS[DriveType.BAIDU].webdavEndpoint}${path}`,
+    getRequestUrl: (_, path) => `${DRIVE_CONFIGS[DriveType.BAIDU].webdavEndpoint}${path}`,
     getRequestHeaders: (method) => {
       if(method === 'PROPFIND') {
         return { 'Depth': '0' };
@@ -127,8 +129,6 @@ export const DRIVE_CONFIGS = {
 };
 
 export class CloudSyncService {
-  #defaultConfig = null;
-  
   #normalizePath(path = '') {
     return path.trim().replace(/^\/+|\/+$/g, '');
   }
@@ -230,7 +230,7 @@ export class CloudSyncService {
   }
   
   // 拉取远程数据
-  async #fetchRemoteData(tableName, config, syncPath) {
+  async #fetchRemoteData(config, syncPath) {
     try {
       const driveConfig = DRIVE_CONFIGS[config.drive_type];
       const res = await this.#webdavRequest(
@@ -238,9 +238,7 @@ export class CloudSyncService {
         driveConfig.getRequestUrl(driveConfig.downloadMethod, syncPath),
         { method: driveConfig.downloadMethod, account: config.account, credential: config.credential }
       );
-      const data = res.ok && res.data ? JSON.parse(res.data) : [];
-      console.log(`[${tableName}] 拉取远程：${data.length} 行`);
-      return data;
+      return res.ok && res.data ? JSON.parse(res.data) : [];
     } catch (e) {
       throw new Error(`远程拉取失败: ${e.message}`);
     }
@@ -248,9 +246,7 @@ export class CloudSyncService {
   
   // 获取本地数据
   async #fetchLocalData(db, tableName) {
-    const data = await db.getAllAsync(`SELECT * FROM ${tableName}`);
-    console.log(`[${tableName}] 本地：${data.length} 行`);
-    return data;
+    return await db.getAllAsync(`SELECT * FROM ${tableName}`);
   }
   
   // 合并双方数据
@@ -269,7 +265,6 @@ export class CloudSyncService {
   async #writeLocalIfChanged(db, tableName, local, merged, updatedAtKey) {
     const [before, after] = await Promise.all([this.#calcDataHash(local), this.#calcDataHash(merged)]);
     if (before === after) {
-      console.log(`[${tableName}] 本地数据无变化`);
       return false;
     }
     await db.withExclusiveTransactionAsync(async tx => {
@@ -286,14 +281,12 @@ export class CloudSyncService {
         await stmt.finalizeAsync();
       }
     });
-    console.log(`[${tableName}] 本地写入：${merged.length} 行`);
     return true;
   }
   
-  async #uploadIfChanged(config, tableName, syncPath, data, checkpoint) {
+  async #uploadIfChanged(config, syncPath, data, checkpoint) {
     const dbHash = await this.#calcDataHash(data);
     if (dbHash === checkpoint?.last_sync_token) {
-      console.log(`[${tableName}] 数据无变化，跳过上传`);
       return;
     }
     const driveConfig = DRIVE_CONFIGS[config.drive_type];
@@ -315,7 +308,6 @@ export class CloudSyncService {
       sync_status: 'idle',
       error_message: null
     });
-    console.log(`[${tableName}] 远程上传成功：${data.length} 行`);
   }
   
   #buildResult(tableName, rows) {
@@ -334,6 +326,154 @@ export class CloudSyncService {
     const jsonStr = JSON.stringify(data);
     const Crypto = require('expo-crypto');
     return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, jsonStr);
+  }
+  
+  // 递归获取目录下所有文件和子目录
+  async #getAllFilesInDir(dirPath, relativePath = '') {
+    // 强制规范化路径：确保末尾1个斜杠，避免路径解析异常
+    const normalizedDir = dirPath.replace(/\/+$/, '') + '/';
+    
+    try {
+      // 步骤1：读取目录
+      let entryPaths = await FileSystem.readDirectoryAsync(normalizedDir);
+      const files = [];
+      
+      for (const entryName of entryPaths) {
+        // 跳过空名称条目
+        if (!entryName || entryName.trim() === '') {
+          continue;
+        }
+        
+        // 拼接完整路径
+        const fullPath = `${normalizedDir}${entryName}`;
+        const relPath = relativePath ? `${relativePath}/${entryName}` : entryName;
+        
+        // 步骤2：手动判断是否为目录
+        const fileInfo = await FileSystem.getInfoAsync(fullPath, { size: false });
+        if (!fileInfo.exists) {
+          continue;
+        }
+        
+        if (fileInfo.isDirectory) {
+          // 递归遍历子目录
+          const subFiles = await this.#getAllFilesInDir(fullPath, relPath);
+          files.push(...subFiles);
+        } else {
+          files.push({ localPath: fullPath, cloudPath: relPath });
+        }
+      }
+      return files;
+    } catch (err) {
+      console.error(`目录遍历失败 [${normalizedDir}]:`, err.message);
+      throw err;
+    }
+  }
+  
+  // 获取所有私有目录文件（包括子目录）
+  async #getAllPrivateFiles() {
+    return this.#getAllFilesInDir(BASE_IMAGE_DIR);
+  }
+  
+  async #syncSingleFile(config, file) {
+    const { localPath, cloudPath } = file;
+    if (!localPath || !cloudPath) {
+      throw new Error(`无效文件路径: local=${localPath}, cloud=${cloudPath}`);
+    }
+    
+    const driveConfig = DRIVE_CONFIGS[config.drive_type];
+    const rootPath = this.#normalizePath(config.root_path);
+    
+    // 云盘完整路径（根路径 + 相对路径）
+    const cloudFilePath = rootPath ? `${rootPath}/${cloudPath}` : cloudPath;
+    // 提取父目录路径（用于创建目录）
+    const lastSlashIndex = cloudPath.lastIndexOf('/');
+    const parentDirPath = lastSlashIndex > -1 ? cloudPath.substring(0, lastSlashIndex) : '';
+    
+    try {
+      // 确保父目录存在
+      if (parentDirPath) {
+        await this.#ensureCloudDirExists(config, parentDirPath);
+      }
+      
+      // 读取文件内容并上传（原有逻辑）
+      const fileContent = await FileSystem.readAsStringAsync(localPath, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+      const binaryData = Buffer.from(fileContent, 'base64');
+      
+      // 自动识别MIME类型（原有逻辑）
+      const ext = cloudPath.split('.').pop()?.toLowerCase();
+      const mimeType = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp'
+      }[ext] || 'application/octet-stream';
+      
+      // 执行上传
+      const uploadUrl = driveConfig.getRequestUrl(driveConfig.uploadMethod, cloudFilePath);
+      const res = await this.#webdavRequest(config.drive_type, uploadUrl, {
+        method: driveConfig.uploadMethod,
+        account: config.account,
+        credential: config.credential,
+        headers: this.#getRequestHeaders(driveConfig, driveConfig.uploadMethod, cloudFilePath, mimeType),
+        body: binaryData
+      });
+      
+      if (!res.ok) {
+        throw new Error(`上传失败 ${cloudFilePath}: ${res.error}`);
+      }
+
+      return { success: true, cloudPath };
+    } catch (err) {
+      console.error(`[${config.drive_type}] 文件同步失败 ${cloudFilePath}:`, err);
+      throw err;
+    }
+  }
+  
+  async #ensureCloudDirExists(config, dirPath) {
+    const driveType = config.drive_type;
+    const driveConfig = DRIVE_CONFIGS[driveType];
+    if (!driveConfig.needsDirCheck) {
+      return true;
+    }
+    
+    // 规范化云盘根路径和目标目录
+    const rootPath = this.#normalizePath(config.root_path);
+    const fullDirPath = rootPath ? `${rootPath}/${dirPath}` : dirPath;
+    
+    // 检查目录是否已存在
+    const { exists, error } = await this.#checkDirExists(driveType, fullDirPath, config.account, config.credential);
+    if (error) {
+      throw new Error(`目录检查失败 ${fullDirPath}: ${error}`);
+    }
+    if (exists) {
+      return true;
+    }
+    
+    // 目录不存在，尝试创建（支持多级目录）
+    const dirSegments = fullDirPath.split('/').filter(seg => seg); // 拆分路径段
+    let currentDir = '';
+    
+    // 递归创建每一级目录
+    for (const segment of dirSegments) {
+      currentDir = currentDir ? `${currentDir}/${segment}` : segment;
+      const dirUrl = driveConfig.getRequestUrl('MKCOL', currentDir);
+      
+      const res = await this.#webdavRequest(driveType, dirUrl, {
+        method: 'MKCOL', // WebDAV创建目录的标准方法
+        account: config.account,
+        credential: config.credential,
+        headers: this.#getRequestHeaders(driveConfig, 'MKCOL', currentDir)
+      });
+      
+      if (!res.ok && res.status !== 405) { // 405表示目录已存在，忽略
+        throw new Error(`创建目录 ${currentDir} 失败: ${res.error || res.statusText}`);
+      }
+    }
+
+    return true;
   }
   
   async testConnection(config) {
@@ -402,18 +542,20 @@ export class CloudSyncService {
   
   // 全量/增量双向同步方法
   async syncSingleTableSafe(tableName, config, updatedAtKey = "updated_at") {
+    if(["cloud_drive_config", "sync_checkpoint"].includes(tableName)) return;
+    
     const db = await getDB();
     const syncPath = this.#normalizePath(`${config.root_path}/${tableName}.json`);
     const checkpoint = await getSyncCheckpoint(config.id, syncPath);
     
     try {
-      const remoteData = await this.#fetchRemoteData(tableName, config, syncPath);
+      const remoteData = await this.#fetchRemoteData(config, syncPath);
       const localData = await this.#fetchLocalData(db, tableName);
       
       const mergedData = this.#mergeData(localData, remoteData, updatedAtKey);
       await this.#writeLocalIfChanged(db, tableName, localData, mergedData, updatedAtKey);
       
-      await this.#uploadIfChanged(config, tableName, syncPath, mergedData, checkpoint);
+      await this.#uploadIfChanged(config, syncPath, mergedData, checkpoint);
       
       return this.#buildResult(tableName, mergedData);
     } catch (err) {
@@ -432,75 +574,83 @@ export class CloudSyncService {
     try {
       const allConfigs = await this.#getAllConfigs();
       result.total = allConfigs.length;
-      if(!result.total) return {
+      if (!result.total) return {
         ...result,
         success: true,
         message: '无云盘配置需同步'
       };
-      
-      for(const config of allConfigs) {
+
+      for (const config of allConfigs) {
         const driveResult = {
           driveId: config.id,
           driveType: config.drive_type,
           displayName: DRIVE_CONFIGS[config.drive_type]?.displayName || config.drive_type,
           success: false,
           successTables: [],
-          failedTables: []
+          failedTables: [],
+          fileSync: { // 文件同步结果
+            success: 0,
+            failed: 0,
+            details: []
+          }
         };
         
         try {
+          // 同步数据库表
           const tables = await getAllTables();
-          for(const { name: tableName } of tables) {
+          for (const { name: tableName } of tables) {
             try {
               const res = await this.syncSingleTableSafe(tableName, config);
-              driveResult.successTables.push({
-                tableName,
-                rows: res.rows
-              });
-              console.log(`[${driveResult.displayName}] 表 ${tableName} 同步成功`);
-            } catch(err) {
-              const errorMsg = err.message || '同步失败';
-              driveResult.failedTables.push({
-                tableName,
-                error: errorMsg
-              });
-              console.error(`[${driveResult.displayName}] 表 ${tableName} 同步失败:`, errorMsg);
+              driveResult.successTables.push({ tableName, rows: res.rows });
+            } catch (err) {
+              driveResult.failedTables.push({ tableName, error: err.message });
             }
           }
-          driveResult.success = !driveResult.failedTables.length;
-        } catch(err) {
-          const errorMsg = err.message || '全局同步异常';
-          driveResult.failedTables.push({
-            tableName: '全局',
-            error: errorMsg
-          });
-          console.error(`[${driveResult.displayName}] 全局同步异常:`, errorMsg);
+          
+          // 同步文件系统
+          const privateFiles = await this.#getAllPrivateFiles();
+          if (privateFiles.length === 0) {
+            driveResult.fileSync.message = '无文件需同步';
+          } else {
+            for (const file of privateFiles) {
+              try {
+                const res = await this.#syncSingleFile(config, file);
+                driveResult.fileSync.success++;
+                driveResult.fileSync.details.push({
+                  cloudPath: res.cloudPath,
+                  status: 'success'
+                });
+              } catch (err) {
+                driveResult.fileSync.failed++;
+                driveResult.fileSync.details.push({
+                  cloudPath: file.cloudPath,
+                  status: 'failed',
+                  error: err.message
+                });
+              }
+            }
+            driveResult.fileSync.message = `${driveResult.fileSync.success} 个文件成功，${driveResult.fileSync.failed} 个失败`;
+          }
+          
+          // 综合判断同步状态
+          driveResult.success =
+            !driveResult.failedTables.length &&
+            driveResult.fileSync.failed === 0;
+        } catch (err) {
+          driveResult.failedTables.push({ tableName: '全局', error: err.message });
         } finally {
           result.driveResults.push(driveResult);
         }
       }
       
-      // 只要有一个网盘同步成功，就认为整体成功
       result.success = result.driveResults.some(d => d.success);
-      console.log("首次同步成功");
       return result;
-    } catch(err) {
-      const errorMsg = err.message || '同步初始化异常';
+    } catch (err) {
       result.driveResults.push({
         driveId: 'global',
-        failedTables: [
-          {
-            tableName: '全局',
-            error: errorMsg
-          }
-        ]
+        failedTables: [{ tableName: '全局', error: err.message }]
       });
-      console.error("同步初始化异常:", errorMsg);
       return result;
     }
-  }
-  
-  resetConfigCache() {
-    this.#defaultConfig = null;
   }
 }

@@ -5,6 +5,7 @@ import TimelineList from './TimelineList';
 import AddEventButton from './AddEventButton';
 import EventModal from './EventModal';
 import { getEventsByDateRange } from '@/db/eventDB';
+import { categories } from "@/constants/commonConstans";
 
 const TimelinePanel = ({ selectedDate }) => {
   const [currentTab, setCurrentTab] = useState('all');
@@ -72,6 +73,7 @@ const TimelinePanel = ({ selectedDate }) => {
     <View style={styles.container}>
       {/* 分类标签栏 */}
       <CategoryTab
+        categories={categories}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
       />

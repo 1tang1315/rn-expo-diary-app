@@ -1,15 +1,19 @@
-// 分类与图标列表（固定配置）
+import * as FileSystem from 'expo-file-system';
+
+export const BASE_IMAGE_DIR = `${FileSystem.documentDirectory}/images/`;
+
+// 事件分类与图标列表（固定配置）
 export const categories = [
-  { id: 'all', name: '全部', icon: 'view-list', isFixed: true },
-  { id: 'daily', name: '日常', icon: 'access-time' },
-  { id: 'work', name: '工作', icon: 'work' },
-  { id: 'study', name: '学习', icon: 'book' },
-  { id: 'entertainment', name: '娱乐', icon: 'gamepad' },
-  { id: 'sports', name: '运动健康', icon: 'fitness-center' },
-  { id: 'sleep', name: '睡眠', icon: 'bed' },
-  { id: 'diet', name: '饮食', icon: 'restaurant' },
-  { id: 'shopping', name: '购物', icon: 'shopping-cart' },
-  { id: 'travel', name: '出行', icon: 'flight' }
+  { id: 'all', name: '全部', icon: 'view-list', emoji: '📋', isFixed: true },
+  { id: 'daily', name: '日常', icon: 'access-time', emoji: '⏱️' },
+  { id: 'work', name: '工作', icon: 'work', emoji: '💼' },
+  { id: 'study', name: '学习', icon: 'book', emoji: '📚' },
+  { id: 'entertainment', name: '娱乐', icon: 'gamepad', emoji: '🎮' },
+  { id: 'sports', name: '运动健康', icon: 'fitness-center', emoji: '🏋️' },
+  { id: 'sleep', name: '睡眠', icon: 'bed', emoji: '😴' },
+  { id: 'diet', name: '饮食', icon: 'restaurant', emoji: '🍽️' },
+  { id: 'shopping', name: '购物', icon: 'shopping-cart', emoji: '🛒' },
+  { id: 'travel', name: '出行', icon: 'flight', emoji: '✈️' }
 ];
 
 // 事件图标选择（按分类划分）
@@ -50,6 +54,45 @@ export const categoryIcons = {
   travel: [
     'flight', 'directions-car', 'train', 'navigation', 'subway',
     'directions-bike', 'directions-walk', 'hotel', 'local-gas-station'
+  ]
+};
+
+// 储物分类与图标列表
+export const storageCategories = [
+  { id: 'all', name: '全部', icon: 'inventory', emoji: '📦', isFixed: true },
+  { id: 'food', name: '饮食', icon: 'lunch-dining', emoji: '🍎' },
+  { id: 'digital', name: '数码产品', icon: 'devices', emoji: '📱' },
+  { id: 'clothes', name: '衣物', icon: 'checkroom', emoji: '👕' },
+  { id: 'bags', name: '箱包', icon: 'luggage', emoji: '🧳' },
+  { id: 'appliances', name: '电器', icon: 'electrical-services', emoji: '🔌' },
+  { id: 'kitchen', name: '厨房', icon: 'kitchen', emoji: '🍳' },
+  { id: 'tools', name: '工具', icon: 'build', emoji: '🔧' },
+];
+
+export const storageCategoryIcons = {
+  food: [
+    'lunch-dining', 'coffee', 'water-drop', 'cake', 'icecream',
+    'emoji-food-beverage', 'fastfood', 'local-drink', 'restaurant',
+    'breakfast-dining', 'dinner-dining', 'bakery-dining'
+  ],
+  digital: [
+    'devices', 'smartphone', 'laptop', 'headphones', 'camera',
+    'watch', 'tv', 'tablet', 'speaker', 'usb', 'keyboard', 'mouse'
+  ],
+  clothes: [
+    'checkroom', 'accessibility', 'filter'
+  ],
+  bags: [
+    'luggage', 'inventory', 'storage'
+  ],
+  appliances: [
+    'electrical-services', 'tv', 'radio', 'lightbulb', 'thermostat', 'blender'
+  ],
+  kitchen: [
+    'kitchen', 'restaurant', 'coffee'
+  ],
+  tools: [
+    'build', 'construction', 'engineering', 'handyman', 'plumbing'
   ]
 };
 
