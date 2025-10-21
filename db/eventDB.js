@@ -50,33 +50,40 @@ export async function getEventById(id) {
  * (只要结束时间还在用户传入的开始时间内就会被返回)
  * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
  * @param {string} [endDate] - 可选，结束日期，格式：YYYY-MM-DD
+ * @param {'asc' | 'desc'} [sortOrder='desc'] - 可选，排序方向。'asc' 表示升序（从早到晚），'desc' 表示降序（从晚到早）。默认为 'desc'。
  * @returns {Promise<Array>} 事件对象数组
  */
-export async function getEventsByDateRange(startDate, endDate) {
+export async function getEventsByDateRange(startDate, endDate, sortOrder = 'desc') {
   // 格式化日期参数
   const formattedStartDate = formatDate(startDate);
   const formattedEndDate = formatDate(endDate) || formattedStartDate;
   
+  // 校验排序方向参数
+  const validSortOrders = ['asc', 'desc'];
+  const finalSortOrder = validSortOrders.includes(sortOrder.toLowerCase())
+    ? sortOrder.toLowerCase()
+    : 'desc'; // 如果传入无效值，则使用默认的 'desc'
+  
   const db = await getDB();
   
   // 事件开始于查询范围内，或结束于查询范围内，或完全覆盖查询范围
+  const sql = `
+    SELECT *
+    FROM event
+    WHERE
+      deleted_at IS NULL
+      AND (
+        (DATE(start_datetime) BETWEEN ? AND ?)
+        OR
+        (DATE(end_datetime) BETWEEN ? AND ?)
+        OR
+        (DATE(start_datetime) <= ? AND DATE(end_datetime) >= ?)
+      )
+    ORDER BY start_datetime ${finalSortOrder}
+  `;
+  
   return await db.getAllAsync(
-    `SELECT *
-     FROM event
-     WHERE
-       -- 只查询未删除的记录
-         deleted_at IS NULL
-       AND (
-         -- 事件开始在查询范围内
-         (DATE (start_datetime) BETWEEN ? AND ?)
-             OR
-             -- 事件结束在查询范围内
-         (DATE (end_datetime) BETWEEN ? AND ?)
-             OR
-             -- 事件开始在查询范围前且结束在查询范围后（完全覆盖）
-         (DATE (start_datetime) <= ? AND DATE (end_datetime) >= ?)
-         )
-     ORDER BY start_datetime desc`,
+    sql,
     // 参数按查询条件顺序传递
     [
       formattedStartDate, formattedEndDate,
@@ -229,7 +236,7 @@ export async function getCommonTitlesByCategory(category, limit = 10) {
      WHERE title IS NOT NULL
        AND title != '' AND category = ? AND deleted_at IS NULL
      GROUP BY title
-     ORDER BY useCount DESC LIMIT ? `,
+     ORDER BY useCount DESC LIMIT ?`,
     [category, limit]
   );
   return result.map(item => item.title);
