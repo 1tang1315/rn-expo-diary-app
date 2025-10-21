@@ -208,7 +208,7 @@ const EventModal = ({
     ]);
   };
   
-  // 内部渲染：分类选择器（含子弹窗）
+  // 内部渲染：分类选择器
   const renderCategorySelector = () => (
     <>
       <View style={styles.formGroup}>

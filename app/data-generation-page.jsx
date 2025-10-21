@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { getEventsByDateRange } from '@/db/eventDB';
 import { useNavigation } from "expo-router";
-import { formatPreviewContent, getPlainTextContent } from "@/utils/statisticsUtils/previewFormatter";
+import { formatPreviewContent, getPlainTextContent } from "@/utils/previewFormatter";
 import DateSelector from "@/components/statistics/DateSelector";
 import FormatSelector from "@/components/statistics/FormatSelector";
 import PreviewBox from "@/components/statistics/PreviewBox";
@@ -36,9 +36,9 @@ const DataGenerationPage = () => {
       start: dayjs(startDate),
       end: dayjs(endDate)
     });
-    const events = (await getEventsByDateRange(startDate, endDate))?.filter(item => item.status === 'completed');
+    const events = (await getEventsByDateRange(startDate, endDate, "asc"));
     
-    if(events.length > 0) setEvents(events);
+    setEvents(events);
     setIsLoading(false);
   }, [])
   
@@ -62,24 +62,13 @@ const DataGenerationPage = () => {
         return;
       }
       
-      // 按日期分组事件
-      const eventsByDate = events.reduce((acc, event) => {
-        // 提取事件的「年月日」作为分组键
-        const eventDate = dayjs(event.start_datetime).format('YYYY-MM-DD');
-        if(!acc[eventDate]) {
-          acc[eventDate] = []; // 初始化该日期的事件数组
-        }
-        acc[eventDate].push(event); // 归并当天事件
-        return acc;
-      }, {});
-      
       // 按格式生成预览内容
       let previewContent;
       if(['txt', 'markdown'].includes(selectedFormat)) {
         // 生成纯文本内容
         const plainContent = getPlainTextContent(
           selectedFormat,
-          eventsByDate,
+          events,
           queryStart,
           queryEnd,
           dateRangeText
@@ -91,7 +80,6 @@ const DataGenerationPage = () => {
         // Image
         previewContent = formatPreviewContent(
           selectedFormat,
-          eventsByDate,
           queryStart,
           queryEnd,
           events,
@@ -261,6 +249,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     marginRight: 12,
+    padding: 8,
+    zIndex: 1,
   },
   pageTitle: {
     fontSize: 18,

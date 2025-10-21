@@ -1,16 +1,8 @@
 import React, {
-  useState,
-  useCallback,
-  useRef,
-  useEffect
+  useState, useCallback, useRef, useEffect
 } from 'react';
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  PanResponder,
-  Dimensions
+  View, Text, Pressable, StyleSheet, PanResponder, Dimensions
 } from 'react-native';
 import dayjs from 'dayjs';
 import solarLunar from 'solarlunar';

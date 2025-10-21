@@ -9,6 +9,7 @@ import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
+import { categories } from "@/constants/commonConstans";
 import BarChart from "@/components/chart/BarChart";
 
 /**
@@ -137,6 +138,7 @@ export default function Statistics() {
         {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
         <View>
           <CategoryTab
+            categories={categories}
             currentTab={currentTab}
             setCurrentTab={setCurrentTab}
           />
@@ -162,9 +164,9 @@ export default function Statistics() {
                   <Button title={chartTypeName} onPress={toggleChart} />
                 </View>
                 {chartType === 'pie' ? (
-                  <PieChart data={chartData} title={`总完成时长: ${totalMinutes}`} />
+                  <PieChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
                 ) : (
-                  <BarChart data={chartData} title={`总完成时长: ${totalMinutes}`}/>
+                  <BarChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`}/>
                 )}
               </View>
               
@@ -263,15 +265,18 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   legendContainer: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     marginVertical: 10,
     padding: 20,
     backgroundColor: "#fff",
     boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)'
   },
   legendItem: {
-    flex: 1,
     display: "flex",
-    width: "100%",
+    width: "45%",
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,

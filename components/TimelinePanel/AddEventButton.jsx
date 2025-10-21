@@ -3,7 +3,7 @@ import { TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 /**
- * 时间线面板的浮动添加按钮
+ * 添加按钮
  * @props {Function} onPress - 点击回调（触发打开添加弹窗）
  */
 const AddEventButton = ({ onPress }) => {
