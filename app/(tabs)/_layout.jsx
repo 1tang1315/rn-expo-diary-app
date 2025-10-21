@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 
 export default function TabLayout() {
   return (
@@ -10,6 +10,33 @@ export default function TabLayout() {
           title: "首页",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="storage"
+        options={{
+          title: "储物",
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome6 name="box-archive" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="diary"
+        options={{
+          title: "日记",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="ai-chat-screen"
+        options={{
+          title: "AI",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbox" color={color} size={size} />
           ),
         }}
       />
