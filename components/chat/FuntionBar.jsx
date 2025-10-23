@@ -145,7 +145,6 @@ const FunctionBar = ({
     }
   };
   
-  
   return (
     <View style={styles.container}>
       <ScrollView
