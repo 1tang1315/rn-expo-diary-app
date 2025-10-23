@@ -87,7 +87,7 @@ export async function deleteConversation(conversationId) {
  * @returns {Promise<void>} 新创建的消息ID
  */
 export async function createMessage(messageData) {
-  const { conversation_id, role, content } = messageData;
+  const { conversation_id, role, content, thought } = messageData;
   if (!conversation_id || !role || !content) {
     throw new Error("对话ID、角色和消息内容不能为空");
   }
@@ -99,9 +99,9 @@ export async function createMessage(messageData) {
     // 插入新消息
     const messageResult = await db.runAsync(
       `INSERT INTO messages
-      (conversation_id, role, content, created_at)
-      VALUES (?, ?, ?, ?)`,
-      [conversation_id, role, content, now]
+      (conversation_id, role, content, thought, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [conversation_id, role, content, thought, now, now]
     );
     
     await db.runAsync(
@@ -121,7 +121,8 @@ export async function createMessage(messageData) {
 export async function getMessagesForConversation(conversationId) {
   const db = await getDB();
   return await db.getAllAsync(
-    `SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC`,
+    `SELECT * FROM messages
+         WHERE conversation_id = ? ORDER BY created_at ASC`,
     [conversationId]
   );
 }

@@ -90,8 +90,9 @@ export async function getDB() {
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TEXT DEFAULT NULL
     );
   `);
   
@@ -103,8 +104,10 @@ export async function getDB() {
       role TEXT NOT NULL,
       thought TEXT,
       content TEXT NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TEXT DEFAULT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     );
   `);
   
@@ -118,10 +121,11 @@ export async function getDB() {
     price REAL,
     details TEXT,
     image TEXT,
-    start_time DATETIME,
-    end_time DATETIME,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at DATETIME
+    start_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    end_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT DEFAULT NULL
   );
 `);
   
@@ -136,7 +140,7 @@ export async function getDB() {
        root_path TEXT NOT NULL DEFAULT 'RNExpoDiaryApp', /* 云盘存储路径 */
        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-       deleted_at TEXT DEFAULT NULL,              /* 软删除字段，NULL表示未删除 */
+       deleted_at TEXT DEFAULT NULL,
        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
     );
 `);
@@ -170,7 +174,6 @@ export async function getDB() {
  * @throws {Error} 非法表名时抛出错误
  */
 export async function exportTable(tableName) {
-  console.log(tableName, "tableName");
   const db = await getDB();
   // 表名合法性校验（防SQL注入）
   if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {

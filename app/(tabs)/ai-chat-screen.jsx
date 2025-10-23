@@ -1,0 +1,961 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View
+} from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  createConversation,
+  createMessage,
+  deleteConversation,
+  getAllConversations,
+  getMessagesForConversation, updateConversation
+} from '@/db/aiDialogueDB';
+import AIStreamText from "@/components/common/AIStreamText";
+import AiDiaryService from "@/db/services/AiDiaryService";
+import EmptyContainer from "@/components/common/EmptyContainer";
+import { HistoryMessage } from "@/components/chat/HistoryMessage";
+import { flushSync } from "react-dom";
+import { AsyncStorage } from "expo-sqlite/kv-store";
+import { getLocalDateTimeByDayjs } from "@/utils/formatTimeUtils";
+import FunctionBar from "@/components/chat/FuntionBar";
+
+const AiChatScreen = () => {
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [config, setConfig] = useState({
+    apiKey: '',
+    model: 'Qwen/Qwen3-8B',
+    apiBaseUrl: 'https://api.siliconflow.cn/v1'
+  });
+  const [aiDiaryService, setAiDiaryService] = useState(null);
+  
+  const [presetModels, setPresetModels] = useState([
+    'Qwen/Qwen3-8B',
+    'Qwen/Qwen3-VL-30B-A3B-Instruct',
+    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+    'deepseek-ai/DeepSeek-V3.1-Terminus',
+    'internlm/internlm2_5-7b-chat',
+    'THUDM/glm-4-9b-chat'
+  ]);
+  
+  // 获取 ai 配置
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const savedApiKey = await AsyncStorage.getItem('AI_DIARY_API_KEY');
+        const savedModel = await AsyncStorage.getItem('AI_DIARY_MODEL');
+        const savedApiBaseUrl = await AsyncStorage.getItem('AI_DIARY_API_BASE_URL');
+        
+        const newConfig = {
+          apiKey: savedApiKey || '',
+          model: savedModel || 'Qwen/Qwen3-8B',
+          apiBaseUrl: savedApiBaseUrl || 'https://api.siliconflow.cn/v1'
+        };
+        setConfig(newConfig);
+        
+        const savedPresets = await AsyncStorage.getItem('AI_DIARY_PRESET_MODELS');
+        if(savedPresets) {
+          setPresetModels(JSON.parse(savedPresets));
+        }
+        
+        // 初始化服务实例
+        setAiDiaryService(new AiDiaryService(newConfig));
+      } catch(err) {
+        console.error('加载配置失败：', err);
+        const defaultService = new AiDiaryService();
+        setAiDiaryService(defaultService);
+      }
+    };
+    
+    loadConfig().then();
+  }, []);
+  
+  // 根据用户习惯更新 ai 模型
+  const updatePresetModels = (newModel) => {
+    if(!newModel.trim()) return;
+    
+    setPresetModels(prev => {
+      const filtered = prev.filter(model => model !== newModel);
+      return [newModel, ...filtered].slice(0, 6);
+    });
+  };
+  
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [currentAIContent, setCurrentAIContent] = useState({
+    thought: '',
+    output: ''
+  });
+  const [isContentFinalized, setIsContentFinalized] = useState(false);
+  
+  const messageScrollRef = useRef(null);
+  const inputRef = useRef(null);
+  
+  // 初始化聊天窗口
+  useEffect(() => {
+    const initChat = async () => {
+      try {
+        const fetchedConversations = await getAllConversations();
+        setConversations(fetchedConversations);
+        
+        // 若有历史对话，默认选择最新的；若无，创建默认对话
+        if(fetchedConversations.length > 0) {
+          const latestConversation = fetchedConversations[0];
+          setCurrentConversationId(latestConversation.id);
+          await loadConversationMessages(latestConversation.id);
+        } else {
+          await handleCreateNewConversation();
+        }
+      } catch(err) {
+        console.error('初始化聊天失败：', err);
+        Alert.alert('错误', '加载历史对话失败，请重试');
+      }
+    };
+    
+    initChat().then();
+  }, [handleCreateNewConversation]);
+  
+  // 滚动到底部
+  useEffect(() => {
+    if(messages.length > 0) {
+      messageScrollRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+  
+  const fetchConversationList = async () => {
+    // 1. 先获取最新数据
+    const latestConversations = await getAllConversations();
+    // 2. 更新状态
+    setConversations(latestConversations);
+    // 3. 直接使用这个返回值（它就是最新的）
+    return latestConversations;
+  };
+  
+  // 加载指定对话的消息
+  const loadConversationMessages = async (conversationId) => {
+    try {
+      const fetchedMessages = await getMessagesForConversation(conversationId);
+      setMessages(fetchedMessages);
+      setIsAIGenerating(false);
+      setCurrentAIContent({
+        thought: '',
+        output: ''
+      });
+      setIsContentFinalized(false);
+    } catch(err) {
+      console.error('加载对话消息失败：', err);
+      Alert.alert('错误', '无法加载当前对话内容');
+    }
+  };
+  
+  // 新建对话
+  const handleCreateNewConversation = useCallback(async () => {
+    const title = getLocalDateTimeByDayjs();
+    try {
+      const newConversationId = await createConversation({ title });
+      setCurrentConversationId(newConversationId);
+      await fetchConversationList();
+      setMessages([]);
+      setSidebarVisible(false);
+    } catch(err) {
+      console.error('创建新对话失败：', err);
+      Alert.alert('错误', '创建对话失败，请重试');
+    }
+  }, []);
+  
+  // 切换对话
+  const handleSwitchConversation = async (conversationId) => {
+    setCurrentConversationId(conversationId);
+    await loadConversationMessages(conversationId);
+    setSidebarVisible(false);
+  };
+  
+  // 删除对话
+  const handleDeleteConversation = async (conversationId, e) => {
+    e.stopPropagation();
+    
+    // 记录是否是最后一个对话
+    const isLastConversation = conversations.length === 1;
+    
+    Alert.alert(
+      '确认删除',
+      '此对话及所有消息将被永久删除，是否继续？',
+      [
+        {
+          text: '取消',
+          style: 'cancel'
+        },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteConversation(conversationId);
+              // 更新对话列表
+              const latestConversations = await fetchConversationList();
+              // 若删除的是当前对话，切换到最新对话
+              if(currentConversationId === conversationId) {
+                // 如果是最后一个对话，删除后创建新对话
+                if(isLastConversation) {
+                  await handleCreateNewConversation();
+                } else {
+                  // 否则切换到最新对话
+                  const latestConversation = latestConversations[0];
+                  setCurrentConversationId(latestConversation.id);
+                  await loadConversationMessages(latestConversation.id);
+                }
+              }
+            } catch(err) {
+              console.error('删除对话失败：', err);
+              Alert.alert('错误', '删除对话失败，请重试');
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  const handleSendMessage = async () => {
+    const userInput = inputText.trim();
+    if(!userInput || !currentConversationId) {
+      return;
+    }
+    
+    try {
+      if(isAIGenerating) {
+        await handleStop();
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setInputText('');
+      setIsAIGenerating(true);
+      setCurrentAIContent({
+        thought: '',
+        output: ''
+      });
+      setIsContentFinalized(false);
+      
+      const userMessage = {
+        conversation_id: currentConversationId,
+        role: 'user',
+        content: userInput
+      };
+      const userMessageId = await createMessage(userMessage);
+      
+      flushSync(() => {
+        setMessages(prev => [
+          ...prev, {
+            id: userMessageId || Date.now(),
+            ...userMessage,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      });
+      
+      const aiResult = await aiDiaryService.generateContent(userInput, {
+        onThought: (partialThought) => {
+          setCurrentAIContent(prev => ({
+            ...prev,
+            thought: partialThought
+          }));
+        },
+        onOutput: (partialOutput) => {
+          setCurrentAIContent(prev => ({
+            ...prev,
+            output: partialOutput
+          }));
+        }
+      });
+      
+      const aiMessage = {
+        conversation_id: currentConversationId,
+        role: 'assistant',
+        thought: aiResult.thought,
+        content: aiResult.output
+      };
+      const aiMessageId = await createMessage(aiMessage);
+      setMessages(prev => [
+        ...prev, {
+          id: aiMessageId || Date.now(),
+          ...aiMessage,
+          created_at: new Date().toISOString()
+        }
+      ]);
+      setCurrentAIContent({
+        thought: '',
+        output: ''
+      });
+      setIsContentFinalized(true);
+      
+      const isFirstAiReply = messages.filter(msg => msg.role === 'assistant').length === 0;
+      if(isFirstAiReply) {
+        const newTitle = await aiDiaryService.updateConversationTitle(userInput, aiResult.output);
+        await updateConversation(currentConversationId, { title: newTitle });
+        
+        setConversations(prev =>
+          prev.map(convo =>
+            convo.id === currentConversationId
+              ? {
+                ...convo,
+                title: newTitle
+              }
+              : convo
+          )
+        );
+      }
+    } catch(err) {
+      console.error('发送消息失败：', err);
+      Alert.alert('错误', err.message || '发送消息失败，请检查网络');
+      setIsAIGenerating(false);
+      setIsContentFinalized(true);
+    } finally {
+      setIsAIGenerating(false);
+    }
+  };
+  
+  // 停止 ai 回复
+  const handleStop = async () => {
+    aiDiaryService.pauseRequest();
+    
+    const updatedAIContent = {
+      ...currentAIContent,
+      output: `${currentAIContent.output} [已停止]`
+    };
+    setCurrentAIContent(updatedAIContent);
+    
+    if(currentConversationId) {
+      try {
+        const aiMessage = {
+          conversation_id: currentConversationId,
+          role: 'assistant',
+          thought: updatedAIContent.thought,
+          content: updatedAIContent.output
+        };
+        
+        const messageId = await createMessage(aiMessage);
+        flushSync(() => {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: messageId || Date.now(),
+              ...aiMessage,
+              created_at: new Date().toISOString()
+            }
+          ]);
+        });
+      } catch(err) {
+        console.error('暂停时保存AI消息失败：', err);
+        Alert.alert('错误', '保存已停止的AI内容失败，请重试');
+      }
+    }
+    
+    flushSync(() => {
+      setIsAIGenerating(false);
+      setIsContentFinalized(true);
+    });
+    
+    
+    return Promise.resolve();
+  };
+  
+  // 渲染正在生成的 ai 消息
+  const renderPendingAIMessage = () => {
+    if(!isAIGenerating) return null;
+    
+    return (
+      <View key="pending-ai-message" style={styles.aiMessageContainer}>
+        <View style={styles.aiMessageBubble}>
+          <AIStreamText
+            content={currentAIContent}
+            speed={30}
+            isContentFinalized={isContentFinalized}
+          />
+          {!isContentFinalized && (
+            <TouchableOpacity onPress={handleStop}>
+              <View style={styles.loadingIndicator}>
+                <FontAwesome5 name="pause-circle" size={16} color="666" style={styles.loadingIcon} />
+                <Text style={styles.loadingText}>AI正在回复 ...</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+  
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerIconContainer}
+          onPress={() => setSidebarVisible(true)}
+        >
+          <Ionicons name="menu" size={24} color="#333" />
+        </TouchableOpacity>
+        
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {conversations.find(c => c.id === currentConversationId)?.title || '新对话'}
+          </Text>
+        </View>
+        
+        <TouchableOpacity
+          style={styles.headerIconContainer}
+          onPress={() => setShowSettingsModal(true)}
+        >
+          <Ionicons name="settings" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+      
+      {/* 聊天消息区域 */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.chatContainer}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView
+          ref={messageScrollRef}
+          style={styles.messageList}
+          contentContainerStyle={styles.messageListContent}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 空状态提示 */}
+          {messages.length === 0 && !isAIGenerating && (
+            <EmptyContainer
+              icon="chatbubbles"
+              IconComponent={Ionicons}
+              text="开始与AI对话吧~"
+            />
+          )}
+          
+          {/* 历史消息 */}
+          {messages.map(message => (
+            <React.Fragment key={message.id}>
+              <HistoryMessage message={message} styles={styles} />
+            </React.Fragment>
+          ))}
+          
+          {renderPendingAIMessage()}
+        </ScrollView>
+        
+        {/* 底部输入框区域 */}
+        <FunctionBar
+          onEventDataSelected={(data) => {
+            setInputText(prev => prev ? `${prev}\n${data}` : data);
+          }}
+          onPromptSelected={(prompt) => {
+            setInputText(prev => prev ? `${prev}\n\n${prompt}` : prompt);
+          }}
+        />
+        <View style={styles.inputContainer}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder="输入消息..."
+            value={inputText}
+            onChangeText={setInputText}
+            multiline={true}
+            maxHeight={120} // 输入框最大高度（防止过长）
+            returnKeyType="send"
+            onSubmitEditing={handleSendMessage}
+          />
+          <TouchableOpacity
+            style={styles.sendBtn}
+            onPress={handleSendMessage}
+          >
+            <Ionicons name="send" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+      
+      {/* 历史对话侧边栏 */}
+      <Modal
+        visible={sidebarVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setSidebarVisible(false)}
+      >
+        <View style={styles.sidebarWrapper}>
+          <Pressable
+            style={styles.sidebarOverlay}
+            onPress={() => setSidebarVisible(false)}
+          />
+          
+          <View style={styles.sidebarContent}>
+            <TouchableOpacity
+              style={styles.newConversationBtn}
+              onPress={() => handleCreateNewConversation()}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text style={styles.newConversationText}>新建对话</Text>
+            </TouchableOpacity>
+            
+            <ScrollView style={styles.conversationList}>
+              {conversations.map(conversation => (
+                <TouchableOpacity
+                  key={conversation.id}
+                  style={[
+                    styles.conversationItem,
+                    currentConversationId === conversation.id && styles.activeConversation
+                  ]}
+                  onPress={() => handleSwitchConversation(conversation.id)}
+                >
+                  <View style={styles.conversationInfo}>
+                    <Text style={styles.conversationTitle} numberOfLines={1}>
+                      {conversation.title}
+                    </Text>
+                    <Text style={styles.conversationTime}>
+                      {conversation.updated_at}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteConversationBtn}
+                    onPress={(e) => handleDeleteConversation(conversation.id, e)}
+                  >
+                    <Ionicons name="trash" size={16} color="#ff4444" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      
+      <Modal
+        visible={showSettingsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowSettingsModal(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { maxHeight: '100%' }]}>
+                <KeyboardAvoidingView>
+                  <Text style={styles.modalTitle}>AI 配置设置</Text>
+                  
+                  <ScrollView style={{ maxHeight: '80%' }} showsVerticalScrollIndicator={false}>
+                    {/* API密钥输入 */}
+                    <Text style={styles.settingLabel}>API 密钥</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="输入 Silicon Flow API 密钥"
+                      value={config.apiKey}
+                      onChangeText={(val) => setConfig(prev => ({
+                        ...prev,
+                        apiKey: val
+                      }))}
+                      secureTextEntry={false}
+                      multiline={true}
+                      maxHeight={80}
+                    />
+                    
+                    <Text style={styles.settingLabel}>模型名称</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.modelPresetContainer}
+                      contentContainerStyle={styles.modelPresetContent}
+                    >
+                      {presetModels.map((model) => (
+                        <TouchableOpacity
+                          key={model}
+                          style={[
+                            styles.modelPresetBtn,
+                            config.model === model && styles.activeModelPresetBtn
+                          ]}
+                          onPress={() => setConfig(prev => ({
+                            ...prev,
+                            model
+                          }))}
+                        >
+                          <Text style={[
+                            styles.modelPresetText,
+                            config.model === model && styles.activeModelPresetText
+                          ]}>
+                            {model}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    {/* 模型输入框 */}
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="例如：Qwen/Qwen3-8B"
+                      value={config.model}
+                      onChangeText={(val) => setConfig(prev => ({
+                        ...prev,
+                        model: val
+                      }))}
+                    />
+                    
+                    {/* API基础地址输入 */}
+                    <Text style={styles.settingLabel}>API 基础地址</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="例如：https://api.siliconflow.cn/v1"
+                      value={config.apiBaseUrl}
+                      onChangeText={(val) => setConfig(prev => ({
+                        ...prev,
+                        apiBaseUrl: val
+                      }))}
+                    />
+                  </ScrollView>
+                  
+                  <View style={styles.modalBtnContainer}>
+                    <TouchableOpacity
+                      style={styles.modalCancelBtn}
+                      onPress={() => setShowSettingsModal(false)}
+                    >
+                      <Text style={styles.modalCancelText}>取消</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalConfirmBtn}
+                      onPress={async () => {
+                        try {
+                          updatePresetModels(config.model);
+                          
+                          // 保存配置到本地存储
+                          await AsyncStorage.setItem('AI_DIARY_API_KEY', config.apiKey);
+                          await AsyncStorage.setItem('AI_DIARY_MODEL', config.model);
+                          await AsyncStorage.setItem('AI_DIARY_API_BASE_URL', config.apiBaseUrl);
+                          
+                          await AsyncStorage.setItem(
+                            'AI_DIARY_PRESET_MODELS',
+                            JSON.stringify(presetModels)
+                          );
+                          
+                          // 更新服务实例
+                          setAiDiaryService(new AiDiaryService(config));
+                          
+                          Alert.alert('成功', '配置已保存');
+                          setShowSettingsModal(false);
+                        } catch(err) {
+                          console.error('保存配置失败：', err);
+                          Alert.alert('错误', '保存配置失败，请重试');
+                        }
+                      }}
+                    >
+                      <Text style={styles.modalConfirmText}>保存</Text>
+                    </TouchableOpacity>
+                  </View>
+                </KeyboardAvoidingView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9f9f9',
+  },
+  
+  // 顶部导航栏
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 10,
+  },
+  headerIconContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    width: '100%',
+    textAlign: 'center',
+  },
+  
+  // 历史对话侧边栏
+  sidebarWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  sidebarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  sidebarContent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '80%',
+    maxWidth: 300,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 2,
+      height: 0
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  
+  // 新建对话按钮
+  newConversationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 16,
+    padding: 12,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+  },
+  newConversationText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  
+  // 对话列表
+  conversationList: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    marginVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  activeConversation: {
+    backgroundColor: '#E3F2FD',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  conversationInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  conversationTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 4,
+  },
+  conversationTime: {
+    fontSize: 12,
+    color: '#999',
+  },
+  deleteConversationBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  // 模态框
+  modalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    maxWidth: 350,
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    minHeight: 30,
+    lineHeight: 30,
+    width: '100%',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalBtnContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    marginRight: 8,
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    marginLeft: 8,
+    padding: 12,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  
+  // 聊天区域
+  chatContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  messageList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  messageListContent: {
+    paddingVertical: 16,
+  },
+  
+  // AI加载中提示
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  loadingIcon: {
+    marginRight: 8
+  },
+  loadingText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#999',
+  },
+  
+  // 底部输入框
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    minHeight: 60,
+    padding: 12,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  input: {
+    flex: 1,
+    minHeight: 30,
+    maxHeight: 200,
+    lineHeight: 30,
+    padding: 12,
+    marginRight: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 24,
+    fontSize: 16,
+    color: '#333',
+    textAlignVertical: 'top',
+  },
+  sendBtn: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2196F3',
+    borderRadius: 24,
+  },
+  
+  settingLabel: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    fontSize: 14,
+    color: '#666'
+  },
+  modelPresetContainer: {
+    marginBottom: 12,
+    height: 36,
+  },
+  modelPresetContent: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  modelPresetBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeModelPresetBtn: {
+    backgroundColor: '#2196F3',
+  },
+  modelPresetText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  activeModelPresetText: {
+    color: '#fff',
+    fontWeight: '500',
+  }
+});
+
+export default AiChatScreen;

@@ -1,4 +1,4 @@
-import Platform, { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import Platform, { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
