@@ -24,14 +24,13 @@ export default function Diary() {
   const [unclassifiedNotes, setUnclassifiedNotes] = useState([]);
   const [folderNotes, setFolderNotes] = useState({});
   
-  // 原有功能状态
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [currentDiaryId, setCurrentDiaryId] = useState(null);
   
-  // 新增：文件夹管理相关状态
+  // 文件夹管理相关状态
   const [settingModalVisible, setSettingModalVisible] = useState(false);
   const [folderManageModalVisible, setFolderManageModalVisible] = useState(false);
   const [addFolderModalVisible, setAddFolderModalVisible] = useState(false);
@@ -58,25 +57,25 @@ export default function Diary() {
       }
       
       // 生成用于排序的数字格式（如202510）和展示格式（2025年10月）
-      const monthNumber = parseInt(dayjs(targetDate).format('YYYYMM'), 10); // 关键：转为数字便于比较
+      const monthNumber = parseInt(dayjs(targetDate).format('YYYYMM'), 10);
       const monthDisplay = dayjs(targetDate).format('YYYY年MM月');
       
       if (!groups[monthNumber]) {
         groups[monthNumber] = {
           month: monthDisplay,
-          monthNumber: monthNumber, // 存储数字格式用于排序
+          monthNumber: monthNumber,
           data: []
         };
       }
       groups[monthNumber].data.push(item);
     });
     
-    // 1. 先按月份数字倒序排序（确保202510在202509之前）
+    // 先按月份数字倒序排序（202510在202509之前）
     const sortedGroups = Object.values(groups).sort((a, b) => {
       return b.monthNumber - a.monthNumber; // 数字大的排在前（倒序）
     });
     
-    // 2. 每个月份组内的笔记按标题字典倒序排序
+    // 每个月份组内的笔记按标题字典倒序排序
     sortedGroups.forEach(group => {
       group.data.sort((a, b) => b.title.localeCompare(a.title));
     });
@@ -128,13 +127,13 @@ export default function Diary() {
     return filtered;
   };
   
-  // 加载文件夹和笔记数据（抽取为独立函数，方便刷新）
+  // 加载文件夹和笔记数据
   const loadAllData = async () => {
-    // 加载文件夹（将 id 转为字符串）
+    // 加载文件夹
     const folderList = await getAllFolders();
     const formattedFolders = folderList.map(folder => ({
       ...folder,
-      id: folder.id.toString() // 整数 id → 字符串
+      id: folder.id.toString()
     }));
     setFolders(formattedFolders);
     
@@ -149,13 +148,13 @@ export default function Diary() {
     }));
     setAllNotes(formattedData);
     
-    // 分类未分类笔记（此时 folderId 和文件夹 id 都是字符串，比较更可靠）
+    // 分类未分类笔记
     const unclassified = formattedData.filter(note =>
       !note.folderId || !formattedFolders.some(f => f.id === note.folderId)
     );
     setUnclassifiedNotes(unclassified);
     
-    // 按文件夹分组笔记（同样用字符串 id 匹配）
+    // 按文件夹分组笔记
     const groupedNotes = formattedFolders.reduce((acc, folder) => {
       acc[folder.id] = formattedData.filter(note => note.folderId === folder.id);
       return acc;
@@ -294,7 +293,7 @@ export default function Diary() {
           style={styles.deleteButton}
           onPress={(e) => {
             e.stopPropagation();
-            deleteDiary(item.id);
+            deleteDiary(item.id).then();
           }}
         >
           <Ionicons name="trash" size={18} color="#ff3b30" />
@@ -346,7 +345,7 @@ export default function Diary() {
     if (result.success) {
       showToastMessage('文件夹创建成功');
       setAddFolderModalVisible(false);
-      loadAllData(); // 刷新文件夹列表
+      await loadAllData(); // 刷新文件夹列表
     } else {
       showToastMessage(result.message);
     }
@@ -364,7 +363,7 @@ export default function Diary() {
     if (result.success) {
       showToastMessage('文件夹修改成功');
       setEditFolderModalVisible(false);
-      loadAllData(); // 刷新文件夹列表
+      await loadAllData(); // 刷新文件夹列表
     } else {
       showToastMessage(result.message);
     }
@@ -388,7 +387,7 @@ export default function Diary() {
               if (currentFolderId === folderId.toString()) {
                 setCurrentFolderId('all');
               }
-              loadAllData(); // 刷新数据
+              await loadAllData();
             } else {
               showToastMessage(result.message);
             }
