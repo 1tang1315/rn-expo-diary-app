@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
   deleteNote, deleteNotes, getAllNotes, getAllFolders,
-  addFolder, updateFolder, deleteFolder, getFolderById
+  createFolder, updateFolder, deleteFolder, getFolderById
 } from '@/db/notesDB';
 import dayjs from 'dayjs';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
@@ -342,7 +342,7 @@ export default function Diary() {
       return;
     }
     
-    const result = await addFolder(name);
+    const result = await createFolder(name);
     if (result.success) {
       showToastMessage('文件夹创建成功');
       setAddFolderModalVisible(false);
