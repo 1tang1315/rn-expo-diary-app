@@ -55,6 +55,14 @@ const AIStreamText = ({
         thought: thoughtText,
         output: outputText
       };
+      
+      if (thoughtText && outputText) {
+        setCollapsed(true);
+        setShowOutput(true);
+      } else if (outputText) {
+        setShowOutput(true);
+      }
+      
       return;
     }
     

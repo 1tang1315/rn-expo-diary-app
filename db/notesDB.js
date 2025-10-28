@@ -230,11 +230,37 @@ export async function deleteNote(noteId) {
   const now = getLocalDateTimeByDayjs();
   const result = await db.runAsync(
     `UPDATE notes SET
-      deleted_at = ?
-      WHERE id = ?
-      AND deleted_at IS NULL`,
+        deleted_at = ?
+     WHERE id = ?
+       AND deleted_at IS NULL`,
     [now, noteId]
   );
+  return result.changes > 0;
+}
+
+/**
+ * 批量软删除笔记
+ * @param {number[]} noteIds - 笔记ID数组
+ * @returns {Promise<boolean>} 是否删除成功
+ */
+export async function deleteNotes(noteIds) {
+  if (!noteIds || noteIds.length === 0) {
+    return false;
+  }
+  
+  const db = await getDB();
+  const now = getLocalDateTimeByDayjs();
+  // 生成与ID数量匹配的占位符 (?, ?, ...)
+  const placeholders = noteIds.map(() => '?').join(',');
+  
+  const result = await db.runAsync(
+    `UPDATE notes SET
+      deleted_at = ?
+      WHERE id IN (${placeholders})
+      AND deleted_at IS NULL`,
+    [now, ...noteIds] // 第一个参数是当前时间，后面跟所有要删除的ID
+  );
+  
   return result.changes > 0;
 }
 
@@ -285,3 +311,13 @@ export async function searchNotes(query, folderId = null) {
   
   return await db.getAllAsync(sql, params);
 }
+
+export const checkDiaryExists = async (dateStr) => {
+  const db = await getDB();
+  const result = await db.getFirstAsync(
+    `SELECT id FROM notes
+     WHERE title = ? AND folder_id = (SELECT id FROM folders WHERE name = '日记')`,
+    [`${dateStr}`]
+  );
+  return !!result;
+};

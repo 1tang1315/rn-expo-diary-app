@@ -33,7 +33,7 @@ export default function Mine() {
     <SafeAreaView style={{flex: 1}}>
       <DatabaseViewer />
       <Button title="刷新" onPress={handleRefresh} />
-      <AIStreamText key={refreshKey} content={content} />
+      <AIStreamText key={refreshKey} content={content} isContentFinalized={true}/>
     </SafeAreaView>
   );
 }

@@ -77,7 +77,7 @@ export default class AiDiaryService {
    * @param {object} callbacks - 回调函数
    * @returns {Promise<{ thought: string, output: string }>}
    */
-  async generateContent(prompt, { onThought, onOutput }) {
+  async generateContent(prompt, { onThought = () => {}, onOutput = () => {} } = {}) {
     // 重置暂停状态
     this.isPaused = false;
     this.currentState.fullThought = '';

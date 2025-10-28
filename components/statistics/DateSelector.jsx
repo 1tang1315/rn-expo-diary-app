@@ -36,9 +36,9 @@ const DateSelector = ({
   
   useEffect(() => {
     if(dateType === 'single') {
-      onDataChange(startDate, startDate);
+      onDataChange(dayjs(startDate).format('YYYY-MM-DD'), dayjs(startDate).format('YYYY-MM-DD'));
     } else {
-      onDataChange(startDate, endDate);
+      onDataChange(dayjs(startDate).format('YYYY-MM-DD'), dayjs(endDate).format('YYYY-MM-DD'));
     }
   }, [dateType, startDate, endDate, onDataChange]);
   
