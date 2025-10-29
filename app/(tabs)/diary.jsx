@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Dimensions, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert
+  Dimensions, FlatList, Modal, StyleSheet, Text,
+  TextInput, TouchableOpacity, View, Alert, TouchableWithoutFeedback
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -10,11 +11,13 @@ import {
 } from '@/db/notesDB';
 import dayjs from 'dayjs';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
+import CategoryTab from "@/components/common/CategoryTab";
 
 const { width } = Dimensions.get("window");
 
 export default function Diary() {
   const navigation = useNavigation();
+  const searchInputRef = useRef(null);
   const [searchText, setSearchText] = useState('');
   
   // 文件夹与笔记分类相关状态
@@ -42,7 +45,7 @@ export default function Diary() {
   
   // 按月份分组数据
   const groupByMonth = (notes) => {
-    if (!notes.length) return [];
+    if(!notes.length) return [];
     
     // 匹配标题中的YYYY-MM-DD格式
     const dateTitleReg = /\b(\d{4}-\d{2}-\d{2})\b/;
@@ -52,7 +55,7 @@ export default function Diary() {
       // 确定用于分组的日期（优先标题中的日期）
       let targetDate = item.time;
       const dateMatch = item.title.match(dateTitleReg);
-      if (dateMatch && dateMatch[1]) {
+      if(dateMatch && dateMatch[1]) {
         targetDate = dateMatch[1];
       }
       
@@ -60,7 +63,7 @@ export default function Diary() {
       const monthNumber = parseInt(dayjs(targetDate).format('YYYYMM'), 10);
       const monthDisplay = dayjs(targetDate).format('YYYY年MM月');
       
-      if (!groups[monthNumber]) {
+      if(!groups[monthNumber]) {
         groups[monthNumber] = {
           month: monthDisplay,
           monthNumber: monthNumber,
@@ -88,10 +91,10 @@ export default function Diary() {
     let filtered = [];
     
     // 按文件夹筛选
-    if (currentFolderId === 'all') {
+    if(currentFolderId === 'all') {
       filtered = [...unclassifiedNotes];
       Object.values(folderNotes).forEach(notes => filtered.push(...notes));
-    } else if (currentFolderId === 'unclassified') {
+    } else if(currentFolderId === 'unclassified') {
       filtered = unclassifiedNotes;
     } else {
       filtered = folderNotes[currentFolderId] || [];
@@ -103,20 +106,20 @@ export default function Diary() {
     
     // 获取当前选中的文件夹名称
     let currentFolderName = '';
-    if (currentFolderId !== 'all' && currentFolderId !== 'unclassified') {
+    if(currentFolderId !== 'all' && currentFolderId !== 'unclassified') {
       const targetFolder = folders.find(folder => folder.id.toString() === currentFolderId);
       currentFolderName = targetFolder?.name || '';
     }
     
     // 仅在「日记」或「阶段总结」分类下执行标题过滤
-    if (currentFolderName === '日记') {
+    if(currentFolderName === '日记') {
       filtered = filtered.filter(item => diaryTitleReg.test(item.title));
-    } else if (currentFolderName === '阶段总结') {
+    } else if(currentFolderName === '阶段总结') {
       filtered = filtered.filter(item => stageTitleReg.test(item.title));
     }
     
     // 搜索筛选
-    if (searchText.trim()) {
+    if(searchText.trim()) {
       const lowerSearch = searchText.toLowerCase();
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(lowerSearch) ||
@@ -171,7 +174,7 @@ export default function Diary() {
   // 全选/取消全选逻辑
   const handleSelectAll = () => {
     const filtered = filterData();
-    if (isSelectAll) {
+    if(isSelectAll) {
       setSelectedIds([]);
     } else {
       setSelectedIds(filtered.map(item => item.id));
@@ -199,9 +202,9 @@ export default function Diary() {
   
   // 批量删除
   const deleteSelected = async () => {
-    if (selectedIds.length === 0) return;
+    if(selectedIds.length === 0) return;
     const isDeleted = await deleteNotes(selectedIds);
-    if (isDeleted) {
+    if(isDeleted) {
       // 更新所有笔记相关状态
       const updatedAllNotes = allNotes.filter(note => !selectedIds.includes(note.id));
       setAllNotes(updatedAllNotes);
@@ -223,9 +226,9 @@ export default function Diary() {
   
   // 单个删除
   const deleteDiary = async (id) => {
-    if (id) {
+    if(id) {
       const isDeleted = await deleteNote(id);
-      if (isDeleted) {
+      if(isDeleted) {
         // 更新所有笔记相关状态
         const updatedAllNotes = allNotes.filter(note => note.id !== id);
         setAllNotes(updatedAllNotes);
@@ -239,7 +242,7 @@ export default function Diary() {
         });
         setFolderNotes(updatedFolderNotes);
         
-        if (selectedIds.includes(id)) {
+        if(selectedIds.includes(id)) {
           setSelectedIds(prev => prev.filter(itemId => itemId !== id));
         }
         
@@ -255,7 +258,7 @@ export default function Diary() {
     <TouchableOpacity
       style={styles.listItem}
       onPress={() => {
-        if (isDeleting) {
+        if(isDeleting) {
           toggleSelect(item.id);
         } else {
           navigation.navigate('diary-edit', { nodeId: item.id });
@@ -310,7 +313,7 @@ export default function Diary() {
     </View>
   );
   
-  // 显示提示Toast
+  // 显示提示
   const showToastMessage = (text) => {
     setToastText(text);
     setShowToast(true);
@@ -326,7 +329,7 @@ export default function Diary() {
   // 打开编辑文件夹弹窗
   const handleOpenEditFolderModal = async (folderId) => {
     const folder = await getFolderById(folderId);
-    if (folder) {
+    if(folder) {
       setFolderName(folder.name);
       setCurrentEditFolderId(folderId);
       setEditFolderModalVisible(true);
@@ -336,31 +339,27 @@ export default function Diary() {
   // 确认新增文件夹
   const handleConfirmAddFolder = async () => {
     const name = folderName.trim();
-    if (!name) {
+    if(!name) {
       showToastMessage('文件夹名称不能为空');
       return;
     }
     
-    const result = await createFolder(name);
-    if (result.success) {
-      showToastMessage('文件夹创建成功');
-      setAddFolderModalVisible(false);
-      await loadAllData(); // 刷新文件夹列表
-    } else {
-      showToastMessage(result.message);
-    }
+    await createFolder({ name });
+    showToastMessage('文件夹创建成功');
+    setAddFolderModalVisible(false);
+    await loadAllData();
   };
   
   // 确认编辑文件夹
   const handleConfirmEditFolder = async () => {
     const name = folderName.trim();
-    if (!name) {
+    if(!name) {
       showToastMessage('文件夹名称不能为空');
       return;
     }
     
     const result = await updateFolder(currentEditFolderId, name);
-    if (result.success) {
+    if(result.success) {
       showToastMessage('文件夹修改成功');
       setEditFolderModalVisible(false);
       await loadAllData(); // 刷新文件夹列表
@@ -375,22 +374,21 @@ export default function Diary() {
       '确认删除',
       '删除文件夹后，旗下笔记将转为未分类，是否继续？',
       [
-        { text: '取消', style: 'cancel' },
+        {
+          text: '取消',
+          style: 'cancel'
+        },
         {
           text: '删除',
           style: 'destructive',
           onPress: async () => {
-            const result = await deleteFolder(folderId);
-            if (result.success) {
-              showToastMessage('文件夹删除成功');
-              // 如果当前选中的是被删除的文件夹，切换到全部
-              if (currentFolderId === folderId.toString()) {
-                setCurrentFolderId('all');
-              }
-              await loadAllData();
-            } else {
-              showToastMessage(result.message);
+            await deleteFolder(folderId);
+            showToastMessage('文件夹删除成功');
+            // 如果当前选中的是被删除的文件夹，切换到全部
+            if(currentFolderId === folderId.toString()) {
+              setCurrentFolderId('all');
             }
+            await loadAllData();
           }
         }
       ]
@@ -420,9 +418,10 @@ export default function Diary() {
   
   return (
     <SafeAreaView style={styles.container}>
-      {/* 搜索栏 + 设置按钮 */}
+      {/* 搜索栏 */}
       <View style={styles.searchContainer}>
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="搜索日记标题或内容..."
           placeholderTextColor="#999"
@@ -440,35 +439,25 @@ export default function Diary() {
       </View>
       
       {/* 文件夹横向选择栏 */}
-      <View style={styles.folderContainer}>
-        <FlatList
-          horizontal
-          data={[
-            { id: 'all', name: '全部' },
-            { id: 'unclassified', name: '未分类' },
-            ...folders.map(f => ({ id: f.id.toString(), name: f.name }))
-          ]}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.folderTabItem,
-                currentFolderId === item.id && styles.folderTabItemActive
-              ]}
-              onPress={() => setCurrentFolderId(item.id)} // 仅保留文件夹ID切换，删除无用的名称更新
-            >
-              <Text style={[
-                styles.folderTabText,
-                currentFolderId === item.id && styles.folderTabTextActive
-              ]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.folderTabList}
-          showsHorizontalScrollIndicator={false}
-        />
-      </View>
+      <CategoryTab
+        categories={[
+          {
+            id: 'all',
+            name: '全部',
+            isFixed: true
+          },
+          {
+            id: 'unclassified',
+            name: '未分类'
+          },
+          ...folders?.map(f => ({
+            id: f.id.toString(),
+            name: f.name
+          }))
+        ]}
+        currentTab={currentFolderId}
+        setCurrentTab={setCurrentFolderId}
+      />
       
       {/* 批量删除栏 */}
       {isDeleting && (
@@ -484,14 +473,18 @@ export default function Diary() {
             <Ionicons name="close" size={20} color="#333" />
           </TouchableOpacity>
           
-          <Text style={styles.selectedCount}>{`已选择 ${selectedIds.length} 项`}</Text>
+          <Text style={styles.selectedCount}>
+            {`已选择 ${selectedIds.length} 项`}
+          </Text>
           
           <View style={styles.deleteActionGroup}>
             <TouchableOpacity
               style={styles.selectAllButton}
               onPress={handleSelectAll}
             >
-              <Text style={styles.selectAllText}>{isSelectAll ? '取消全选' : '全选'}</Text>
+              <Text style={styles.selectAllText}>
+                {isSelectAll ? '取消全选' : '全选'}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -508,16 +501,18 @@ export default function Diary() {
         </View>
       )}
       
-      {/* 笔记列表（按月份分组）- 调用时仅传过滤后的笔记数组 */}
+      {/* 笔记列表 */}
       <FlatList
         contentContainerStyle={styles.flatList}
         data={groupByMonth(filterData())}
         keyExtractor={(group) => group.month}
         renderItem={({ item: group }) => (
           <View style={styles.monthGroup}>
-            <Text style={styles.monthTitle} numberOfLines={1} ellipsizeMode="tail">
-              {group.month}
-            </Text>
+            <Text
+              style={styles.monthTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >{group.month}</Text>
             <FlatList
               data={group.data}
               keyExtractor={(item) => item.id}
@@ -553,28 +548,32 @@ export default function Diary() {
         visible={settingModalVisible}
         onRequestClose={() => setSettingModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => {
-                setSettingModalVisible(false);
-                navigation.navigate('ai-diary-generator');
-              }}
-            >
-              <Text style={styles.modalItemText}>ai日记选择</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalItem}
-              onPress={() => {
-                setSettingModalVisible(false);
-                setFolderManageModalVisible(true);
-              }}
-            >
-              <Text style={styles.modalItemText}>文件夹管理</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={() => setSettingModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContainer}>
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSettingModalVisible(false);
+                    navigation.navigate('ai-diary-generator');
+                  }}
+                >
+                  <Text style={styles.modalItemText}>ai日记选择</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSettingModalVisible(false);
+                    setFolderManageModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>文件夹管理</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
       
       {/* 文件夹管理弹窗 */}
@@ -697,7 +696,7 @@ export default function Diary() {
         </View>
       </Modal>
       
-      {/* 单个删除确认弹窗（原有） */}
+      {/* 单个删除确认弹窗 */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -754,39 +753,19 @@ const styles = StyleSheet.create({
     color: '#333'
   },
   settingButton: {
-    marginLeft: 10,
+    marginLeft: 8,
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center'
   },
   
-  // 文件夹选择栏
-  folderContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    marginBottom: 4
-  },
-  folderTabList: {
-    paddingHorizontal: 10,
-    gap: 8
-  },
-  folderTabItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0'
-  },
-  folderTabItemActive: {
-    backgroundColor: '#007AFF'
-  },
-  folderTabText: {
-    fontSize: 14,
-    color: '#333'
-  },
-  folderTabTextActive: {
-    color: '#fff',
-    fontWeight: 'bold'
+  searchButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8
   },
   
   // 列表容器
@@ -953,14 +932,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
     zIndex: 100
   },
   
-  // 通用提示Toast
+  // 通用提示
   toast: {
     position: 'absolute',
     top: '60%',
@@ -1003,7 +985,7 @@ const styles = StyleSheet.create({
     color: '#333'
   },
   
-  // 删除确认弹窗（原有）
+  // 删除确认弹窗
   deleteModalOverlay: {
     flex: 1,
     justifyContent: 'center',

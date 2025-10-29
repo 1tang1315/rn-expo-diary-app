@@ -30,10 +30,9 @@ const CategoryTab = ({
   // 处理标签点击
   const handleTabPress = useCallback(
     (tabId) => {
-      // 如果点击的是固定标签，并且当前处于折叠状态
       const clickedFixedTab = fixedTabs?.some(tab => tab.id === tabId);
+      
       if (clickedFixedTab && isScrolled) {
-        // 滚动回最左边
         scrollRef.current?.scrollTo({ x: 0, animated: true });
       }
       setCurrentTab(tabId);
@@ -49,7 +48,7 @@ const CategoryTab = ({
     if (scrollPosition > 20 && !isScrolled) {
       setIsScrolled(true);
       Animated.timing(scaleAnim, {
-        toValue: 0.8, // 稍微缩小一点，提示用户可以点击
+        toValue: 0.8,
         duration: 200,
         useNativeDriver: true,
       }).start();
@@ -70,6 +69,9 @@ const CategoryTab = ({
     const isActive = currentTab === tab.id;
     const hasIcon = !!tab.icon || !!tab.emoji;
     
+    // 判断是否需要显示默认图标（无自定义图标且固定标签处于折叠状态）
+    const shouldShowDefaultIcon = !hasIcon && isFixed && isScrolled;
+    
     // 对于固定标签，根据滚动状态决定是否显示文字
     const shouldShowText = !isFixed || !isScrolled;
     
@@ -84,19 +86,28 @@ const CategoryTab = ({
         onPress={() => handleTabPress(tab.id)}
         activeOpacity={0.8}
       >
-        {hasIcon && (
+        {hasIcon || shouldShowDefaultIcon ? (
           <Animated.View style={{ transform: [{ scale: isFixed && isScrolled ? scaleAnim : 1 }] }}>
-            {tab.icon ? (
+            {shouldShowDefaultIcon ? (
+              // 折叠时显示默认图标
+              <MaterialIcons
+                name="view-list"
+                size={20}
+                color={isActive ? "#2196F3" : "#888888"}
+              />
+            ) : tab.icon ? (
+              // 原有自定义图标渲染
               <MaterialIcons
                 name={tab.icon}
-                size={isFixed && isScrolled ? 20 : 18} // 折叠时图标稍大
+                size={isFixed && isScrolled ? 20 : 18}
                 color={isActive ? "#2196F3" : "#888888"}
               />
             ) : (
+              // 原有emoji渲染
               <Text style={{ fontSize: isFixed && isScrolled ? 20 : 18 }}>{tab.emoji}</Text>
             )}
           </Animated.View>
-        )}
+        ) : null}
         
         {/* 仅在非固定标签或固定标签未折叠时显示文字 */}
         {shouldShowText && (
@@ -106,9 +117,7 @@ const CategoryTab = ({
               isActive && styles.activeTabText,
               !hasIcon && styles.tabTextNoIcon
             ]}
-          >
-            {tab.name}
-          </Text>
+          >{tab.name}</Text>
         )}
       </TouchableOpacity>
     );
@@ -117,12 +126,12 @@ const CategoryTab = ({
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
-        {/* 1. 渲染固定标签 (在ScrollView外部) */}
-        <View style={styles.fixedTabsContainer}>
-          {fixedTabs.map(tab => renderTab(tab, true))}
+        {/* 渲染固定标签 */}
+        <View>
+          {fixedTabs?.map(tab => renderTab(tab, true))}
         </View>
         
-        {/* 2. 渲染可滚动的标签 */}
+        {/* 渲染可滚动的标签 */}
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -131,7 +140,7 @@ const CategoryTab = ({
           scrollEventThrottle={16}
           contentContainerStyle={styles.scrollContentContainer}
         >
-          {scrollableTabs.map(tab => renderTab(tab))}
+          {scrollableTabs?.map(tab => renderTab(tab))}
         </ScrollView>
       </View>
     </View>
@@ -145,11 +154,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   tabBar: {
-    flexDirection: 'row', // 让固定标签和滚动视图在同一行
-    alignItems: 'center',
-  },
-  fixedTabsContainer: {
-    // 固定标签容器，确保它不会被压缩
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   scrollContentContainer: {
     paddingVertical: 8,
@@ -163,9 +169,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f5f5f5',
   },
-  // 折叠状态下的固定标签样式
   collapsedFixedTab: {
-    backgroundColor: 'transparent', // 背景透明
+    backgroundColor: 'transparent',
   },
   activeTab: {
     backgroundColor: '#E3F2FD',
