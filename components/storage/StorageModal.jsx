@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Modal, Alert,
+  View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Modal, Alert,
   TouchableWithoutFeedback, Image, StyleSheet
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -27,10 +26,10 @@ const StorageItemModal = ({
     category: storageCategories[0].id,
     icon: '',
     price: '',
-    details: '',
+    detail: '',
     image: '',
-    startDatetime: new Date(),
-    endDatetime: null
+    startDate: new Date(),
+    endDate: null
   });
   const priceRef = useRef(formData.price);
   
@@ -49,6 +48,7 @@ const StorageItemModal = ({
     };
     
     if(currentItem) {
+      console.log(currentItem, "curr");
       const defaultIcon = getDefaultIcon(currentItem.category || storageCategories[0].id);
       
       setFormData({
@@ -56,10 +56,10 @@ const StorageItemModal = ({
         category: currentItem.category || storageCategories[0].id,
         icon: currentItem.icon || defaultIcon,
         price: currentItem.price ? currentItem.price : '',
-        details: currentItem.details || '',
+        detail: currentItem.detail || '',
         image: currentItem.image || '',
-        startDatetime: currentItem.start_time ? new Date(currentItem.start_time) : new Date(),
-        endDatetime: currentItem.end_time ? new Date(currentItem.end_time) : null
+        startDate: currentItem.startDate ? new Date(currentItem.startDate) : new Date(),
+        endDate: currentItem.endDate ? new Date(currentItem.endDate) : null
       });
     } else {
       const defaultIcon = getDefaultIcon(storageCategories[0].id);
@@ -68,10 +68,10 @@ const StorageItemModal = ({
         category: storageCategories[0].id,
         icon: defaultIcon,
         price: '',
-        details: '',
+        detail: '',
         image: '',
-        startDatetime: new Date(),
-        endDatetime: null
+        startDate: new Date(),
+        endDate: null
       });
     }
   }, [visible, currentItem]);
@@ -123,7 +123,7 @@ const StorageItemModal = ({
   
   // 日期变更
   const handleDateChange = (event, selectedDate) => {
-    const targetKey = selectors.datetimeTarget === 'start' ? 'startDatetime' : 'endDatetime';
+    const targetKey = selectors.datetimeTarget === 'start' ? 'startDate' : 'endDate';
     handleInputChange(targetKey, selectedDate);
     setSelectors(prev => ({
       ...prev,
@@ -190,7 +190,7 @@ const StorageItemModal = ({
       return;
     }
     
-    if(formData.endDatetime && formData.startDatetime > formData.endDatetime) {
+    if(formData.endDate && formData.startDate > formData.endDate) {
       Alert.alert('时间错误', '结束日期不能早于开始日期');
       return;
     }
@@ -205,10 +205,10 @@ const StorageItemModal = ({
       category: formData.category,
       icon: formData.icon,
       price: price,
-      details: formData.details.trim(),
+      detail: formData.detail.trim(),
       image: imageData,
-      start_time: formatDate(formData.startDatetime),
-      end_time: formData.endDatetime ? formatDate(formData.endDatetime) : null
+      startDate: formatDate(formData.startDate),
+      endDate: formData.endDate ? formatDate(formData.endDate) : null
     };
     
     try {
@@ -278,7 +278,6 @@ const StorageItemModal = ({
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalContainer}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
@@ -347,8 +346,8 @@ const StorageItemModal = ({
                     <Text style={styles.formLabel}>物品详情</Text>
                     <TextInput
                       style={[styles.formInput, styles.multilineInput]}
-                      value={formData.details}
-                      onChangeText={(val) => handleInputChange('details', val)}
+                      value={formData.detail}
+                      onChangeText={(val) => handleInputChange('detail', val)}
                       placeholder="请输入物品详情"
                       multiline
                       numberOfLines={4}
@@ -358,7 +357,7 @@ const StorageItemModal = ({
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>
                       启用日期:
-                      <Text style={styles.dateDisplayText}> {formatDate(formData.startDatetime)}</Text>
+                      <Text style={styles.dateDisplayText}> {formatDate(formData.startDate)}</Text>
                     </Text>
                     <View style={styles.dateButtonGroup}>
                       <TouchableOpacity style={styles.dateButton} onPress={() => toggleDatetimePicker('start')}>
@@ -367,7 +366,7 @@ const StorageItemModal = ({
                     </View>
                     {selectors.showDatetime && selectors.datetimeTarget === 'start' && (
                       <DateTimePicker
-                        value={formData.startDatetime}
+                        value={formData.startDate}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
                         onChange={handleDateChange}
@@ -381,29 +380,29 @@ const StorageItemModal = ({
                     <Text style={styles.formLabel}>
                       退役日期（可选）:
                       <Text style={styles.dateDisplayText}>
-                        {formData.endDatetime ? formatDate(formData.endDatetime) : '未设置'}
+                        {formData.endDate ? formatDate(formData.endDate) : '未设置'}
                       </Text>
                     </Text>
                     <View style={styles.dateButtonGroup}>
                       <TouchableOpacity style={styles.dateButton} onPress={() => toggleDatetimePicker('end')}>
                         <Text style={styles.dateButtonText}>选择日期</Text>
                       </TouchableOpacity>
-                      {formData.endDatetime && (
+                      {formData.endDate && (
                         <TouchableOpacity
                           style={styles.dateButton}
-                          onPress={() => handleInputChange('endDatetime', null)}>
+                          onPress={() => handleInputChange('endDate', null)}>
                           <Text style={styles.dateButtonText}>清除</Text>
                         </TouchableOpacity>
                       )}
                     </View>
                     {selectors.showDatetime && selectors.datetimeTarget === 'end' && (
                       <DateTimePicker
-                        value={formData.endDatetime || new Date()}
+                        value={formData.endDate || new Date()}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
                         onChange={handleDateChange}
                         maximumDate={new Date(2100, 11, 31)}
-                        minimumDate={formData.startDatetime}
+                        minimumDate={formData.startDate}
                       />
                     )}
                   </View>
@@ -424,7 +423,6 @@ const StorageItemModal = ({
                 </View>
               </View>
             </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -446,7 +444,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
-    maxHeight: '85%'
+    maxHeight: '85%',
+    minHeight: '85%'
   },
   modalHeader: {
     flexDirection: 'row',

@@ -1,9 +1,9 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DatabaseViewer  from "@/db/DatabaseViewer";
-import { Demo2 } from "@/components/Demo2";
 import AIStreamText from "@/components/common/AIStreamText";
 import { Button } from "react-native";
 import { useState } from "react";
+import DragSortList from "@/components/common/DragSort";
 
 const content = {
   thought: "用户的报错信息显示在 Expo Router 中，RNSScreenContainer 处发生了 Cannot read property 'toString' of undefined，这通常是因为屏幕组件缺少正确的 key 或 id 导致的。结合 Expo Router 的机制，_layout.jsx 中定义的路由表会作为 children 传递给 Tabs 或 Stack 组件，而每个子元素需要有明确的 name（会被用作 key）。\n" +
@@ -23,6 +23,15 @@ GitHub
   `
 }
 export default function Mine() {
+  const initialItems = [
+    { id: '1', content: '列表项 1' },
+    { id: '2', content: '列表项 2' },
+    { id: '3', content: '列表项 3' },
+    { id: '4', content: '列表项 4' },
+    { id: '5', content: '列表项 5' },
+  ];
+  
+  
   const [refreshKey, setRefreshKey] = useState(0);
   
   const handleRefresh = () => {
@@ -33,7 +42,15 @@ export default function Mine() {
     <SafeAreaView style={{flex: 1}}>
       <DatabaseViewer />
       <Button title="刷新" onPress={handleRefresh} />
-      <AIStreamText key={refreshKey} content={content} isContentFinalized={true}/>
+      
+      <AIStreamText
+        key={refreshKey}
+        content={content}
+        isContentFinalized={true}
+      />
+      
+      {/* <DragSortList initialItems={initialItems} /> */}
+      
     </SafeAreaView>
   );
 }

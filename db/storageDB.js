@@ -14,10 +14,10 @@ export async function createStorageItem(item) {
     category,
     icon,
     price,
-    details,
+    detail,
     image,
-    start_time,
-    end_time
+    startDate: start_date,
+    endDate: end_date
   } = item;
 
   const db = await getDB();
@@ -25,9 +25,9 @@ export async function createStorageItem(item) {
   
   const result = await db.runAsync(
     `INSERT INTO storage
-     (name, category, icon, price, details, image, start_time, end_time, updated_at)
+     (name, category, icon, price, detail, image, start_date, end_date, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [name, category, icon, price, details, image, start_time, end_time, localNow]
+    [name, category, icon, price, detail, image, start_date, end_date, localNow]
   );
   
   // 返回新创建的储物项
@@ -56,7 +56,7 @@ export async function getStorageItemById(id) {
  */
 export async function getAllStorageItems(sortOrder = 'asc', sortField = 'name') {
   // 验证排序字段是否合法
-  const validFields = ['name', 'category', 'price', 'start_time', 'end_time'];
+  const validFields = ['name', 'category', 'price', 'start_date', 'end_date'];
   const finalSortField = validFields.includes(sortField) ? sortField : 'name';
   
   // 验证排序方向
@@ -97,13 +97,13 @@ export async function getStorageItemsByDateRange(startDate, endDate, sortOrder =
     WHERE
       deleted_at IS NULL
       AND (
-        (DATE(start_time) BETWEEN ? AND ?)
+        (DATE(start_date) BETWEEN ? AND ?)
         OR
-        (DATE(end_time) BETWEEN ? AND ?)
+        (DATE(end_date) BETWEEN ? AND ?)
         OR
-        (DATE(start_time) <= ? AND DATE(end_time) >= ?)
+        (DATE(start_date) <= ? AND DATE(end_date) >= ?)
       )
-    ORDER BY start_time ${finalSortOrder}
+    ORDER BY start_date ${finalSortOrder}
   `;
   
   return await db.getAllAsync(
@@ -131,15 +131,15 @@ export async function searchStorageItems(keyword) {
                 WHEN name LIKE ? THEN 3
                 WHEN category = ? THEN 4
                 WHEN category LIKE ? THEN 5
-                WHEN details = ? THEN 6
-                WHEN details LIKE ? THEN 7
-                WHEN details LIKE ? THEN 8
+                WHEN detail = ? THEN 6
+                WHEN detail LIKE ? THEN 7
+                WHEN detail LIKE ? THEN 8
                 ELSE 9
                 END AS search_priority
      FROM storage
      WHERE
          deleted_at IS NULL
-       AND (name LIKE ? OR details LIKE ? OR category LIKE ?)  -- 新增：搜索分类
+       AND (name LIKE ? OR detail LIKE ? OR category LIKE ?)  -- 新增：搜索分类
      ORDER BY search_priority ASC, name ASC`,
     [
       keyword,                   // 名称完全匹配
@@ -170,10 +170,10 @@ export async function updateStorageItem(id, updates) {
     category,
     icon,
     price,
-    details,
+    detail,
     image,
-    start_time,
-    end_time
+    startDate: start_date,
+    endDate: end_date,
   } = updates;
   
   const db = await getDB();
@@ -185,13 +185,13 @@ export async function updateStorageItem(id, updates) {
          category = ?,
          icon = ?,
          price = ?,
-         details = ?,
+         detail = ?,
          image = ?,
-         start_time = ?,
-         end_time = ?,
+         start_date = ?,
+         end_date = ?,
          updated_at = ?
      WHERE id = ? AND deleted_at IS NULL`,
-    [name, category, icon, price, details, image, start_time, end_time, localNow, id]
+    [name, category, icon, price, detail, image, start_date, end_date, localNow, id]
   );
   
   return result.changes > 0;

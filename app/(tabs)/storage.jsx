@@ -22,14 +22,16 @@ export default function Storage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [allItems, setAllItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentEditItem, setCurrentEditItem] = useState(null);
   
+  const [isActiveCollapsed, setIsActiveCollapsed] = useState(false);
+  const [isRetiredCollapsed, setIsRetiredCollapsed] = useState(false);
+  
   const processSingleItem = useCallback((item) => {
     const today = new Date();
-    const startDate = item.start_time ? new Date(item.start_time) : null;
-    const endDate = item.end_time ? new Date(item.end_time) : today;
+    const startDate = item.start_date ? new Date(item.start_date) : null;
+    const endDate = item.end_date ? new Date(item.end_date) : today;
     
     // 计算使用天数
     const daysUsed = startDate
@@ -50,9 +52,9 @@ export default function Storage() {
       dailyPrice,
       daysUsed,
       image: item.image,
-      detail: item.details || '',
-      startDate: startDate ? startDate.toISOString().split('T')[0] : '',
-      endDate: item.end_time ? endDate.toISOString().split('T')[0] : '',
+      detail: item.detail,
+      startDate: item.start_date,
+      endDate: item.end_date
     };
   }, []);
   
@@ -61,7 +63,7 @@ export default function Storage() {
     return dbItems.map(processSingleItem);
   }, [processSingleItem]);
   
-  // 根据活动类别过滤项目 - 使用useMemo缓存结果
+  // 根据活动类别过滤项目
   const filteredItems = useMemo(() => {
     if(activeCategory === 'all') return allItems;
     return allItems.filter(item => item.category === activeCategory);
@@ -71,24 +73,22 @@ export default function Storage() {
   const fetchItems = useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
       
       // 从数据库获取所有项目
-      const dbItems = await getAllStorageItems('desc', 'updated_at');
+      const dbItems = await getAllStorageItems('desc', 'start_date');
       
       // 处理数据并更新状态
       const processedItems = processItems(dbItems);
       setAllItems(processedItems);
     } catch(err) {
       console.error('获取储物数据失败:', err);
-      setError('加载数据失败，请重试');
       setAllItems([]);
     } finally {
       setIsLoading(false);
     }
   }, [processItems]);
   
-  // 初始加载和类别变化时重新获取数据
+  // 初始加载获取数据
   useEffect(() => {
     const fetchData = async () => {
       await fetchItems();
@@ -97,13 +97,16 @@ export default function Storage() {
     fetchData().then();
   }, [fetchItems]);
   
-  // 计算统计数据 - 使用useMemo避免每次渲染重新计算
+  // 计算统计数据
   const {
     totalValue,
     activeItems,
     retiredItems,
     activeValue,
-    retiredValue
+    retiredValue,
+    dailyTotal,
+    activeDailyTotal,
+    retiredDailyTotal
   } = useMemo(() => {
     const today = new Date();
     const total = filteredItems.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
@@ -112,12 +115,19 @@ export default function Storage() {
     const activeVal = active.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
     const retiredVal = retired.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
     
+    const dailyTotal = filteredItems.reduce((sum, item) => sum + Number(item.dailyPrice) * 100, 0) / 100;
+    const activeDailyTotal = active.reduce((sum, item) => sum + Number(item.dailyPrice) * 100, 0) / 100;
+    const retiredDailyTotal = retired.reduce((sum, item) => sum + Number(item.dailyPrice) * 100, 0) / 100;
+    
     return {
       totalValue: total,
       activeItems: active,
       retiredItems: retired,
       activeValue: activeVal,
-      retiredValue: retiredVal
+      retiredValue: retiredVal,
+      dailyTotal,
+      activeDailyTotal,
+      retiredDailyTotal
     };
   }, [filteredItems]);
   
@@ -128,19 +138,6 @@ export default function Storage() {
         <ActivityIndicator size="large" color="#3498db" />
         <Text style={styles.loadingText}>加载储物数据中...</Text>
       </LinearGradient>
-    );
-  }
-  
-  // 错误状态
-  if(error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={40} color="#e74c3c" />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchItems}>
-          <Text style={styles.retryText}>重试</Text>
-        </TouchableOpacity>
-      </View>
     );
   }
   
@@ -163,25 +160,38 @@ export default function Storage() {
         style={styles.statsCard}
       >
         <View style={styles.statsRow}>
+          {/* 总资产 + 全部日均价格 */}
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>总资产</Text>
             <Text style={styles.statValue}>¥{totalValue.toLocaleString()}</Text>
+            <Text style={styles.dailyPriceText}>日均 ¥{dailyTotal.toFixed(2)}</Text>
           </View>
           <View style={styles.divider} />
+          
+          {/* 未退役 + 未退役日均价格 */}
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>未退役</Text>
             <Text style={[styles.statValue, styles.activeValue]}>
               ¥{activeValue.toLocaleString()}
             </Text>
+            <Text style={[styles.dailyPriceText, styles.activeDailyText]}>
+              日均 ¥{activeDailyTotal.toFixed(2)}
+            </Text>
           </View>
           <View style={styles.divider} />
+          
+          {/* 已退役 + 已退役日均价格 */}
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>已退役</Text>
             <Text style={[styles.statValue, styles.retiredValue]}>
               ¥{retiredValue.toLocaleString()}
             </Text>
+            <Text style={[styles.dailyPriceText, styles.retiredDailyText]}>
+              日均 ¥{retiredDailyTotal.toFixed(2)}
+            </Text>
           </View>
         </View>
+        
         <View style={styles.statsSubRow}>
           <Text style={styles.statsSubText}>
             未退役: {activeItems.length} 件 | 已退役: {retiredItems.length} 件
@@ -195,27 +205,83 @@ export default function Storage() {
         currentTab={activeCategory}
         setCurrentTab={setActiveCategory}
       />
-      
-      {/* 列表或空状态 */}
-      {filteredItems.length > 0 ? (
-        <FlatList
-          showsVerticalScrollIndicator={false}
-          data={filteredItems}
-          renderItem={({ item }) => (
-            <StorageCard
-              item={item}
-              onPress={() => openModal(item)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={7}
-        />
-      ) : (
-        <EmptyContainer icon="folder-open" text="暂无储物物品" />
-      )}
+
+      <View style={styles.sectionContainer}>
+        {/* 未退役 */}
+        {activeItems.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setIsActiveCollapsed(!isActiveCollapsed)}
+            >
+              <View style={styles.sectionHeaderLeft}>
+                <Text style={styles.sectionTitle}>未退役</Text>
+                <Text style={styles.sectionCount}>({activeItems.length}件)</Text>
+              </View>
+              <Ionicons
+                name={isActiveCollapsed ? "chevron-down" : "chevron-up"}
+                size={18}
+                color="#3498db"
+              />
+            </TouchableOpacity>
+            
+            {!isActiveCollapsed && (
+              <FlatList
+                showsVerticalScrollIndicator={false}
+                data={activeItems}
+                renderItem={({ item }) => (
+                  <StorageCard item={item} onPress={() => openModal(item)} />
+                )}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.sectionListContent}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={7}
+              />
+            )}
+          </View>
+        )}
+        
+        {/* 已退役 */}
+        {retiredItems.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setIsRetiredCollapsed(!isRetiredCollapsed)}
+            >
+              <View style={styles.sectionHeaderLeft}>
+                <Text style={styles.sectionTitle}>已退役</Text>
+                <Text style={styles.sectionCount}>({retiredItems.length}件)</Text>
+              </View>
+              <Ionicons
+                name={isRetiredCollapsed ? "chevron-down" : "chevron-up"}
+                size={18}
+                color="#ff9500"
+              />
+            </TouchableOpacity>
+            
+            {!isRetiredCollapsed && (
+              <FlatList
+                showsVerticalScrollIndicator={false}
+                data={retiredItems}
+                renderItem={({ item }) => (
+                  <StorageCard item={item} onPress={() => openModal(item)} />
+                )}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.sectionListContent}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={7}
+              />
+            )}
+          </View>
+        )}
+        
+        {/* 空 */}
+        {activeItems.length === 0 && retiredItems.length === 0 && (
+          <EmptyContainer icon="folder-open" text="暂无储物物品" />
+        )}
+      </View>
       
       {/* 添加按钮 */}
       <AddEventButton onPress={() => openModal()} />
@@ -246,30 +312,7 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     fontSize: 15
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  errorText: {
-    color: '#e74c3c',
-    fontSize: 16,
-    marginTop: 10,
-    textAlign: 'center'
-  },
-  retryButton: {
-    marginTop: 20,
-    backgroundColor: '#3498db',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8
-  },
-  retryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500'
-  },
+  
   statsCard: {
     margin: 16,
     borderRadius: 12,
@@ -316,7 +359,52 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12
   },
-  listContent: {
+  dailyPriceText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2
+  },
+  activeDailyText: {
+    color: 'rgba(76,217,100,0.9)'
+  },
+  retiredDailyText: {
+    color: 'rgba(255,149,0,0.9)'
+  },
+  
+  sectionContainer: {
+    flex: 1,
     padding: 16
-  }
+  },
+  section: {
+    marginBottom: 16
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+    backgroundColor: '#ffffff'
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2c3e50'
+  },
+  sectionCount: {
+    fontSize: 14,
+    color: '#7f8c8d'
+  },
+  sectionListContent: {
+    gap: 12
+  },
 });

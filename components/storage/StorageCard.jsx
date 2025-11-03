@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   
-  // 底部统计区域
+  // 底部
   statsSection: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -119,10 +119,10 @@ export async function getDB() {
     icon TEXT,
     name TEXT NOT NULL,
     price REAL,
-    details TEXT,
+    detail TEXT,
     image TEXT,
-    start_time TEXT DEFAULT CURRENT_TIMESTAMP,
-    end_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    start_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    end_date TEXT DEFAULT CURRENT_TIMESTAMP,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     deleted_at TEXT DEFAULT NULL
