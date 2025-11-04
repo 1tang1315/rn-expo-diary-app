@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ActivityIndicator, ScrollView
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CategoryTab from "@/components/common/CategoryTab";
 import StorageCard from "@/components/storage/StorageCard";
@@ -25,10 +24,7 @@ export default function Storage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentEditItem, setCurrentEditItem] = useState(null);
-  
-  const [isActiveCollapsed, setIsActiveCollapsed] = useState(false);
-  const [isRetiredCollapsed, setIsRetiredCollapsed] = useState(false);
-  
+
   const processSingleItem = useCallback((item) => {
     const today = new Date();
     const startDate = item.start_date ? new Date(item.start_date) : null;
