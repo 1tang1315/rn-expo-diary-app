@@ -307,7 +307,11 @@ const EventModal = ({
                             style={styles.commonTitleTag}
                             onPress={() => handleInputChange('title', title)}
                           >
-                            <Text style={styles.commonTitleTagText} numberOfLines={1}>{title}</Text>
+                            <Text
+                              style={styles.commonTitleTagText}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >{title}</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -548,6 +552,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   commonTitleTagText: {
+    height: 15,
+    lineHeight: 15,
+    textAlign: 'center',
     fontSize: 14,
     color: '#333',
   },
