@@ -18,12 +18,13 @@ import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
 const StorageItemModal = ({
   visible,
   onClose,
+  currentTab = storageCategories[0].id,
   currentItem,
   onRefresh
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    category: storageCategories[0].id,
+    category: currentTab,
     icon: '',
     price: '',
     detail: '',
@@ -48,12 +49,11 @@ const StorageItemModal = ({
     };
     
     if(currentItem) {
-      console.log(currentItem, "curr");
-      const defaultIcon = getDefaultIcon(currentItem.category || storageCategories[0].id);
+      const defaultIcon = getDefaultIcon(currentItem.category || currentTab);
       
       setFormData({
         name: currentItem.name || '',
-        category: currentItem.category || storageCategories[0].id,
+        category: currentItem.category || currentTab,
         icon: currentItem.icon || defaultIcon,
         price: currentItem.price ? currentItem.price : '',
         detail: currentItem.detail || '',
@@ -65,7 +65,7 @@ const StorageItemModal = ({
       const defaultIcon = getDefaultIcon(storageCategories[0].id);
       setFormData({
         name: '',
-        category: storageCategories[0].id,
+        category: currentTab,
         icon: defaultIcon,
         price: '',
         detail: '',
@@ -329,11 +329,13 @@ const StorageItemModal = ({
                   <View style={styles.formGroup}>
                     <Text style={styles.formLabel}>物品图片</Text>
                     <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
-                      <Image
-                        source={{ uri: formData.image }}
-                        style={styles.imagePreview}
-                        resizeMode="cover"
-                      />
+                      {formData.image ? (
+                        <Image
+                          source={{ uri: formData.image }}
+                          style={styles.imagePreview}
+                          resizeMode="cover"
+                        />
+                      ) : null}
 
                       <View style={styles.imagePickerOverlay}>
                         <Ionicons name="camera-outline" size={24} color="#fff" />
@@ -389,7 +391,9 @@ const StorageItemModal = ({
                       </TouchableOpacity>
                       {formData.endDate && (
                         <TouchableOpacity
-                          style={styles.dateButton}
+                          style={[styles.dateButton, {
+                            backgroundColor: '#ff3b30'
+                          }]}
                           onPress={() => handleInputChange('endDate', null)}>
                           <Text style={styles.dateButtonText}>清除</Text>
                         </TouchableOpacity>

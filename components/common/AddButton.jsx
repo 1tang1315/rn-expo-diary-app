@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
  * 添加按钮
  * @props {Function} onPress - 点击回调（触发打开添加弹窗）
  */
-const AddEventButton = ({ onPress }) => {
+const AddButton = ({ onPress }) => {
   return (
     <TouchableOpacity
       style={styles.floatingAddButton}
@@ -34,4 +34,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default AddEventButton;
+export default AddButton;

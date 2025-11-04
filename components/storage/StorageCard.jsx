@@ -38,7 +38,7 @@ const StorageCard = ({ item, onPress }) => {
       
       <View style={styles.infoContainer}>
         <View style={styles.headerSection}>
-          <Text style={[styles.productName, isRetired && styles.retiredText]}>{item.name}</Text>
+          <Text style={[styles.productName, isRetired && styles.retiredText]} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
           <Text style={[styles.totalPrice, isRetired && styles.retiredText]}>¥{item.price}</Text>
         </View>
         
@@ -51,22 +51,28 @@ const StorageCard = ({ item, onPress }) => {
             <View style={styles.statRow}>
               <Ionicons name="calendar-outline" size={14} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
               <Text style={[styles.statText, isRetired && styles.retiredText]}>
-                开始: {formatDate(item.startDate)}
+                {formatDate(item.startDate)}
               </Text>
             </View>
             
             {item.endDate && (
               <View style={styles.statRow}>
                 <Ionicons name="calendar-clear-outline" size={14} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
-                <Text style={[styles.statText, isRetired && styles.retiredText]}>结束: {formatDate(item.endDate)}</Text>
+                <Text style={[styles.statText, isRetired && styles.retiredText]}>{formatDate(item.endDate)}</Text>
               </View>
             )}
           </View>
           
-          <View style={styles.statRow}>
-            <FontAwesome5 name="coins" size={13} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
-            <Text style={[styles.statText, isRetired && styles.retiredText]}>{item.daysUsed} 天</Text>
-            <Text style={[styles.statText, isRetired && styles.retiredText]}>¥{item.dailyPrice}/天</Text>
+          <View>
+            <View style={styles.statRow}>
+              <FontAwesome5 name="coins" size={13} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
+              <Text style={[styles.statText, isRetired && styles.retiredText]}>{item.daysUsed} 天</Text>
+            </View>
+            
+            <View style={styles.statRow}>
+              <Text style={[styles.statText, isRetired && styles.retiredText]}>¥ </Text>
+              <Text style={[styles.statText, isRetired && styles.retiredText]}>{item.dailyPrice}/天</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -165,13 +171,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 8
+    gap: 5
   },
   statRow: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    justifyContent: 'flex-start'
   },
   statText: {
+    height: 15,
+    lineHeight: 15,
     marginLeft: 4,
     fontSize: 12,
     color: '#7f8c8d'

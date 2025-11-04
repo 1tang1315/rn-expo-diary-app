@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import Header from "@/components/common/Header";
 import Calendar from "@/components/common/Calendar";
-import TimelinePanel from "@/components/TimelinePanel";
+import TimelinePanel from "@/components/event";
 import dayjs from 'dayjs';
 
 export default function Home() {

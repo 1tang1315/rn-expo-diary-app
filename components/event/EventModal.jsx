@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Modal, Button, StyleSheet, Alert, TouchableWithoutFeedback
+  Platform, Modal, Button, StyleSheet, Alert,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -265,198 +266,195 @@ const EventModal = ({
     >
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalContainer}
-          >
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                {/* 弹窗头部 */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
-                    {currentEvent ? '编辑日程' : '添加新日程'}
-                  </Text>
-                  <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                    <MaterialIcons name="close" size={24} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                {/* 表单内容区 */}
-                <ScrollView
-                  style={styles.formScrollView}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {renderCategorySelector()}
-                  
-                  <CategoryModal
-                    visible={showCategoryPicker}
-                    onClose={() => setShowCategoryPicker(false)}
-                    selectedCategory={formData.category}
-                    categories={categories}
-                    onSelect={confirmCategorySelect}
-                  />
-                  
-                  {/* 事件标题 + 常用标题 */}
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>
-                      事件标题（可选，不填显示分类名）
-                    </Text>
-                    {commonTitles.length > 0 && (
-                      <View style={styles.commonTitlesContainer}>
-                        <View style={styles.commonTitlesTags}>
-                          {commonTitles.map((title, index) => (
-                            <TouchableOpacity
-                              key={index}
-                              style={styles.commonTitleTag}
-                              onPress={() => handleInputChange('title', title)}
-                            >
-                              <Text style={styles.commonTitleTagText} numberOfLines={1}>{title}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-                    <TextInput
-                      style={styles.formInput}
-                      scrollEnabled={false}
-                      multiline={false}
-                      maxLength={50}
-                      value={formData.title}
-                      onChangeText={(val) => handleInputChange('title', val)}
-                      placeholder="请输入事件标题"
-                    />
-                  </View>
-                  
-                  {/* 事件描述 */}
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>描述</Text>
-                    <TextInput
-                      style={[styles.formInput, styles.multilineInput]}
-                      value={formData.description}
-                      onChangeText={(val) => handleInputChange('description', val)}
-                      placeholder="请输入日程详情（如：会议主题、任务内容）"
-                      multiline
-                      numberOfLines={4}
-                    />
-                  </View>
-                  
-                  {/* 开始时间选择 */}
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>
-                      开始时间:
-                      <Text style={styles.datetimeDisplayText}>
-                        {formatDatetime(formData.startDatetime)}
-                      </Text>
-                    </Text>
-                    <View style={styles.datetimeButtonGroup}>
-                      <Button
-                        title={"当前时间"}
-                        onPress={() => handleResetToCurrentTime('start')}
-                      />
-                      <Button
-                        title={"选择日期"}
-                        onPress={() => onShowDatetimePicker('start', 'date')}
-                      />
-                      <Button
-                        title={"选择时间"}
-                        onPress={() => onShowDatetimePicker('start', 'time')}
-                      />
-                    </View>
-                    {showDatetimePicker && targetDatetime === 'start' && (
-                      <DateTimePicker
-                        value={formData.startDatetime}
-                        mode={pickerMode}
-                        display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-                        onChange={handleDatetimeChange}
-                        maximumDate={new Date(2100, 11, 31)}
-                        minimumDate={new Date(1900, 0, 1)}
-                        is24Hour={true}
-                      />
-                    )}
-                  </View>
-                  
-                  {/* 结束时间选择 */}
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>
-                      结束时间:
-                      <Text style={styles.datetimeDisplayText}>
-                        {formatDatetime(formData.endDatetime)}
-                      </Text>
-                    </Text>
-                    <View style={styles.datetimeButtonGroup}>
-                      <Button
-                        title={"当前时间"}
-                        onPress={() => handleResetToCurrentTime('end')}
-                      />
-                      <Button
-                        title={"选择日期"}
-                        onPress={() => onShowDatetimePicker('end', 'date')}
-                      />
-                      <Button
-                        title={"选择时间"}
-                        onPress={() => onShowDatetimePicker('end', 'time')}
-                      />
-                    </View>
-                    {showDatetimePicker && targetDatetime === 'end' && (
-                      <DateTimePicker
-                        value={formData.endDatetime}
-                        mode={pickerMode}
-                        display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-                        onChange={handleDatetimeChange}
-                        maximumDate={new Date(2100, 11, 31)}
-                        minimumDate={new Date(1900, 0, 1)}
-                        is24Hour={true}
-                      />
-                    )}
-                  </View>
-                  
-                  {/* 事件状态选择 */}
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>事件状态</Text>
-                    <View style={styles.statusSelector}>
-                      {Object.entries(statusTextMap).map(([value, label]) => (
-                        <TouchableOpacity
-                          key={value}
-                          style={[
-                            styles.statusOption,
-                            formData.status === value && styles.selectedStatusOption
-                          ]}
-                          onPress={() => handleInputChange('status', value)}
-                        >
-                          <Text style={[
-                            styles.statusOptionText,
-                            formData.status === value && styles.selectedStatusOptionText,
-                            { color: statusColors[value] || '#333' }
-                          ]}>
-                            {label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  
-                  {renderIconSelector()}
-                </ScrollView>
-                
-                {/* 弹窗底部按钮 */}
-                <View style={styles.modalFooter}>
-                  {currentEvent && (
-                    <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-                      <Text style={styles.deleteButtonText}>删除</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                    <Text style={styles.cancelButtonText}>取消</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>
-                      {currentEvent ? '更新' : '保存'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              {/* 弹窗头部 */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {currentEvent ? '编辑日程' : '添加新日程'}
+                </Text>
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <MaterialIcons name="close" size={24} color="#666" />
+                </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
+              
+              {/* 表单内容区 */}
+              <ScrollView
+                style={styles.formScrollView}
+                showsVerticalScrollIndicator={false}
+              >
+                {renderCategorySelector()}
+                
+                <CategoryModal
+                  visible={showCategoryPicker}
+                  onClose={() => setShowCategoryPicker(false)}
+                  selectedCategory={formData.category}
+                  categories={categories}
+                  onSelect={confirmCategorySelect}
+                />
+                
+                {/* 事件标题 + 常用标题 */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>
+                    事件标题（可选，不填显示分类名）
+                  </Text>
+                  {commonTitles.length > 0 && (
+                    <View style={styles.commonTitlesContainer}>
+                      <View style={styles.commonTitlesTags}>
+                        {commonTitles.map((title, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={styles.commonTitleTag}
+                            onPress={() => handleInputChange('title', title)}
+                          >
+                            <Text style={styles.commonTitleTagText} numberOfLines={1}>{title}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  <TextInput
+                    style={styles.formInput}
+                    scrollEnabled={false}
+                    multiline={false}
+                    maxLength={50}
+                    value={formData.title}
+                    onChangeText={(val) => handleInputChange('title', val)}
+                    placeholder="请输入事件标题"
+                  />
+                </View>
+                
+                {/* 事件描述 */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>描述</Text>
+                  <TextInput
+                    style={[styles.formInput, styles.multilineInput]}
+                    value={formData.description}
+                    onChangeText={(val) => handleInputChange('description', val)}
+                    placeholder="请输入日程详情（如：会议主题、任务内容）"
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+                
+                {/* 开始时间选择 */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>
+                    开始时间:
+                    <Text style={styles.datetimeDisplayText}>
+                      {formatDatetime(formData.startDatetime)}
+                    </Text>
+                  </Text>
+                  <View style={styles.datetimeButtonGroup}>
+                    <Button
+                      title={"当前时间"}
+                      onPress={() => handleResetToCurrentTime('start')}
+                    />
+                    <Button
+                      title={"选择日期"}
+                      onPress={() => onShowDatetimePicker('start', 'date')}
+                    />
+                    <Button
+                      title={"选择时间"}
+                      onPress={() => onShowDatetimePicker('start', 'time')}
+                    />
+                  </View>
+                </View>
+                
+                {/* 结束时间选择 */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>
+                    结束时间:
+                    <Text style={styles.datetimeDisplayText}>
+                      {formatDatetime(formData.endDatetime)}
+                    </Text>
+                  </Text>
+                  <View style={styles.datetimeButtonGroup}>
+                    <Button
+                      title={"当前时间"}
+                      onPress={() => handleResetToCurrentTime('end')}
+                    />
+                    <Button
+                      title={"选择日期"}
+                      onPress={() => onShowDatetimePicker('end', 'date')}
+                    />
+                    <Button
+                      title={"选择时间"}
+                      onPress={() => onShowDatetimePicker('end', 'time')}
+                    />
+                  </View>
+                </View>
+                
+                {/* 事件状态选择 */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>事件状态</Text>
+                  <View style={styles.statusSelector}>
+                    {Object.entries(statusTextMap).map(([value, label]) => (
+                      <TouchableOpacity
+                        key={value}
+                        style={[
+                          styles.statusOption,
+                          formData.status === value && styles.selectedStatusOption
+                        ]}
+                        onPress={() => handleInputChange('status', value)}
+                      >
+                        <Text style={[
+                          styles.statusOptionText,
+                          formData.status === value && styles.selectedStatusOptionText,
+                          { color: statusColors[value] || '#333' }
+                        ]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                
+                {renderIconSelector()}
+              </ScrollView>
+              
+              {/* 弹窗底部按钮 */}
+              <View style={styles.modalFooter}>
+                {currentEvent && (
+                  <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                    <Text style={styles.deleteButtonText}>删除</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                  <Text style={styles.cancelButtonText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                  <Text style={styles.saveButtonText}>
+                    {currentEvent ? '更新' : '保存'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {showDatetimePicker && targetDatetime === 'start' && (
+                <DateTimePicker
+                  value={formData.startDatetime}
+                  mode={pickerMode}
+                  display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+                  onChange={handleDatetimeChange}
+                  maximumDate={new Date(2100, 11, 31)}
+                  minimumDate={new Date(1900, 0, 1)}
+                  is24Hour={true}
+                />
+              )}
+              
+              {showDatetimePicker && targetDatetime === 'end' && (
+                <DateTimePicker
+                  value={formData.endDatetime}
+                  mode={pickerMode}
+                  display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+                  onChange={handleDatetimeChange}
+                  maximumDate={new Date(2100, 11, 31)}
+                  minimumDate={new Date(1900, 0, 1)}
+                  is24Hour={true}
+                />
+              )}
+            </View>
+          </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -470,16 +468,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end'
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end'
-  },
   modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
-    maxHeight: '85%'
+    maxHeight: '85%',
+    minHeight: '85%'
   },
   modalHeader: {
     flexDirection: 'row',

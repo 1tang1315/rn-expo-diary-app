@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import CategoryTab from '@/components/common/CategoryTab';
 import TimelineList from './TimelineList';
-import AddEventButton from './AddEventButton';
+import AddEventButton from '../common/AddButton';
 import EventModal from './EventModal';
 import { getEventsByDateRange } from '@/db/eventDB';
 import { categories } from "@/constants/commonConstans";

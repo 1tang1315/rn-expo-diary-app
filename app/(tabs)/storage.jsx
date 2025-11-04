@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ActivityIndicator
+  TouchableOpacity, ActivityIndicator, ScrollView
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CategoryTab from "@/components/common/CategoryTab";
-import AddEventButton from "@/components/TimelinePanel/AddEventButton";
 import StorageCard from "@/components/storage/StorageCard";
-import { getAllStorageItems } from '@/db/storageDB';
+import AddButton from "@/components/common/AddButton";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import StorageModal from "@/components/storage/StorageModal";
 import { storageCategories } from "@/constants/commonConstans";
+import { getAllStorageItems } from '@/db/storageDB';
+import ExpandableCard from "@/components/common/ExpandableCard";
 
 // 常量定义
 const MS_PER_DAY = 1000 * 60 * 60 * 24; // 每天的毫秒数
@@ -154,7 +155,7 @@ export default function Storage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
         colors={['#3498db', '#2980b9']}
         style={styles.statsCard}
@@ -205,86 +206,43 @@ export default function Storage() {
         currentTab={activeCategory}
         setCurrentTab={setActiveCategory}
       />
-
+      
       <View style={styles.sectionContainer}>
-        {/* 未退役 */}
-        {activeItems.length > 0 && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.sectionHeader}
-              onPress={() => setIsActiveCollapsed(!isActiveCollapsed)}
-            >
-              <View style={styles.sectionHeaderLeft}>
-                <Text style={styles.sectionTitle}>未退役</Text>
-                <Text style={styles.sectionCount}>({activeItems.length}件)</Text>
-              </View>
-              <Ionicons
-                name={isActiveCollapsed ? "chevron-down" : "chevron-up"}
-                size={18}
-                color="#3498db"
-              />
-            </TouchableOpacity>
-            
-            {!isActiveCollapsed && (
-              <FlatList
-                showsVerticalScrollIndicator={false}
-                data={activeItems}
-                renderItem={({ item }) => (
-                  <StorageCard item={item} onPress={() => openModal(item)} />
-                )}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.sectionListContent}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={7}
-              />
-            )}
-          </View>
-        )}
-        
-        {/* 已退役 */}
-        {retiredItems.length > 0 && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.sectionHeader}
-              onPress={() => setIsRetiredCollapsed(!isRetiredCollapsed)}
-            >
-              <View style={styles.sectionHeaderLeft}>
-                <Text style={styles.sectionTitle}>已退役</Text>
-                <Text style={styles.sectionCount}>({retiredItems.length}件)</Text>
-              </View>
-              <Ionicons
-                name={isRetiredCollapsed ? "chevron-down" : "chevron-up"}
-                size={18}
-                color="#ff9500"
-              />
-            </TouchableOpacity>
-            
-            {!isRetiredCollapsed && (
-              <FlatList
-                showsVerticalScrollIndicator={false}
-                data={retiredItems}
-                renderItem={({ item }) => (
-                  <StorageCard item={item} onPress={() => openModal(item)} />
-                )}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.sectionListContent}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={7}
-              />
-            )}
-          </View>
-        )}
-        
-        {/* 空 */}
-        {activeItems.length === 0 && retiredItems.length === 0 && (
-          <EmptyContainer icon="folder-open" text="暂无储物物品" />
-        )}
+        <FlatList
+          style={{paddingHorizontal: 16}}
+          data={[
+            { key: 'active', title: `未退役(${activeItems.length}件)`, items: activeItems },
+            { key: 'retired', title: `已退役(${retiredItems.length}件)`, items: retiredItems },
+          ]}
+          renderItem={({ item: section }) => {
+            if (section.items.length === 0) return null;
+            return (
+              <ExpandableCard title={section.title}>
+                <FlatList
+                  showsVerticalScrollIndicator={false}
+                  data={section.items}
+                  renderItem={({ item }) => (
+                    <StorageCard item={item} onPress={() => openModal(item)} />
+                  )}
+                  keyExtractor={(item) => item.id}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={7}
+                  nestedScrollEnabled={true}
+                />
+              </ExpandableCard>
+            );
+          }}
+          keyExtractor={(section) => section.key}
+          ListEmptyComponent={() => (
+            <EmptyContainer icon="folder-open" text="暂无储物物品" />
+          )}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
       
       {/* 添加按钮 */}
-      <AddEventButton onPress={() => openModal()} />
+      <AddButton onPress={() => openModal()} />
       
       <StorageModal
         visible={modalVisible}
@@ -312,7 +270,7 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     fontSize: 15
   },
-  
+  // 顶部资产卡片
   statsCard: {
     margin: 16,
     borderRadius: 12,
@@ -373,38 +331,6 @@ const styles = StyleSheet.create({
   
   sectionContainer: {
     flex: 1,
-    padding: 16
-  },
-  section: {
-    marginBottom: 16
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e1e8ed',
-    backgroundColor: '#ffffff'
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#2c3e50'
-  },
-  sectionCount: {
-    fontSize: 14,
-    color: '#7f8c8d'
-  },
-  sectionListContent: {
-    gap: 12
-  },
+    paddingVertical: 10
+  }
 });

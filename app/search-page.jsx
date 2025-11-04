@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import { getEventsByTitleOrDescriptionSearch } from "@/db/eventDB";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getCategoryInfo } from "@/utils/categoryUtils";
-import EventModal from "@/components/TimelinePanel/EventModal";
+import EventModal from "@/components/event/EventModal";
 
 const SearchPage = () => {
   // 状态管理：搜索输入、搜索结果、加载状态
