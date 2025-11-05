@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Platform, Modal, Button, StyleSheet, Alert,
@@ -57,7 +57,6 @@ const EventModal = ({
         status: currentEvent.status || 'upcoming'
       };
       setFormData(initData);
-      fetchCommonTitles(currentEvent.category).then();
     } else {
       // 新增模式初始化
       const defaultCategory = currentTab && currentTab !== 'all'
@@ -81,7 +80,6 @@ const EventModal = ({
         status: 'upcoming'
       };
       setFormData(initData);
-      fetchCommonTitles(defaultCategory).then();
     }
   }, [visible, currentEvent, selectedDate, currentTab]);
   
@@ -107,16 +105,23 @@ const EventModal = ({
   };
   
   // 标题
+  const [titleCount, setTitleCount] = useState(5);
   const [commonTitles, setCommonTitles] = useState([]);
-  const fetchCommonTitles = async (category) => {
+  const fetchCommonTitles = useCallback(async (category) => {
     try {
-      const titles = await getCommonTitlesByCategory(category, 5);
+      const titles = await getCommonTitlesByCategory(category, titleCount);
       setCommonTitles(titles);
     } catch(error) {
       console.error('获取常用标题失败:', error);
       setCommonTitles([]); // 失败时重置，避免显示旧数据
     }
-  };
+  }, [titleCount]);
+  
+  useEffect(() => {
+    if (formData?.category) {
+      fetchCommonTitles(formData.category).then();
+    }
+  }, [titleCount, formData.category, fetchCommonTitles]);
   
   // 日期事件选择
   const [pickerMode, setPickerMode] = useState('date');
@@ -133,7 +138,7 @@ const EventModal = ({
       setTargetDatetime(target);
     }
   };
-  const handleDatetimeChange = (event, selectedDate) => {
+  const handleDatetimeChange = (_, selectedDate) => {
     const currentTarget = targetDatetime === 'start' ? 'startDatetime' : 'endDatetime';
     
     handleInputChange(currentTarget, selectedDate);
@@ -160,9 +165,9 @@ const EventModal = ({
     const eventParams = {
       start_datetime: formatDatetime(startDatetime),
       end_datetime: formatDatetime(endDatetime),
-      title: formData.title,
+      title: formData.title.trim(),
       category: formData.category,
-      description: formData.description,
+      description: formData.description.trim(),
       status: formData.status,
       icon: formData.icon
     };
@@ -295,9 +300,36 @@ const EventModal = ({
                 
                 {/* 事件标题 + 常用标题 */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>
-                    事件标题（可选，不填显示分类名）
-                  </Text>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: "center",
+                    marginBottom: 8
+                  }}>
+                    <Text
+                      style={[styles.formLabel, { marginBottom: 0 }]}
+                    >事件标题（可选，不填显示分类名）</Text>
+
+                    <View style={styles.countControl}>
+                      <TouchableOpacity
+                        disabled={titleCount === 5}
+                        onPress={() => {
+                          setTitleCount(prev => Math.max(prev - 5, 5));
+                      }}>
+                        <MaterialIcons
+                          name="arrow-drop-up"
+                          size={20}
+                          color={titleCount === 5 ? "#ccc" : "#666"}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.countText}>{titleCount}</Text>
+                      <TouchableOpacity onPress={() => {
+                        setTitleCount(prev => prev + 5, 5);
+                      }}>
+                        <MaterialIcons name="arrow-drop-down" size={20} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
                   {commonTitles.length > 0 && (
                     <View style={styles.commonTitlesContainer}>
                       <View style={styles.commonTitlesTags}>
@@ -543,20 +575,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commonTitleTag: {
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E4E7ED',
-    alignItems: 'center',
+    backgroundColor: '#F5F7FA'
   },
   commonTitleTagText: {
     height: 15,
+    padding: 0,
     lineHeight: 15,
-    textAlign: 'center',
     fontSize: 14,
     color: '#333',
+  },
+  countControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6
+  },
+  countText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500'
   },
   
   // 状态选择器样式
