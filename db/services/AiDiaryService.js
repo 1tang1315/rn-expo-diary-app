@@ -159,12 +159,11 @@ export default class AiDiaryService {
    * @param {string} aiFirstReply - AI第一条回复
    * @returns {Promise<string>} 生成的标题
    */
-  async updateConversationTitle(userFirstMsg, aiFirstReply) {
+  async updateConversationTitle(userFirstMsg) {
     try {
       const prompt = `
-      请根据以下用户初始问题和AI首次回复，生成一个简洁准确的中文对话标题（8-20字）：
-      用户初始问题：${userFirstMsg}
-      AI首次回复：${aiFirstReply}
+      请根据以下用户初始消息，生成一个简洁准确的中文对话标题（8-20字）：
+      用户初始消息：${userFirstMsg}
       要求：
       1. 包含核心关键词
       2. 不使用"聊天记录""对话内容"等模糊表述

@@ -97,6 +97,50 @@ const AiChatScreen = () => {
   const messageScrollRef = useRef(null);
   const inputRef = useRef(null);
   
+  // 新建对话
+  const handleCreateNewConversation = useCallback(async () => {
+    const title = getLocalDateTimeByDayjs();
+    
+    try {
+      const latestConversations = await getAllConversations();
+      
+      // 判断最新对话是否为空消息, 空消息 -> 更新标题; 非空消息 -> 新建对话
+      if(latestConversations.length > 0) {
+        const latestConversation = latestConversations[0];
+        const latestMessages = await getMessagesForConversation(latestConversation.id);
+        
+        if(latestMessages.length === 0) {
+          await updateConversation(latestConversation.id, {
+            title
+          });
+          setConversations(prev =>
+            prev.map(convo =>
+              convo.id === latestConversation.id
+                ? {
+                  ...convo,
+                  title
+                }
+                : convo
+            )
+          );
+          
+          setCurrentConversationId(latestConversation.id);
+          setSidebarVisible(false);
+          return;
+        }
+      }
+      
+      const newConversationId = await createConversation({ title });
+      setCurrentConversationId(newConversationId);
+      await fetchConversationList();
+      setMessages([]);
+      setSidebarVisible(false);
+    } catch(err) {
+      console.error('创建新对话失败：', err);
+      Alert.alert('错误', '创建对话失败，请重试');
+    }
+  }, []);
+  
   // 初始化聊天窗口
   useEffect(() => {
     const initChat = async () => {
@@ -153,21 +197,6 @@ const AiChatScreen = () => {
       Alert.alert('错误', '无法加载当前对话内容');
     }
   };
-  
-  // 新建对话
-  const handleCreateNewConversation = useCallback(async () => {
-    const title = getLocalDateTimeByDayjs();
-    try {
-      const newConversationId = await createConversation({ title });
-      setCurrentConversationId(newConversationId);
-      await fetchConversationList();
-      setMessages([]);
-      setSidebarVisible(false);
-    } catch(err) {
-      console.error('创建新对话失败：', err);
-      Alert.alert('错误', '创建对话失败，请重试');
-    }
-  }, []);
   
   // 切换对话
   const handleSwitchConversation = async (conversationId) => {
@@ -293,11 +322,11 @@ const AiChatScreen = () => {
       });
       setIsContentFinalized(true);
       
-      const isFirstAiReply = messages.filter(msg => msg.role === 'assistant').length === 0;
-      if(isFirstAiReply) {
-        const newTitle = await aiDiaryService.updateConversationTitle(userInput, aiResult.output);
+      // 标题生成
+      const isFirstUserMessage = messages.length === 0;
+      if(isFirstUserMessage) {
+        const newTitle = await aiDiaryService.updateConversationTitle(userInput);
         await updateConversation(currentConversationId, { title: newTitle });
-        
         setConversations(prev =>
           prev.map(convo =>
             convo.id === currentConversationId
@@ -438,7 +467,7 @@ const AiChatScreen = () => {
           {/* 历史消息 */}
           {messages.map(message => (
             <React.Fragment key={message.id}>
-              <HistoryMessage message={message} styles={styles} />
+              <HistoryMessage message={message} />
             </React.Fragment>
           ))}
           

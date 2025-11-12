@@ -1,58 +1,104 @@
 import React, { useState } from "react";
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Text, TouchableOpacity, View, StyleSheet, Pressable, Alert, Modal } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import * as Clipboard from 'expo-clipboard';
 
 export const HistoryMessage = ({ message }) => {
   const [isThoughtCollapsed, setIsThoughtCollapsed] = useState(true);
   
-  if (message.role === 'user') {
-    return (
-      <View key={message.id} style={styles.userMessageContainer}>
-        <View style={styles.userMessageBubble}>
-          <Text style={styles.userMessageText}>{message.content}</Text>
-        </View>
-      </View>
-    );
-  }
+  const [showActionModal, setShowActionModal] = useState(false);
   
-  if (message.role === 'assistant') {
-    const hasThought = !!message.thought?.trim();
-    return (
-      <View key={message.id} style={styles.aiMessageContainer}>
-        <View style={styles.aiMessageBubble}>
-          {hasThought && (
-            <View style={styles.thoughtContainer}>
-              <TouchableOpacity
-                style={styles.thoughtHeader}
-                onPress={() => setIsThoughtCollapsed(!isThoughtCollapsed)}
-              >
-                <Text style={styles.thoughtLabel}>思考</Text>
-                <Ionicons
-                  name={isThoughtCollapsed ? 'chevron-down' : 'chevron-up'}
-                  size={16}
-                  color="#666"
-                />
-              </TouchableOpacity>
-              {!isThoughtCollapsed && (
-                <Text style={styles.thoughtText}>
-                  {message.thought.trim()}
-                </Text>
-              )}
+  const handleLongPress = () => {
+    if (message.content) {
+      setShowActionModal(true);
+    } else {
+      Alert.alert("提示", "没有可操作的内容");
+    }
+  };
+  
+  const copyContent = async () => {
+    await Clipboard.setStringAsync(message.content);
+    setShowActionModal(false);
+    Alert.alert("提示", "复制成功");
+  };
+  
+  return (
+    <>
+      {
+        message.role === 'user' ? (
+          <Pressable
+            onLongPress={() => handleLongPress()}
+            key={message.id}
+            style={styles.userMessageContainer}
+          >
+            <View style={styles.userMessageBubble}>
+              <Text style={styles.userMessageText}>{message.content}</Text>
             </View>
-          )}
-          
-          <View style={styles.outputContainer}>
-            <Text style={styles.outputText}>
-              {message.content.trim()}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-  
-  // 未知角色消息默认空渲染
-  return null;
+          </Pressable>
+        ) : (
+          <Pressable
+            onLongPress={() => handleLongPress()}
+            key={message.id}
+            style={styles.aiMessageContainer}
+          >
+            <View style={styles.aiMessageBubble}>
+              {message.thought?.trim() && (
+                <View style={styles.thoughtContainer}>
+                  <TouchableOpacity
+                    style={styles.thoughtHeader}
+                    onPress={() => setIsThoughtCollapsed(!isThoughtCollapsed)}
+                  >
+                    <Text style={styles.thoughtLabel}>思考</Text>
+                    <Ionicons
+                      name={isThoughtCollapsed ? 'chevron-down' : 'chevron-up'}
+                      size={16}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                  {!isThoughtCollapsed && (
+                    <Text style={styles.thoughtText}>
+                      {message.thought.trim()}
+                    </Text>
+                  )}
+                </View>
+              )}
+              
+              <View style={styles.outputContainer}>
+                <Text style={styles.outputText}>
+                  {message.content.trim()}
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+        )
+      }
+      
+      <Modal
+        visible={showActionModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowActionModal(false)}
+      >
+        <Pressable
+          style={styles.modalBackground}
+          onPress={() => setShowActionModal(false)}
+        >
+          <Pressable
+            style={styles.actionContainer}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={copyContent}
+            >
+              <Feather name="copy" size={22} color="black" />
+              <Text style={styles.actionText}>复制</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  )
 };
 
 const styles = StyleSheet.create({
@@ -61,10 +107,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    marginBottom: 16,
+    marginBottom: 8
   },
   userMessageBubble: {
-    maxWidth: '80%',
+    maxWidth: '100%',
     padding: 12,
     marginRight: 8,
     backgroundColor: '#2196F3',
@@ -81,10 +127,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 8
   },
   aiMessageBubble: {
-    maxWidth: '80%',
+    maxWidth: '100%',
     padding: 12,
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -133,5 +179,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     lineHeight: 24,
+  },
+  
+  // 弹窗相关样式
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+  },
+  actionContainer: {
+    width: '80%',
+    borderRadius: 12,
+    backgroundColor: 'white',
+    overflow: 'hidden',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    padding: 16,
+  },
+  actionText: {
+    marginLeft: 8,
+    height: 20,
+    lineHeight: 20,
+    fontSize: 18,
+    color: '#333',
   },
 })
