@@ -1,56 +1,481 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DatabaseViewer  from "@/db/DatabaseViewer";
-import AIStreamText from "@/components/common/AIStreamText";
-import { Button } from "react-native";
-import { useState } from "react";
-import DragSortList from "@/components/common/DragSort";
+import { useTheme } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 
-const content = {
-  thought: "用户的报错信息显示在 Expo Router 中，RNSScreenContainer 处发生了 Cannot read property 'toString' of undefined，这通常是因为屏幕组件缺少正确的 key 或 id 导致的。结合 Expo Router 的机制，_layout.jsx 中定义的路由表会作为 children 传递给 Tabs 或 Stack 组件，而每个子元素需要有明确的 name（会被用作 key）。\n" +
-    "因此，我首先会怀疑用户在 (tabs)/_layout.jsx 中使用了动态生成的路由，例如 map 循环但没有提供稳定的 key，或者直接渲染了没有 name 属性的组件。\n" +
-    "我需要指导用户检查 _layout.jsx 的 children 部分，确保每个路由项都有固定的 name，并且 key 与 name 一致。\n" +
-    "为了帮助用户快速验证问题，我可以提供一个正确的静态路由示例，以及一个如果必须动态生成路由时如何正确设置 key 和 name 的示例。\n" +
-    "最后，总结常见的错误模式，帮助用户对照排查。",
-  output: `
-    ⚠️ 在 Expo + 流式回复可能遇到的问题
-SSE 支持与网络拦截：Expo 的版本里有 issue 提到 SSE（或 fetch 的 streaming body）被网络拦截器拦住，导致流式响应被延迟或整块返回。
-GitHub
-** polyfills**：React Native 在一些版本里对 ReadableStream、TextDecoder 等 web API 支持不全，可能要引入 polyfill（或用已有库如 react-native-sse）来处理 SSE。
-性能：逐 token 更新 UI 时，如果每次都大量重渲染列表或整条消息组件，性能可能会掉，滚动／闪动问题。要优化 state 更新粒度、尽量局部更新 UI。
-💡 简易组件思路实现（用 Vue 的思路你也可以改成 RN + JS）
-下面是一个在 Expo RN + JS + React Hooks 的伪代码思路，只保留核心流式显示部分。你可以基于这个自己封装成组件。
-如果你愿意的话，我可以帮你写一个完整的 RN + Expo 的“流式回复组件”，包含问答输入框、逐字显示、loading 指示 etc，你要吗？
-  `
-}
-export default function Mine() {
-  const initialItems = [
-    { id: '1', content: '列表项 1' },
-    { id: '2', content: '列表项 2' },
-    { id: '3', content: '列表项 3' },
-    { id: '4', content: '列表项 4' },
-    { id: '5', content: '列表项 5' },
-  ];
+const SettingsScreen = () => {
+  // 获取当前主题
+  const { colors } = useTheme();
   
+  // 状态管理
+  const [darkMode, setDarkMode] = useState(false);
+  const [cloudSync, setCloudSync] = useState(true);
+  const [aiFeatures, setAiFeatures] = useState(true);
+  const [autoBackup, setAutoBackup] = useState(false);
+  const [storageLocation, setStorageLocation] = useState('personal');
+  const [aiModel, setAiModel] = useState('balanced');
   
-  const [refreshKey, setRefreshKey] = useState(0);
+  // 从存储加载设置
+  useEffect(() => {
+    const loadSettings = async () => {
+      const savedDarkMode = await SecureStore.getItemAsync('darkMode');
+      const savedCloudSync = await SecureStore.getItemAsync('cloudSync');
+      const savedThemeColor = await SecureStore.getItemAsync('themeColor');
+      
+      const savedAiFeatures = await SecureStore.getItemAsync('aiFeatures');
+      const savedAutoBackup = await SecureStore.getItemAsync('autoBackup');
+      const savedStorage = await SecureStore.getItemAsync('storageLocation');
+      const savedAiModel = await SecureStore.getItemAsync('aiModel');
+      
+      if (savedDarkMode) setDarkMode(savedDarkMode === 'true');
+      if (savedCloudSync) setCloudSync(savedCloudSync === 'true');
+      if (savedThemeColor) {
+        setThemeColor(savedThemeColor);
+        setSelectedThemeColor(savedThemeColor);
+      }
+      if (savedAiFeatures) setAiFeatures(savedAiFeatures === 'true');
+      if (savedAutoBackup) setAutoBackup(savedAutoBackup === 'true');
+      if (savedStorage) setStorageLocation(savedStorage);
+      if (savedAiModel) setAiModel(savedAiModel);
+    };
+    
+    loadSettings().then();
+  }, []);
   
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1); // 每次刷新 key 改变
+  // 保存设置
+  const saveSetting = async (key, value) => {
+    await SecureStore.setItemAsync(key, value.toString());
+  };
+  
+  // 渲染开关类型设置项
+  const renderSwitchSetting = (title, description, value, onValueChange, icon) => (
+    <View style={[styles.settingItem, { backgroundColor: colors.card }]}>
+      <Ionicons name={icon} size={24} color={colors.primary} style={styles.settingIcon} />
+      <View style={styles.settingContent}>
+        <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+        {description && (
+          <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+            {description}
+          </Text>
+        )}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.border, true: colors.primary }}
+        thumbColor={colors.background}
+      />
+    </View>
+  );
+  
+  // 渲染选项选择设置项
+  const renderOptionSetting = (title, description, options, selectedValue, onSelect, icon, customOnPress) => (
+    <TouchableOpacity
+      style={[styles.settingItem, { backgroundColor: colors.card }]}
+      onPress={customOnPress || (() => showOptionsDialog(title, options, onSelect))}
+    >
+      <Ionicons name={icon} size={24} color={colors.primary} style={styles.settingIcon} />
+      <View style={styles.settingContent}>
+        <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+          {options.find(opt => opt.value === selectedValue)?.label || description}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+    </TouchableOpacity>
+  );
+  
+  // 渲染链接式设置项
+  const renderLinkSetting = (title, description, onPress, icon) => (
+    <TouchableOpacity
+      style={[styles.settingItem, { backgroundColor: colors.card }]}
+      onPress={onPress}
+    >
+      <Ionicons name={icon} size={24} color={colors.primary} style={styles.settingIcon} />
+      <View style={styles.settingContent}>
+        <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+        {description && (
+          <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+            {description}
+          </Text>
+        )}
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+    </TouchableOpacity>
+  );
+  
+  // 显示选项对话框
+  const showOptionsDialog = (title, options, onSelect) => {
+    Alert.alert(
+      title,
+      null,
+      options.map(option => ({
+        text: option.label,
+        onPress: () => onSelect(option.value)
+      })),
+      { cancelable: true }
+    );
+  };
+  
+  // 主题
+  const [themeColor, setThemeColor] = useState('blue');
+  const [themeColorModalVisible, setThemeColorModalVisible] = useState(false);
+  const [selectedThemeColor, setSelectedThemeColor] = useState('blue');
+  
+  const themeColorLabels = {
+    blue: '蓝色',
+    green: '绿色',
+    red: '红色',
+    purple: '紫色'
   };
   
   return (
-    <SafeAreaView style={{flex: 1}}>
-      <DatabaseViewer />
-      <Button title="刷新" onPress={handleRefresh} />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView style={styles.scrollContainer}>
+        {/* 个人信息卡片 */}
+        <View style={[styles.profileCard, { backgroundColor: colors.card }]}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle" size={64} color={colors.primary} />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: colors.text }]}>用户名</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>user@example.com</Text>
+          </View>
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.editButtonText}>编辑</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* 主题设置 */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>主题设置</Text>
+        {renderSwitchSetting(
+          '深色模式',
+          '切换应用的深色/浅色显示模式',
+          darkMode,
+          (value) => {
+            setDarkMode(value);
+            saveSetting('darkMode', value);
+            Alert.alert('提示', '主题更改将在下次启动时生效');
+          },
+          'moon'
+        )}
+        {renderOptionSetting(
+          '主题颜色',
+          themeColorLabels[themeColor] || '选择应用的主色调',
+          [
+            { label: '蓝色', value: 'blue' },
+            { label: '绿色', value: 'green' },
+            { label: '红色', value: 'red' },
+            { label: '紫色', value: 'purple' }
+          ],
+          themeColor,
+          () => {}, // 占位，实际通过弹窗触发
+          'color-palette',
+          () => {
+            setSelectedThemeColor(themeColor);
+            setThemeColorModalVisible(true);
+          }
+        )}
+        {renderLinkSetting(
+          '字体设置',
+          '调整应用内文字大小和样式',
+          () => Alert.alert('提示', '字体设置功能即将上线'),
+          'text'
+        )}
+        
+        {/* 网盘设置 */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>网盘设置</Text>
+        {renderSwitchSetting(
+          '云同步',
+          '开启后自动同步文件到云端',
+          cloudSync,
+          (value) => {
+            setCloudSync(value);
+            saveSetting('cloudSync', value);
+          },
+          'cloud-sync'
+        )}
+        {renderSwitchSetting(
+          '自动备份',
+          '每日自动备份重要文件',
+          autoBackup,
+          (value) => {
+            setAutoBackup(value);
+            saveSetting('autoBackup', value);
+          },
+          'cloud-upload'
+        )}
+        {renderOptionSetting(
+          '默认存储位置',
+          '选择新文件的保存位置',
+          [
+            { label: '个人网盘', value: 'personal' },
+            { label: '家庭共享', value: 'family' },
+            { label: '仅本地', value: 'local' }
+          ],
+          storageLocation,
+          (value) => {
+            setStorageLocation(value);
+            saveSetting('storageLocation', value);
+          },
+          'folder'
+        )}
+        {renderLinkSetting(
+          '存储空间',
+          '查看和管理你的存储空间',
+          () => Alert.alert('存储空间', '已使用: 2.4GB / 10GB'),
+          'hard-drive'
+        )}
+        
+        {/* AI设置 */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>AI设置</Text>
+        {renderSwitchSetting(
+          'AI功能',
+          '开启或关闭所有AI相关功能',
+          aiFeatures,
+          (value) => {
+            setAiFeatures(value);
+            saveSetting('aiFeatures', value);
+          },
+          'cog'
+        )}
+        {renderOptionSetting(
+          'AI模型',
+          '选择使用的AI模型',
+          [
+            { label: '平衡模式', value: 'balanced' },
+            { label: '性能优先', value: 'performance' },
+            { label: '省电模式', value: 'efficient' }
+          ],
+          aiModel,
+          (value) => {
+            setAiModel(value);
+            saveSetting('aiModel', value);
+          },
+          'brain'
+        )}
+        {renderLinkSetting(
+          'AI隐私设置',
+          '管理AI功能的隐私选项',
+          () => Alert.alert('提示', 'AI隐私设置功能即将上线'),
+          'shield'
+        )}
+      </ScrollView>
       
-      <AIStreamText
-        key={refreshKey}
-        content={content}
-        isContentFinalized={true}
-      />
-      
-      {/* <DragSortList initialItems={initialItems} /> */}
-      
+      {/* 主题颜色选择弹窗 */}
+      <Modal
+        visible={themeColorModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setThemeColorModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>主题颜色</Text>
+            
+            {/* 颜色选择块区域 */}
+            <View style={styles.colorOptionContainer}>
+              {[
+                { value: 'blue', color: '#2196f3' },
+                { value: 'green', color: '#4caf50' },
+                { value: 'red', color: '#f44336' },
+                { value: 'purple', color: '#9c27b0' }
+              ].map(item => (
+                <TouchableOpacity
+                  key={item.value}
+                  style={[styles.colorOption, selectedThemeColor === item.value && styles.selectedColorOption]}
+                  onPress={() => setSelectedThemeColor(item.value)}
+                >
+                  <View style={[styles.colorBlock, { backgroundColor: item.color }]} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            {/* 底部按钮区域 */}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setThemeColorModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={() => {
+                  setThemeColor(selectedThemeColor);
+                  saveSetting('themeColor', selectedThemeColor).then();
+                  setThemeColorModalVisible(false);
+                }}
+              >
+                <Text style={styles.confirmButtonText}>确认</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrollContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+  },
+  editButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#2196f3',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    marginTop: 24,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  settingIcon: {
+    width: 24,
+    marginRight: 16,
+  },
+  settingContent: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
+  },
+  
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)'
+  },
+  modalContent: {
+    width: '80%',
+    gap: 20,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: '#ffffff'
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    textAlign: 'center'
+  },
+  colorOptionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 16
+  },
+  colorOption: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: '50%'
+  },
+  colorBlock: {
+    width: 30,
+    height: 30,
+    borderRadius: '50%'
+  },
+  selectedColorOption: {
+    borderWidth: 3,
+    borderColor: '#2196f3',
+    borderRadius: 10
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center'
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#333333'
+  },
+  confirmButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#2196f3',
+    alignItems: 'center'
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    color: '#ffffff'
+  }
+});
+
+export default SettingsScreen;
