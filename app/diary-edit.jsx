@@ -9,7 +9,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import Icon from "@/components/common/Icon";
-import ThemeCard from "@/components/Theme/ThemeCard";
 import { useTheme } from "@/context/ThemeContext";
 import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
