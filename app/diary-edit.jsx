@@ -3,14 +3,19 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, ScrollView
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { getNoteById, updateNote, createNote } from '@/db/notesDB';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { formatDatetime } from "@/utils/formatTimeUtils";
+import Icon from "@/components/common/Icon";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 export default function DiaryEdit() {
+  const { theme } = useTheme();
+  
   const route = useRoute();
   const navigation = useNavigation();
   const nodeId = route.params?.nodeId;
@@ -185,7 +190,7 @@ export default function DiaryEdit() {
   const wordCount = content.length || 0;
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView style={styles.container}>
       {/* 顶部导航 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -193,11 +198,7 @@ export default function DiaryEdit() {
           onPress={() => navigation.goBack()}
           disabled={isLoading}
         >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#333"
-          />
+          <Icon lib="Ionicons" name="arrow-back" size={24} />
         </TouchableOpacity>
         
         <View style={styles.controls}>
@@ -212,8 +213,8 @@ export default function DiaryEdit() {
               size={24}
               color={
                 historyIndex <= 0 || isLoading
-                  ? styles.disabledIcon.color
-                  : styles.activeIcon.color}
+                  ? theme.colors.interactiveLight
+                  : theme.colors.interactive}
             />
           </TouchableOpacity>
           
@@ -228,8 +229,8 @@ export default function DiaryEdit() {
               size={24}
               color={
                 historyIndex >= history.length - 1 || isLoading
-                  ? styles.disabledIcon.color
-                  : styles.activeIcon.color
+                  ? theme.colors.interactiveLight
+                  : theme.colors.interactive
               }
             />
           </TouchableOpacity>
@@ -243,8 +244,8 @@ export default function DiaryEdit() {
               size={24}
               color={
                 isContentChanged() && !isLoading
-                  ? styles.activeIcon.color
-                  : styles.disabledIcon.color
+                  ? theme.colors.interactive
+                  : theme.colors.interactiveLight
               }
             />
           </TouchableOpacity>
@@ -302,15 +303,14 @@ export default function DiaryEdit() {
           editable={!isLoading}
         />
       </ScrollView>
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: 16
   },
   loadingContainer: {
     flex: 1,
@@ -344,12 +344,6 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 8,
-  },
-  activeIcon: {
-    color: '#007AFF',
-  },
-  disabledIcon: {
-    color: '#C7C7CC',
   },
   
   contentContainer: {

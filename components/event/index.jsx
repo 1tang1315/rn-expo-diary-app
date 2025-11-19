@@ -108,9 +108,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     flex: 1,
     overflow: 'hidden',
-    elevation: 4,
-    backgroundColor: '#fff',
-    boxShadow: '0px 2px 2px rgba(0, 0, 0, 0.05)'
+    elevation: 4
   }
 });
 

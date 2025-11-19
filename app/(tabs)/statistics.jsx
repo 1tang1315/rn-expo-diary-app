@@ -1,7 +1,6 @@
 import {
   ActivityIndicator, ScrollView, StyleSheet, Text, View, Button
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useCallback, useState } from "react";
 import { getEventsByDateRange } from "@/db/eventDB";
 import DateSelector from "@/components/statistics/DateSelector";
@@ -11,6 +10,7 @@ import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
 import { categories } from "@/constants/commonConstans";
 import BarChart from "@/components/chart/BarChart";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -131,7 +131,7 @@ export default function Statistics() {
     setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView style={styles.container}>
       <ScrollView style={styles.contentContainer}>
         <DateSelector hasRadius={false} onDataChange={handleDateChange} />
         
@@ -208,7 +208,7 @@ export default function Statistics() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 }
 

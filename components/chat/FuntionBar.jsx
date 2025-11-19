@@ -9,11 +9,15 @@ import ExpandableCard from "@/components/common/ExpandableCard";
 import { getPlainTextContent } from "@/utils/previewFormatter";
 import { getEventsByDateRange } from "@/db/eventDB";
 import { AsyncStorage } from "expo-sqlite/kv-store";
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
 
 const FunctionBar = ({
   onEventDataSelected,
   onPromptSelected
 }) => {
+  const { theme } = useTheme();
+  
   // 事件相关
   const [showEventSelector, setShowEventSelector] = useState(false);
   const [eventsText, setEventsText] = useState("");
@@ -157,15 +161,15 @@ const FunctionBar = ({
             style={styles.functionButton}
             onPress={() => setShowEventSelector(true)}
           >
-            <Ionicons name="calendar" size={20} color="#4A6CF7" />
-            <Text style={styles.functionText}>事件数据</Text>
+            <Icon lib="Ionicons" name="calendar" size={20} />
+            <Text style={[styles.functionText, { color: theme.colors.interactive }]}>事件数据</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.functionButton}
             onPress={() => setShowPromptModal(true)}
           >
-            <Ionicons name="chatbox" size={20} color="#4A6CF7" />
-            <Text style={styles.functionText}>提示词</Text>
+            <Icon lib="Ionicons" name="chatbox" size={20} />
+            <Text style={[styles.functionText, { color: theme.colors.interactive }]}>提示词</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -3,7 +3,6 @@ import {
   Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -21,8 +20,15 @@ import { flushSync } from "react-dom";
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import { getLocalDateTimeByDayjs } from "@/utils/formatTimeUtils";
 import FunctionBar from "@/components/chat/FuntionBar";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeTextInput from "@/components/Theme/ThemeTextInput";
 
 const AiChatScreen = () => {
+  const { theme } = useTheme();
+  
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [config, setConfig] = useState({
     apiKey: '',
@@ -419,17 +425,17 @@ const AiChatScreen = () => {
   };
   
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <ThemeSafeAreaView style={styles.container} edges={['top']}>
+      <ThemeCard style={styles.header}>
         <TouchableOpacity
           style={styles.headerIconContainer}
           onPress={() => setSidebarVisible(true)}
         >
-          <Ionicons name="menu" size={24} color="#333" />
+          <Icon lib="Ionicons" name="menu" size={24} />
         </TouchableOpacity>
         
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { color: theme.colors.interactive }]}>
             {conversations.find(c => c.id === currentConversationId)?.title || '新对话'}
           </Text>
         </View>
@@ -438,9 +444,9 @@ const AiChatScreen = () => {
           style={styles.headerIconContainer}
           onPress={() => setShowSettingsModal(true)}
         >
-          <Ionicons name="settings" size={24} color="#333" />
+          <Icon lib="Ionicons" name="settings" size={24} />
         </TouchableOpacity>
-      </View>
+      </ThemeCard>
       
       {/* 聊天消息区域 */}
       <KeyboardAvoidingView
@@ -484,7 +490,7 @@ const AiChatScreen = () => {
           }}
         />
         <View style={styles.inputContainer}>
-          <TextInput
+          <ThemeTextInput
             ref={inputRef}
             style={styles.input}
             placeholder="输入消息..."
@@ -496,10 +502,10 @@ const AiChatScreen = () => {
             onSubmitEditing={handleSendMessage}
           />
           <TouchableOpacity
-            style={styles.sendBtn}
+            style={[styles.sendBtn, { backgroundColor: theme.colors.interactive }]}
             onPress={handleSendMessage}
           >
-            <Ionicons name="send" size={20} color="#fff" />
+            <Icon lib="Ionicons" name="send" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -681,7 +687,7 @@ const AiChatScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 };
 
@@ -724,7 +730,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     width: '100%',
     textAlign: 'center',
   },
@@ -937,10 +942,8 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     padding: 12,
     marginRight: 8,
-    backgroundColor: '#f5f5f5',
     borderRadius: 24,
     fontSize: 16,
-    color: '#333',
     textAlignVertical: 'top',
   },
   sendBtn: {
@@ -948,7 +951,6 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2196F3',
     borderRadius: 24,
   },
   

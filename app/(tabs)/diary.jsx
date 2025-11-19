@@ -12,10 +12,21 @@ import {
 import dayjs from 'dayjs';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
 import CategoryTab from "@/components/common/CategoryTab";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import Icon from "@/components/common/Icon";
+import ThemeButton from "@/components/Theme/ThemeButton";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
+import ThemeText from "@/components/Theme/ThemeText";
+import { useTheme } from "@/context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
 export default function Diary() {
+  const { theme } = useTheme();
+  
   const navigation = useNavigation();
   const searchInputRef = useRef(null);
   const [searchText, setSearchText] = useState('');
@@ -255,7 +266,7 @@ export default function Diary() {
   
   // 列表项渲染
   const renderItem = ({ item }) => (
-    <TouchableOpacity
+    <ThemeTouchableOpacity
       style={styles.listItem}
       onPress={() => {
         if(isDeleting) {
@@ -281,11 +292,11 @@ export default function Diary() {
       )}
       
       <View style={styles.itemContentContainer}>
-        <Text style={styles.itemTitle}>{item.title}</Text>
-        <Text numberOfLines={1} style={styles.itemContent}>
+        <ThemeSubTitleText style={styles.itemTitle}>{item.title}</ThemeSubTitleText>
+        <ThemeText numberOfLines={1} style={styles.itemContent}>
           {item.content}
-        </Text>
-        <Text style={styles.itemTime}>
+        </ThemeText>
+        <Text style={[styles.itemTime, { color: theme.colors.dim }]}>
           {dayjs(item.time).format('YYYY-MM-DD dddd')}
         </Text>
       </View>
@@ -302,7 +313,7 @@ export default function Diary() {
           <Ionicons name="trash" size={18} color="#ff3b30" />
         </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </ThemeTouchableOpacity>
   );
   
   // 空列表提示
@@ -397,7 +408,7 @@ export default function Diary() {
   
   // 渲染文件夹列表项（文件夹管理弹窗内）
   const renderFolderItem = ({ item }) => (
-    <View style={styles.folderItemContainer}>
+    <ThemeCard style={styles.folderItemContainer}>
       <Text style={styles.folderItemText}>{item.name}</Text>
       <View style={styles.folderItemActionGroup}>
         <TouchableOpacity
@@ -413,14 +424,14 @@ export default function Diary() {
           <Ionicons name="trash" size={16} color="#ff3b30" />
         </TouchableOpacity>
       </View>
-    </View>
+    </ThemeCard>
   );
   
   return (
     <SafeAreaView style={styles.container}>
       {/* 搜索栏 */}
       <View style={styles.searchContainer}>
-        <TextInput
+        <ThemeTextInput
           ref={searchInputRef}
           style={styles.searchInput}
           placeholder="搜索日记标题或内容..."
@@ -434,22 +445,15 @@ export default function Diary() {
           style={styles.settingButton}
           onPress={() => setSettingModalVisible(true)}
         >
-          <Ionicons name="settings" size={22} color="#333" />
+          <Icon lib="Ionicons" name="settings" size={22} />
         </TouchableOpacity>
       </View>
       
       {/* 文件夹横向选择栏 */}
       <CategoryTab
         categories={[
-          {
-            id: 'all',
-            name: '全部',
-            isFixed: true
-          },
-          {
-            id: 'unclassified',
-            name: '未分类'
-          },
+          { id: 'all', name: '全部', isFixed: true },
+          { id: 'unclassified', name: '未分类' },
           ...folders?.map(f => ({
             id: f.id.toString(),
             name: f.name
@@ -478,25 +482,23 @@ export default function Diary() {
           </Text>
           
           <View style={styles.deleteActionGroup}>
-            <TouchableOpacity
+            <ThemeButton
+              title={isSelectAll ? '取消全选' : '全选'}
               style={styles.selectAllButton}
+              textStyle={styles.selectAllText}
               onPress={handleSelectAll}
-            >
-              <Text style={styles.selectAllText}>
-                {isSelectAll ? '取消全选' : '全选'}
-              </Text>
-            </TouchableOpacity>
+            ></ThemeButton>
             
-            <TouchableOpacity
+            <ThemeButton
+              title="批量删除"
+              textStyle={styles.batchDeleteText}
               style={[
                 styles.batchDeleteButton,
                 selectedIds.length === 0 && styles.batchDeleteButtonDisabled
               ]}
               onPress={deleteSelected}
               disabled={selectedIds.length === 0}
-            >
-              <Text style={styles.batchDeleteText}>批量删除</Text>
-            </TouchableOpacity>
+            ></ThemeButton>
           </View>
         </View>
       )}
@@ -508,11 +510,11 @@ export default function Diary() {
         keyExtractor={(group) => group.month}
         renderItem={({ item: group }) => (
           <View style={styles.monthGroup}>
-            <Text
+            <ThemeTitleText
               style={styles.monthTitle}
               numberOfLines={1}
               ellipsizeMode="tail"
-            >{group.month}</Text>
+            >{group.month}</ThemeTitleText>
             <FlatList
               data={group.data}
               keyExtractor={(item) => item.id}
@@ -528,7 +530,7 @@ export default function Diary() {
       
       {/* 新增日记按钮 */}
       <TouchableOpacity
-        style={styles.floatingButton}
+        style={[styles.floatingButton, { backgroundColor: theme.colors.interactive}]}
         onPress={() => navigation.navigate('diary-edit')}
       >
         <Ionicons name="add" size={24} color="#fff" />
@@ -748,9 +750,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     paddingHorizontal: 15,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    fontSize: 14,
-    color: '#333'
+    fontSize: 14
   },
   settingButton: {
     marginLeft: 8,
@@ -782,8 +782,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 8,
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333'
+    fontWeight: 'bold'
   },
   monthGroupList: {
     paddingHorizontal: 10
@@ -795,24 +794,20 @@ const styles = StyleSheet.create({
     margin: 6,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#f6f6f6",
     minHeight: 100,
     position: 'relative'
   },
   itemTitle: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#333"
+    fontWeight: "bold"
   },
   itemContent: {
     marginTop: 4,
-    fontSize: 14,
-    color: "#555"
+    fontSize: 14
   },
   itemTime: {
     marginTop: 4,
-    fontSize: 12,
-    color: "#999"
+    fontSize: 12
   },
   
   // 勾选框
@@ -874,7 +869,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto'
   },
   batchDeleteButton: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
     backgroundColor: '#ff3b30'
@@ -887,7 +882,7 @@ const styles = StyleSheet.create({
     opacity: 0.5
   },
   batchDeleteText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff'
   },
   
@@ -896,7 +891,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0'
+    borderWidth: 0
   },
   selectAllText: {
     fontSize: 14,
@@ -928,7 +923,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

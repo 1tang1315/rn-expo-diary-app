@@ -1,15 +1,21 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from "@/context/ThemeContext";
 
 /**
  * 添加按钮
  * @props {Function} onPress - 点击回调（触发打开添加弹窗）
  */
 const AddButton = ({ onPress }) => {
+  const { theme } = useTheme();
+  
   return (
     <TouchableOpacity
-      style={styles.floatingAddButton}
+      style={[
+        styles.floatingAddButton,
+        { backgroundColor: theme.colors.interactive }
+      ]}
       onPress={onPress}
       accessibilityLabel="添加新日程"
     >
@@ -26,11 +32,9 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#2196F3',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+    elevation: 5
   }
 });
 

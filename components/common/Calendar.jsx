@@ -2,25 +2,14 @@ import React, {
   useState, useCallback, useRef, useEffect
 } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, PanResponder, Dimensions
+  View, Text, Pressable, StyleSheet, PanResponder
 } from 'react-native';
 import dayjs from 'dayjs';
 import solarLunar from 'solarlunar';
+import ThemeView from "@/components/Theme/ThemeView";
+import { useTheme } from "@/context/ThemeContext";
 
-const screenWidth = Dimensions.get('window').width;
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
-
-const COLORS = {
-  text: '#222',
-  dim: '#999',
-  border: '#eee',
-  bg: '#fff',
-  weekend: '#2563eb',
-  holiday: '#dc2626',
-  today: '#16a34a',
-  primary: '#3b82f6',
-  modalBg: 'rgba(0, 0, 0, 0.5)',
-};
 
 // 公历节日
 const SOLAR_HOLIDAYS = {
@@ -133,6 +122,8 @@ export default function Calendar({
   value,
   onChange
 }) {
+  const { theme } = useTheme();
+  
   // 当天日期
   const [base, setBase] = useState(() => value ? dayjs(value) : dayjs());
   // 选中的日期
@@ -294,14 +285,14 @@ export default function Calendar({
     const holidayInfo = getHolidayInfo(d);
     const lunar = lunarInfo(d);
     let lunarText = holidayInfo ? holidayInfo.name : (lunar.lunarDay === 1 ? lunar.lunarMonthCn : lunar.lunarDayCn);
-    let dayNumColor = COLORS.text, lunarTextColor = COLORS.dim;
+    let dayNumColor = theme.colors.text, lunarTextColor = theme.colors.subText;
     if(!inCycle) {
-      dayNumColor = lunarTextColor = COLORS.dim;
-    } else if(isToday) dayNumColor = COLORS.today;
+      dayNumColor = lunarTextColor = theme.colors.dim;
+    } else if(isToday) dayNumColor = theme.colors.today;
     else if(holidayInfo?.isHoliday) {
-      dayNumColor = lunarTextColor = COLORS.holiday;
+      dayNumColor = lunarTextColor = theme.colors.holiday;
     } else if(isWeekend) {
-      dayNumColor = lunarTextColor = COLORS.weekend;
+      dayNumColor = lunarTextColor = theme.colors.weekend;
     }
     
     return (
@@ -353,8 +344,87 @@ export default function Calendar({
     );
   }
   
+  const styles = StyleSheet.create({
+    container: {
+      marginBottom: 10
+    },
+    pageContainer: {
+      flexShrink: 0,
+      paddingVertical: 8
+    },
+    row: {
+      flexDirection: 'row',
+      width: '100%',
+      justifyContent: 'space-between'
+    },
+    weekCell: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8
+    },
+    weekText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.dim
+    },
+    weekendText: { color: theme.colors.weekend },
+    cell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 4
+    },
+    cellInner: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      paddingVertical: 6,
+      borderRadius: 8
+    },
+    cellToday: {
+      borderWidth: 1,
+      borderRadius: '50%',
+      borderColor: theme.colors.today
+    },
+    cellSelected: {
+      borderRadius: '50%',
+      backgroundColor: `${theme.colors.primary}15`
+    },
+    dayNum: {
+      fontSize: 16,
+      fontWeight: '500',
+      marginBottom: 2
+    },
+    lunarText: {
+      fontSize: 11,
+      fontWeight: '400',
+      lineHeight: 12
+    },
+    footer: {
+      marginTop: 8,
+      paddingTop: 4,
+      borderTopWidth: StyleSheet.hairlineWidth
+    },
+    lineIcon: {
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      width: 30,
+      height: 4,
+      backgroundColor: theme.colors.dim,
+      borderRadius: 2
+    },
+    emptyState: {
+      paddingVertical: 40,
+      alignItems: 'center'
+    },
+    emptyText: {
+      fontSize: 14,
+      color: theme.colors.dim
+    },
+  });
+  
   return (
-    <View style={styles.container} {...(combinedPanResponder.current ? combinedPanResponder.current.panHandlers : {})}>
+    <ThemeView style={styles.container} {...(combinedPanResponder.current ? combinedPanResponder.current.panHandlers : {})}>
       {/* 星期标签栏 */}
       <View style={styles.row}>
         {WEEK_LABELS.map((label, idx) => (
@@ -366,92 +436,8 @@ export default function Calendar({
       
       <View style={styles.pageContainer}>{renderPageRows(currentData)}</View>
       
-      <View style={styles.footer}><View style={styles.lineIcon} /></View>
-    </View>
+      <ThemeView style={styles.footer}><View style={styles.lineIcon} /></ThemeView>
+    </ThemeView>
   );
+  
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: COLORS.bg,
-    elevation: 2,
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-  },
-  pageContainer: {
-    width: screenWidth - 20,
-    flexShrink: 0,
-    paddingVertical: 8
-  },
-  row: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between'
-  },
-  weekCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8
-  },
-  weekText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.dim
-  },
-  weekendText: { color: COLORS.weekend },
-  cell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4
-  },
-  cellInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    paddingVertical: 6,
-    borderRadius: 8
-  },
-  cellToday: {
-    borderWidth: 1,
-    borderRadius: '50%',
-    borderColor: COLORS.today
-  },
-  cellSelected: {
-    borderRadius: '50%',
-    backgroundColor: `${COLORS.primary}15`
-  },
-  dayNum: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 2
-  },
-  lunarText: {
-    fontSize: 11,
-    fontWeight: '400',
-    lineHeight: 12
-  },
-  footer: {
-    marginTop: 8,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border
-  },
-  lineIcon: {
-    marginLeft: 'auto',
-    marginRight: 'auto',
-    width: 30,
-    height: 4,
-    backgroundColor: COLORS.dim,
-    borderRadius: 2
-  },
-  emptyState: {
-    paddingVertical: 40,
-    alignItems: 'center'
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.dim
-  },
-});

@@ -3,7 +3,6 @@ import {
   View, Text, StyleSheet, FlatList,
   ActivityIndicator
 } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from 'expo-linear-gradient';
 import CategoryTab from "@/components/common/CategoryTab";
 import StorageCard from "@/components/storage/StorageCard";
@@ -13,12 +12,16 @@ import StorageModal from "@/components/storage/StorageModal";
 import { storageCategories } from "@/constants/commonConstans";
 import { getAllStorageItems } from '@/db/storageDB';
 import ExpandableCard from "@/components/common/ExpandableCard";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 // 常量定义
 const MS_PER_DAY = 1000 * 60 * 60 * 24; // 每天的毫秒数
 const MIN_DAILY_PRICE = 0; // 最低日价格
 
 export default function Storage() {
+  const { theme } = useTheme();
+  
   const [activeCategory, setActiveCategory] = useState('all');
   const [allItems, setAllItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,9 +154,9 @@ export default function Storage() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <ThemeSafeAreaView edges={['top']}>
       <LinearGradient
-        colors={['#3498db', '#2980b9']}
+        colors={[theme.colors.interactive, theme.colors.interactiveLight]}
         style={styles.statsCard}
       >
         <View style={styles.statsRow}>
@@ -247,15 +250,11 @@ export default function Storage() {
         currentTab={activeCategory}
         onRefresh={closeModalAndRefresh}
       />
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f6f9fc'
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

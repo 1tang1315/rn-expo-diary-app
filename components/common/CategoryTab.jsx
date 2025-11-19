@@ -2,7 +2,9 @@ import React, { useRef, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import ThemeView from "@/components/Theme/ThemeView";
+import { useTheme } from "@/context/ThemeContext";
+import Icon from "@/components/common/Icon";
 
 /**
  * 分类标签组件
@@ -16,6 +18,8 @@ const CategoryTab = ({
   currentTab,
   setCurrentTab,
 }) => {
+  const { theme } = useTheme();
+  
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollRef = useRef(null);
   const scaleAnim = useRef(new Animated.Value(1)).current; // 用于折叠/展开动画
@@ -80,7 +84,9 @@ const CategoryTab = ({
         key={tab.id}
         style={[
           styles.tabItem,
-          isActive && styles.activeTab,
+          isActive && {
+            backgroundColor: theme.colors.card
+          },
           isFixed && isScrolled && styles.collapsedFixedTab
         ]}
         onPress={() => handleTabPress(tab.id)}
@@ -90,17 +96,19 @@ const CategoryTab = ({
           <Animated.View style={{ transform: [{ scale: isFixed && isScrolled ? scaleAnim : 1 }] }}>
             {shouldShowDefaultIcon ? (
               // 折叠时显示默认图标
-              <MaterialIcons
+              <Icon
+                lib="MaterialIcons"
                 name="view-list"
                 size={20}
-                color={isActive ? "#2196F3" : "#888888"}
+                color={isActive ? theme.colors.interactive : theme.colors.interactiveLight}
               />
             ) : tab.icon ? (
               // 原有自定义图标渲染
-              <MaterialIcons
+              <Icon
+                lib="MaterialIcons"
                 name={tab.icon}
                 size={isFixed && isScrolled ? 20 : 18}
-                color={isActive ? "#2196F3" : "#888888"}
+                color={isActive ? theme.colors.interactive : theme.colors.interactiveLight}
               />
             ) : (
               // 原有emoji渲染
@@ -114,7 +122,11 @@ const CategoryTab = ({
           <Text
             style={[
               styles.tabText,
-              isActive && styles.activeTabText,
+              { color: theme.colors.interactiveLight },
+              isActive && {
+                fontWeight: 600,
+                color: theme.colors.interactive
+              },
               !hasIcon && styles.tabTextNoIcon
             ]}
           >{tab.name}</Text>
@@ -124,7 +136,7 @@ const CategoryTab = ({
   };
   
   return (
-    <View style={styles.container}>
+    <ThemeView style={styles.container}>
       <View style={styles.tabBar}>
         {/* 渲染固定标签 */}
         <View>
@@ -143,15 +155,14 @@ const CategoryTab = ({
           {scrollableTabs?.map(tab => renderTab(tab))}
         </ScrollView>
       </View>
-    </View>
+    </ThemeView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
   },
   tabBar: {
     flexDirection: 'row',
@@ -172,22 +183,14 @@ const styles = StyleSheet.create({
   collapsedFixedTab: {
     backgroundColor: 'transparent',
   },
-  activeTab: {
-    backgroundColor: '#E3F2FD',
-  },
   tabText: {
     marginLeft: 6,
-    color: '#888888',
     fontSize: 14,
     fontWeight: '500',
   },
   tabTextNoIcon: {
     marginLeft: 0,
-  },
-  activeTabText: {
-    color: '#2196F3',
-    fontWeight: '600',
-  },
+  }
 });
 
 export default CategoryTab;

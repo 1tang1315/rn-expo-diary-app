@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import ThemeView from "@/components/Theme/ThemeView";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
 
 /**
  * 分类选择弹窗独立组件
@@ -11,6 +15,8 @@ import { MaterialIcons } from '@expo/vector-icons';
  * @props {Function} onSelect - 选择分类后的回调
  */
 const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelect }) => {
+  const { theme } = useTheme();
+  
   return (
     <Modal
       animationType="slide"
@@ -21,14 +27,14 @@ const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelec
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.categoryModalOverlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.categoryModalContent}>
+            <ThemeView style={styles.categoryModalContent}>
               {/* 弹窗头部 */}
-              <View style={styles.categoryModalHeader}>
-                <Text style={styles.categoryModalTitle}>选择分类</Text>
+              <ThemeView style={styles.categoryModalHeader}>
+                <ThemeTitleText style={styles.categoryModalTitle}>选择分类</ThemeTitleText>
                 <TouchableOpacity style={styles.categoryModalClose} onPress={onClose}>
-                  <MaterialIcons name="close" size={24} color="#666" />
+                  <Icon lib="MaterialIcons" name="close" size={24} />
                 </TouchableOpacity>
-              </View>
+              </ThemeView>
               
               {/* 分类列表 */}
               <ScrollView
@@ -38,33 +44,40 @@ const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelec
                 {categories
                   .filter(tab => !tab.isFixed) // 排除"全部"分类
                   .map(category => (
-                    <TouchableOpacity
+                    <ThemeTouchableOpacity
                       key={category.id}
                       style={[
                         styles.categoryItem,
-                        selectedCategory === category.id && styles.selectedCategoryItem
+                        selectedCategory === category.id && {
+                          borderWidth: 1,
+                          borderColor: theme.colors.interactive
+                        }
                       ]}
                       onPress={() => onSelect(category.id)}
                     >
-                      <MaterialIcons
+                      <Icon
+                        lib="MaterialIcons"
                         name={category.icon}
                         size={20}
-                        color={selectedCategory === category.id ? "#2196F3" : "#666"}
-                        style={styles.categoryItemIcon}
+                        color={ selectedCategory === category.id ? theme.colors.interactive : theme.colors.interactiveLight }
                       />
                       <Text style={[
                         styles.categoryItemText,
-                        selectedCategory === category.id && styles.selectedCategoryItemText
+                        {color: theme.colors.interactiveLight},
+                        selectedCategory === category.id && {
+                          fontWeight: '500',
+                          color: theme.colors.interactive
+                        }
                       ]}>
                         {category.name}
                       </Text>
                       {selectedCategory === category.id && (
-                        <MaterialIcons name="check" size={18} color="#2196F3" />
+                        <Icon lib="MaterialIcons" name="check" size={18} />
                       )}
-                    </TouchableOpacity>
+                    </ThemeTouchableOpacity>
                   ))}
               </ScrollView>
-            </View>
+            </ThemeView>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -80,11 +93,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   categoryModalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    maxHeight: '60%',
     padding: 20,
-    maxHeight: '60%'
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
   },
   categoryModalHeader: {
     flexDirection: 'row',
@@ -92,13 +104,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    borderBottomWidth: 1
   },
   categoryModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
+    fontSize: 18
   },
   categoryModalClose: {
     padding: 4
@@ -113,25 +122,14 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
     justifyContent: 'space-between'
   },
-  selectedCategoryItem: {
-    backgroundColor: '#E3F2FD',
-    borderWidth: 1,
-    borderColor: '#2196F3'
-  },
-  categoryItemIcon: {
-    marginRight: 12
-  },
   categoryItemText: {
+    flexGrow: 1,
+    marginLeft: 8,
     fontSize: 16,
-    color: '#333',
-    flexGrow: 1
-  },
-  selectedCategoryItemText: {
-    color: '#2196F3',
-    fontWeight: '500'
+    height: 16,
+    lineHeight: 16
   }
 });
 

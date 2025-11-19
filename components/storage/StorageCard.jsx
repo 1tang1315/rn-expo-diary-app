@@ -1,13 +1,14 @@
-import { TouchableOpacity, Image, View, Text, StyleSheet } from "react-native";
+import { Image, View, Text, StyleSheet } from "react-native";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { formatDate } from "@/utils/formatTimeUtils";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
 
 const StorageCard = ({ item, onPress }) => {
   // 判断是否为退役产品（有结束时间且已过期）
   const isRetired = item.endDate && new Date(item.endDate) < new Date();
   
   return (
-    <TouchableOpacity
+    <ThemeTouchableOpacity
       activeOpacity={0.8}
       style={[styles.container, isRetired && styles.retiredContainer]}
       onPress={onPress}
@@ -76,7 +77,7 @@ const StorageCard = ({ item, onPress }) => {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </ThemeTouchableOpacity>
   );
 };
 
@@ -88,7 +89,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 3,

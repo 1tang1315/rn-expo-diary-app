@@ -3,11 +3,18 @@ import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeView from "@/components/Theme/ThemeView";
 
 const DateSelector = ({
   onDataChange,
   hasRadius = true
 }) => {
+  const { theme } = useTheme();
+  
   const [dateType, setDateType] = useState('single');
   const [startDate, setStartDate] = useState(dayjs().startOf('day'));
   const [endDate, setEndDate] = useState(dayjs().startOf('day'));
@@ -43,14 +50,14 @@ const DateSelector = ({
   }, [dateType, startDate, endDate, onDataChange]);
   
   return (
-    <View style={[
+    <ThemeView style={[
       styles.sectionCard,
       { borderRadius: hasRadius ? 8 : 0 }
     ]}>
-      <Text style={styles.sectionTitle}>选择日期范围</Text>
+      <ThemeTitleText style={styles.sectionTitle}>选择日期范围</ThemeTitleText>
       <View style={styles.dateTypeSwitcher}>
-        <TouchableOpacity
-          style={[styles.dateTypeBtn, dateType === 'single' && styles.dateTypeBtnActive]}
+        <ThemeTouchableOpacity
+          style={[styles.dateTypeBtn, dateType === 'single' && ({backgroundColor: theme.colors.interactive})]}
           onPress={() => {
             const currentTime = new Date().getTime();
             if(currentTime - lastSingleClickTime < 300) {
@@ -66,33 +73,34 @@ const DateSelector = ({
             <Text
               style={[styles.dateTypeHint, dateType === 'single' && styles.dateTypeHintActive]}>(快速双击回到今日)</Text>
           </View>
-        </TouchableOpacity>
+        </ThemeTouchableOpacity>
         <TouchableOpacity
-          style={[styles.dateTypeBtn, dateType === 'range' && styles.dateTypeBtnActive]}
+          style={[styles.dateTypeBtn, dateType === 'range' && ({backgroundColor: theme.colors.interactive})]}
           onPress={() => setDateType('range')}
         >
           <Text style={[styles.dateTypeText, dateType === 'range' && styles.dateTypeTextActive]}>日期范围</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.datePickerContainer}>
+      
+      <ThemeCard style={styles.datePickerContainer}>
         {dateType === 'single' ? (
           <TouchableOpacity style={styles.dateSelectBtn} onPress={() => handleShowDatePicker('start')}>
-            <Ionicons name="calendar-outline" size={18} color="#666" style={styles.dateIcon} />
-            <Text style={styles.dateText}>{dayjs(startDate).format('YYYY-MM-DD')}</Text>
+            <Ionicons name="calendar-outline" size={18} color={theme.colors.interactive} style={styles.dateIcon} />
+            <Text style={[styles.dateText, [{color: theme.colors.interactive}]]}>{dayjs(startDate).format('YYYY-MM-DD')}</Text>
           </TouchableOpacity>
         ) : (
           <>
             <TouchableOpacity style={styles.dateSelectBtn} onPress={() => handleShowDatePicker('start')}>
-              <Ionicons name="calendar-outline" size={18} color="#666" style={styles.dateIcon} />
-              <Text style={styles.dateText}>开始：{startDate.format('YYYY-MM-DD')}</Text>
+              <Ionicons name="calendar-outline" size={18} color={theme.colors.interactive} style={styles.dateIcon} />
+              <Text style={[styles.dateText, [{color: theme.colors.interactive}]]}>开始: {dayjs(startDate).format('YYYY-MM-DD')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.dateSelectBtn} onPress={() => handleShowDatePicker('end')}>
-              <Ionicons name="calendar-outline" size={18} color="#666" style={styles.dateIcon} />
-              <Text style={styles.dateText}>结束：{endDate.format('YYYY-MM-DD')}</Text>
+              <Ionicons name="calendar-outline" size={18} color={theme.colors.interactive} style={styles.dateIcon} />
+              <Text style={[styles.dateText, [{color: theme.colors.interactive}]]}>结束: {dayjs(endDate).format('YYYY-MM-DD')}</Text>
             </TouchableOpacity>
           </>
         )}
-      </View>
+      </ThemeCard>
       
       {showDatePicker && (
         <DateTimePicker
@@ -103,7 +111,7 @@ const DateSelector = ({
           maximumDate={new Date()} // 禁止选择未来日期
         />
       )}
-    </View>
+    </ThemeView>
   );
 };
 
@@ -114,14 +122,12 @@ const styles = StyleSheet.create({
     marginTop: 1,
     marginBottom: 10,
     padding: 16,
-    backgroundColor: '#fff',
     elevation: 2,
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 16,
   },
   dateTypeSwitcher: {
@@ -133,12 +139,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F5F7FA',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dateTypeBtnActive: {
-    backgroundColor: '#4A6CF7',
   },
   dateTypeTextContainer: {
     alignItems: 'center',
@@ -173,7 +175,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   dateText: {
-    fontSize: 15,
-    color: '#333',
+    fontSize: 15
   },
 });

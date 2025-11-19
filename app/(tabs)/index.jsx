@@ -1,16 +1,15 @@
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Header from "@/components/common/Header";
 import Calendar from "@/components/common/Calendar";
 import TimelinePanel from "@/components/event";
 import dayjs from 'dayjs';
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 export default function Home() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView>
       <Header
         selectedDate={selectedDate}
         onToday={() => setSelectedDate(dayjs())}
@@ -20,13 +19,6 @@ export default function Home() {
         onChange={(d) => setSelectedDate(d)}
       />
       <TimelinePanel selectedDate={selectedDate} />
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7fafd'
-  }
-});

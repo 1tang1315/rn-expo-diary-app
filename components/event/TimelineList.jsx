@@ -4,6 +4,14 @@ import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { statusColors, statusTextMap, categories } from '@/constants/commonConstans';
 import { updateEventStatus } from "@/db/eventDB";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
+import EmptyContainer from "@/components/common/EmptyContainer";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import { LinearGradient } from "expo-linear-gradient";
+import ThemeText from "@/components/Theme/ThemeText";
+import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
+import ThemeCard from "@/components/Theme/ThemeCard";
 
 // 判断两个日期是否为同一天（只比较年/月/日）
 const isSameDate = (date1, date2) => {
@@ -22,7 +30,7 @@ const getFinalStatus = (item) => {
   const timeToStart = startTime - now;
   
   // 若用户手动设置为「未完成（notCompleted）」，直接返回，不允许自动修改
-  if (item.status === 'notCompleted') {
+  if(item.status === 'notCompleted') {
     return item.status;
   }
   
@@ -35,7 +43,7 @@ const getFinalStatus = (item) => {
   let finalStatus = item.status;
   
   // 事件已完全结束（结束日期在过去，或今天已结束）→ 自动设为 completed
-  if (
+  if(
     (isEndPast) || // 结束日期在昨天及之前
     (isEndToday && now > endTime) // 结束日期是今天，但当前时间已过结束时间
   ) {
@@ -43,7 +51,7 @@ const getFinalStatus = (item) => {
   }
   
   // 事件正在进行（跨天事件/今天内事件）→ 自动设为 inProgress
-  else if (
+  else if(
     (startTime < now && endTime > now) || // 跨天事件（如昨天开始→今天结束）
     (isStartToday && isEndToday && now >= startTime && now <= endTime) // 今天内事件，且在时间范围内
   ) {
@@ -51,13 +59,13 @@ const getFinalStatus = (item) => {
   }
   
   // 事件未开始（今天/未来）→ 按时间差细分 early/upcoming
-  else if (timeToStart > 0) {
+  else if(timeToStart > 0) {
     // 今天的事件，1小时内开始 → upcoming
-    if (isStartToday && timeToStart <= ONE_HOUR) {
+    if(isStartToday && timeToStart <= ONE_HOUR) {
       finalStatus = 'upcoming';
     }
     // 未来日期事件，或今天超过1小时后开始 → early
-    else if (isStartFuture || (isStartToday && timeToStart > ONE_HOUR)) {
+    else if(isStartFuture || (isStartToday && timeToStart > ONE_HOUR)) {
       finalStatus = 'early';
     }
   }
@@ -83,13 +91,15 @@ const TimelineList = ({
   currentTab,
   openEditModal,
 }) => {
+  const { theme } = useTheme();
+  
   const handleStatusUpdate = useCallback(async (item) => {
     const newStatus = getFinalStatus(item);
-    if (item.status !== newStatus) {
+    if(item.status !== newStatus) {
       try {
         await updateEventStatus(item.id, newStatus);
         console.log(`事件 ${item.id} 状态更新为：${newStatus}`);
-      } catch (err) {
+      } catch(err) {
         console.error('更新失败:', err);
       }
     }
@@ -101,7 +111,7 @@ const TimelineList = ({
     
     // 批量处理更新，避免同时触发多个更新
     const processUpdates = async () => {
-      for (const update of updateQueue) {
+      for(const update of updateQueue) {
         await update();
         // 每处理一个更新，给一点时间让UI呼吸
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -115,7 +125,7 @@ const TimelineList = ({
   useEffect(() => {
     categorizedData.forEach(item => {
       const newStatus = getFinalStatus(item);
-      if (item.status !== newStatus) {
+      if(item.status !== newStatus) {
         updateEventStatus(item.id, newStatus)
           .then(() => console.log(`事件 ${item.id} 状态更新为：${newStatus}`))
           .catch(err => console.error('更新失败:', err));
@@ -130,7 +140,7 @@ const TimelineList = ({
     const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
     const statusText = statusTextMap[finalStatus];
-
+    
     const startDate = new Date(item.startDatetime);
     const endDate = new Date(item.endDatetime);
     const isDifferentDate = startDate.getDate() !== endDate.getDate();
@@ -139,7 +149,7 @@ const TimelineList = ({
       <View style={styles.timelineItemContainer}>
         {/* 左侧时间线 */}
         <View style={styles.timelineColumn}>
-          <View style={[styles.timelineDot, { backgroundColor: finalStatusColor }]}>
+          <View style={[styles.timelineDot, { backgroundColor: theme.colors .interactive }]}>
             <MaterialIcons name={item.icon} size={14} color="white" />
           </View>
           {isDifferentDate ? (
@@ -147,49 +157,48 @@ const TimelineList = ({
           ) : (
             <Text style={styles.endTimeText}>{item.endTime}</Text>
           )}
-          <View style={[styles.timelineLine, { backgroundColor: finalStatusColor }]} />
+          <View style={[styles.timelineLine, { backgroundColor: theme.colors .interactive }]} />
           {isDifferentDate ? (
             <Text style={styles.startTimeText}>{(item.startDatetime).slice(5)} </Text>
           ) : (
             <Text style={styles.startTimeText}>{item.startTime}</Text>
           )}
         </View>
-
+        
         {/* 事件内容卡片（点击触发编辑） */}
-        <TouchableOpacity
-          style={[styles.contentCard, { borderLeftColor: finalStatusColor }]}
+        <ThemeTouchableOpacity
+          style={styles.contentCard}
           onPress={() => openEditModal(item)}
         >
-          <Text style={styles.title}>{displayTitle}</Text>
-          <Text style={styles.description}>{item.description}</Text>
-          
-          {isDifferentDate ? (
-              <Text style={styles.timeRange}>
+          <LinearGradient
+            colors={[theme.colors.interactive, theme.colors.interactiveLight]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{padding: 16}}
+          >
+            <ThemeText style={[styles.title, {color: theme.colors.textInverse}]}>{displayTitle}</ThemeText>
+            <Text style={[styles.description, theme.colors.dim]}>{item.description}</Text>
+            
+            {isDifferentDate ? (
+              <ThemeSubTitleText style={styles.timeRange}>
                 {item.startDatetime.slice(8)} - {item.endDatetime.slice(8)}({formatDuration(item)})
+              </ThemeSubTitleText>
+            ) : (
+              <ThemeSubTitleText style={styles.timeRange}>
+                {item.startTime} - {item.endTime}({formatDuration(item)})
+              </ThemeSubTitleText>
+            )}
+            
+            <ThemeCard style={styles.statusBadge}>
+              <Text style={[styles.statusText, { color: finalStatusColor }]}>
+                {statusText}
               </Text>
-          ) : (
-            <Text style={styles.timeRange}>
-              {item.startTime} - {item.endTime}({formatDuration(item)})
-            </Text>
-          )}
-          
-          <View style={[styles.statusBadge, { backgroundColor: `${finalStatusColor}20` }]}>
-            <Text style={[styles.statusText, { color: finalStatusColor }]}>
-              {statusText}
-            </Text>
-          </View>
-        </TouchableOpacity>
+            </ThemeCard>
+          </LinearGradient>
+        </ThemeTouchableOpacity>
       </View>
     );
   };
-  
-  // 渲染加载状态
-  const renderLoading = () => (
-    <View style={styles.loadingState}>
-      <FontAwesome name="hourglass-half" size={32} color="#ccc" />
-      <Text style={styles.loadingText}>加载中...</Text>
-    </View>
-  );
   
   // 渲染 FlatList 核心
   return (
@@ -199,21 +208,36 @@ const TimelineList = ({
       keyExtractor={item => item.id} // 确保唯一标识
       contentContainerStyle={styles.timelineList}
       showsVerticalScrollIndicator={false} // 隐藏垂直滚动条
-      // 空状态处理（加载中/无数据）
       ListEmptyComponent={() => {
-        if (isLoading) return renderLoading();
+        // 加载状态
+        if(isLoading) {
+          return (
+            <View style={styles.loadingState}>
+              <FontAwesome name="hourglass-half" size={32} color="#ccc" />
+              <Text style={styles.loadingText}>加载中...</Text>
+            </View>);
+        }
+        
+        // 根据当前标签页（currentTab）动态决定图标和文本
+        let iconName, emptyText;
+        
+        if(currentTab === 'all') {
+          iconName = 'event';
+          emptyText = '今日暂无任何日程';
+        } else {
+          // 找到当前分类
+          const currentCategory = categories.find(tab => tab.id === currentTab);
+          // 安全取值，如果找不到分类则提供默认值
+          iconName = currentCategory?.icon || 'event';
+          emptyText = `当前「${currentCategory?.name || '未知分类'}」分类无日程`;
+        }
+        
         return (
-          <View style={styles.emptyState}>
-            <MaterialIcons
-              name={currentTab === 'all' ? 'event' : categories.find(tab => tab.id === currentTab)?.icon}
-              size={48} color="#ccc"
-            />
-            <Text style={styles.emptyText}>
-              {currentTab === 'all'
-                ? '今日暂无任何日程'
-                : `当前「${categories.find(tab => tab.id === currentTab)?.name}」分类无日程`}
-            </Text>
-          </View>
+          <EmptyContainer
+            iconLib="MaterialIcons"
+            iconName={iconName}
+            text={emptyText}
+          />
         );
       }}
     />
@@ -279,31 +303,24 @@ const styles = StyleSheet.create({
   // 事件内容卡片
   contentCard: {
     flex: 1,
-    backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 3,
-    elevation: 5,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+    overflow: 'hidden'
   },
   // 事件标题
   title: {
+    marginBottom: 4,
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#333',
   },
   // 事件描述
   description: {
-    fontSize: 14,
-    color: '#666',
     marginBottom: 8,
+    fontSize: 14,
   },
   // 时间范围
   timeRange: {
-    fontSize: 13,
-    color: '#888',
     marginBottom: 12,
+    fontSize: 13,
     fontStyle: 'italic',
   },
   // 状态标签
@@ -342,7 +359,6 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#999',
     marginBottom: 24,
     textAlign: 'center',
   },

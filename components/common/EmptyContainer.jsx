@@ -1,23 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
 
 const EmptyContainer = ({
-  icon,
-  IconComponent = FontAwesome,
+  iconLib="FontAwesome",
+  iconName,
   text = "暂无数据",
   model = 'txt'
 }) => {
+  const { theme } = useTheme();
+  
   return (
     <View style={[styles.container, model === 'box' && styles.boxContainer]}>
-      {icon && (
-        <IconComponent
-          name={icon}
-          size={48}
-          color="#a0aec0"
-        />
+      {iconName && (
+        <Icon lib={iconLib} name={iconName} size={48} />
       )}
-      <Text style={styles.text}>
+      <Text style={[styles.text, { color: theme.colors.interactive }]}>
         {text}
       </Text>
     </View>
@@ -40,9 +39,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    color: '#718096',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
     lineHeight: 24,
   },
 });

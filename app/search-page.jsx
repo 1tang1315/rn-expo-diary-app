@@ -12,9 +12,9 @@ import {
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { getEventsByTitleOrDescriptionSearch } from "@/db/eventDB";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { getCategoryInfo } from "@/utils/categoryUtils";
 import EventModal from "@/components/event/EventModal";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 const SearchPage = () => {
   // 状态管理：搜索输入、搜索结果、加载状态
@@ -162,7 +162,7 @@ const SearchPage = () => {
   const [currentEvent, setCurrentEvent] = useState(null);
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView style={styles.container}>
       {/* 搜索栏 */}
       <View style={styles.searchBar}>
         <TextInput
@@ -227,14 +227,13 @@ const SearchPage = () => {
         selectedDate={currentEvent ? new Date(currentEvent.start_datetime) : new Date()}
         onRefresh={() => handleSearch(inputValue)}
       />
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     paddingHorizontal: 16
   },
   searchBar: {

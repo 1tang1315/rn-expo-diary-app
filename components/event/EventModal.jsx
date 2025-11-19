@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
-  Platform, Modal, Button, StyleSheet, Alert,
+  View, Text, TouchableOpacity, ScrollView,
+  Platform, Modal, StyleSheet, Alert,
   TouchableWithoutFeedback
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { categories, categoryIcons, statusColors, statusTextMap } from '@/constants/commonConstans';
 import {
@@ -15,6 +14,15 @@ import {
 } from "@/db/eventDB";
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import CategoryModal from "@/components/common/CategoryModal";
+import ThemeView from "@/components/Theme/ThemeView";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import Icon from "@/components/common/Icon";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import ThemeButton from "@/components/Theme/ThemeButton";
 
 /**
  * 事件添加/编辑弹窗
@@ -32,6 +40,8 @@ const EventModal = ({
   selectedDate,
   onRefresh
 }) => {
+  const { theme } = useTheme();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -118,7 +128,7 @@ const EventModal = ({
   }, [titleCount]);
   
   useEffect(() => {
-    if (formData?.category) {
+    if(formData?.category) {
       fetchCommonTitles(formData.category).then();
     }
   }, [titleCount, formData.category, fetchCommonTitles]);
@@ -218,21 +228,16 @@ const EventModal = ({
   const renderCategorySelector = () => (
     <>
       <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>所属分类</Text>
-        <TouchableOpacity
+        <ThemeSubTitleText style={styles.formLabel}>所属分类</ThemeSubTitleText>
+        <ThemeButton
           style={styles.categoryDisplay}
+          iconLib="MaterialIcons"
+          iconName={categories.find(cat => cat.id === formData.category)?.icon || 'category'}
+          iconSize={18}
+          title={categories.find(cat => cat.id === formData.category)?.name || '未选择分类'}
+          textStyle={styles.categoryText}
           onPress={() => onShowDatetimePicker(false, 'category')}
-        >
-          <MaterialIcons
-            name={categories.find(cat => cat.id === formData.category)?.icon || 'category'}
-            size={18}
-            color="#2196F3"
-            style={styles.categoryIcon}
-          />
-          <Text style={styles.categoryText}>
-            {categories.find(cat => cat.id === formData.category)?.name || '未选择分类'}
-          </Text>
-        </TouchableOpacity>
+        ></ThemeButton>
       </View>
     </>
   );
@@ -240,16 +245,18 @@ const EventModal = ({
   // 内部渲染：图标选择器
   const renderIconSelector = () => (
     <View style={styles.formGroup}>
-      <Text style={styles.formLabel}>选择图标</Text>
+      <ThemeSubTitleText style={styles.formLabel}>选择图标</ThemeSubTitleText>
       <View style={styles.iconGrid}>
         {currentIconOptions.map(icon => (
-          <TouchableOpacity
+          <ThemeButton
             key={icon}
-            style={[styles.iconOption, formData.icon === icon && styles.selectedIcon]}
+            active={formData.icon === icon}
+            style={[styles.iconOption]}
+            iconLib="MaterialIcons"
+            iconName={icon}
+            iconSize={24}
             onPress={() => handleInputChange('icon', icon)}
-          >
-            <MaterialIcons name={icon} size={24} color="#333" />
-          </TouchableOpacity>
+          ></ThemeButton>
         ))}
       </View>
     </View>
@@ -272,14 +279,14 @@ const EventModal = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
+            <ThemeView style={styles.modalContent}>
               {/* 弹窗头部 */}
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
+                <ThemeTitleText style={styles.modalTitle}>
                   {currentEvent ? '编辑日程' : '添加新日程'}
-                </Text>
+                </ThemeTitleText>
                 <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                  <MaterialIcons name="close" size={24} color="#666" />
+                  <Icon lib="MaterialIcons" name="close" size={24} />
                 </TouchableOpacity>
               </View>
               
@@ -305,51 +312,53 @@ const EventModal = ({
                     alignItems: "center",
                     marginBottom: 8
                   }}>
-                    <Text
+                    <ThemeSubTitleText
                       style={[styles.formLabel, { marginBottom: 0 }]}
-                    >事件标题（可选，不填显示分类名）</Text>
-
-                    <View style={styles.countControl}>
-                      <TouchableOpacity
+                    >事件标题（可选，不填显示分类名）</ThemeSubTitleText>
+                    
+                    <ThemeCard style={[styles.countControl, { borderColor: theme.colors.interactive }]}>
+                      <ThemeTouchableOpacity
                         disabled={titleCount === 5}
                         onPress={() => {
                           setTitleCount(prev => Math.max(prev - 5, 5));
-                      }}>
-                        <MaterialIcons
+                        }}>
+                        <Icon
+                          lib="MaterialIcons"
                           name="arrow-drop-up"
                           size={20}
-                          color={titleCount === 5 ? "#ccc" : "#666"}
+                          color={titleCount === 5 ? theme.colors.interactiveLight : theme.colors.interactive}
                         />
-                      </TouchableOpacity>
-                      <Text style={styles.countText}>{titleCount}</Text>
+                      </ThemeTouchableOpacity>
+                      <Text style={[
+                        styles.countText,
+                        { color: theme.colors.interactive }
+                      ]}>{titleCount}</Text>
                       <TouchableOpacity onPress={() => {
                         setTitleCount(prev => prev + 5, 5);
                       }}>
-                        <MaterialIcons name="arrow-drop-down" size={20} color="#666" />
+                        <Icon lib="MaterialIcons" name="arrow-drop-down" size={20} color={theme.colors.interactive} />
                       </TouchableOpacity>
-                    </View>
+                    </ThemeCard>
                   </View>
                   
                   {commonTitles.length > 0 && (
                     <View style={styles.commonTitlesContainer}>
                       <View style={styles.commonTitlesTags}>
                         {commonTitles.map((title, index) => (
-                          <TouchableOpacity
-                            key={index}
+                          <ThemeButton
                             style={styles.commonTitleTag}
+                            key={index}
+                            active={false}
+                            title={title}
+                            textStyle={styles.commonTitleTagText}
                             onPress={() => handleInputChange('title', title)}
-                          >
-                            <Text
-                              style={styles.commonTitleTagText}
-                              numberOfLines={1}
-                              ellipsizeMode="tail"
-                            >{title}</Text>
-                          </TouchableOpacity>
+                          ></ThemeButton>
                         ))}
                       </View>
                     </View>
                   )}
-                  <TextInput
+                  
+                  <ThemeTextInput
                     style={styles.formInput}
                     scrollEnabled={false}
                     multiline={false}
@@ -362,8 +371,8 @@ const EventModal = ({
                 
                 {/* 事件描述 */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>描述</Text>
-                  <TextInput
+                  <ThemeSubTitleText style={styles.formLabel}>描述</ThemeSubTitleText>
+                  <ThemeTextInput
                     style={[styles.formInput, styles.multilineInput]}
                     value={formData.description}
                     onChangeText={(val) => handleInputChange('description', val)}
@@ -375,22 +384,25 @@ const EventModal = ({
                 
                 {/* 开始时间选择 */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>
+                  <ThemeSubTitleText style={styles.formLabel}>
                     开始时间:
-                    <Text style={styles.datetimeDisplayText}>
+                    <Text style={[
+                      styles.datetimeDisplayText,
+                      { color: theme.colors.interactive }
+                    ]}>
                       {formatDatetime(formData.startDatetime)}
                     </Text>
-                  </Text>
+                  </ThemeSubTitleText>
                   <View style={styles.datetimeButtonGroup}>
-                    <Button
+                    <ThemeButton
                       title={"当前时间"}
                       onPress={() => handleResetToCurrentTime('start')}
                     />
-                    <Button
+                    <ThemeButton
                       title={"选择日期"}
                       onPress={() => onShowDatetimePicker('start', 'date')}
                     />
-                    <Button
+                    <ThemeButton
                       title={"选择时间"}
                       onPress={() => onShowDatetimePicker('start', 'time')}
                     />
@@ -399,22 +411,22 @@ const EventModal = ({
                 
                 {/* 结束时间选择 */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>
+                  <ThemeSubTitleText style={styles.formLabel}>
                     结束时间:
-                    <Text style={styles.datetimeDisplayText}>
+                    <Text style={[styles.datetimeDisplayText, { color: theme.colors.interactive }]}>
                       {formatDatetime(formData.endDatetime)}
                     </Text>
-                  </Text>
+                  </ThemeSubTitleText>
                   <View style={styles.datetimeButtonGroup}>
-                    <Button
+                    <ThemeButton
                       title={"当前时间"}
                       onPress={() => handleResetToCurrentTime('end')}
                     />
-                    <Button
+                    <ThemeButton
                       title={"选择日期"}
                       onPress={() => onShowDatetimePicker('end', 'date')}
                     />
-                    <Button
+                    <ThemeButton
                       title={"选择时间"}
                       onPress={() => onShowDatetimePicker('end', 'time')}
                     />
@@ -423,25 +435,21 @@ const EventModal = ({
                 
                 {/* 事件状态选择 */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>事件状态</Text>
+                  <ThemeSubTitleText style={styles.formLabel}>事件状态</ThemeSubTitleText>
                   <View style={styles.statusSelector}>
                     {Object.entries(statusTextMap).map(([value, label]) => (
-                      <TouchableOpacity
+                      <ThemeButton
                         key={value}
-                        style={[
-                          styles.statusOption,
-                          formData.status === value && styles.selectedStatusOption
+                        active={formData.status === value}
+                        style={[styles.statusOption]}
+                        title={label}
+                        textStyle={[
+                          styles.statusOptionText,
+                          { color: statusColors[value] || '#333' },
+                          formData.status === value && ({color: theme.colors.interactive, borderColor: theme.colors.interactive}),
                         ]}
                         onPress={() => handleInputChange('status', value)}
-                      >
-                        <Text style={[
-                          styles.statusOptionText,
-                          formData.status === value && styles.selectedStatusOptionText,
-                          { color: statusColors[value] || '#333' }
-                        ]}>
-                          {label}
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     ))}
                   </View>
                 </View>
@@ -456,14 +464,19 @@ const EventModal = ({
                     <Text style={styles.deleteButtonText}>删除</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>取消</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                  <Text style={styles.saveButtonText}>
-                    {currentEvent ? '更新' : '保存'}
-                  </Text>
-                </TouchableOpacity>
+                <ThemeButton
+                  style={styles.cancelButton}
+                  onPress={onClose}
+                  title="取消"
+                  active={false}
+                  textStyle={styles.cancelButtonText}
+                ></ThemeButton>
+                
+                <ThemeButton
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                  title= {currentEvent ? '更新' : '保存'}
+                ></ThemeButton>
               </View>
               
               {showDatetimePicker && targetDatetime === 'start' && (
@@ -489,7 +502,7 @@ const EventModal = ({
                   is24Hour={true}
                 />
               )}
-            </View>
+            </ThemeView>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -505,12 +518,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
     maxHeight: '85%',
-    minHeight: '85%'
+    minHeight: '85%',
+    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
   },
   modalHeader: {
     flexDirection: 'row',
@@ -520,8 +532,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
+    fontWeight: 'bold'
   },
   closeButton: {
     padding: 4
@@ -535,17 +546,15 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   formLabel: {
-    fontSize: 14,
-    fontWeight: '500',
     marginBottom: 8,
-    color: '#555'
+    fontSize: 14,
+    fontWeight: '500'
   },
   formInput: {
     minHeight: 30,
     lineHeight: 30,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     fontSize: 16,
     textAlignVertical: 'center'
@@ -556,8 +565,7 @@ const styles = StyleSheet.create({
   },
   datetimeDisplayText: {
     marginLeft: 5,
-    fontSize: 16,
-    color: '#1396ff'
+    fontSize: 16
   },
   datetimeButtonGroup: {
     flexDirection: 'row',
@@ -579,28 +587,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 6,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E4E7ED',
-    backgroundColor: '#F5F7FA'
+    borderWidth: 1
   },
   commonTitleTagText: {
     height: 15,
     padding: 0,
     lineHeight: 15,
-    fontSize: 14,
-    color: '#333',
+    fontSize: 14
   },
   countControl: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    marginLeft: 5,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6
+    borderRadius: 6,
+    overflow: 'hidden'
   },
   countText: {
     fontSize: 14,
-    color: '#333',
     fontWeight: '500'
   },
   
@@ -615,71 +620,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd'
-  },
-  selectedStatusOption: {
-    borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD'
+    borderWidth: 1
   },
   statusOptionText: {
     fontSize: 14,
     fontWeight: '500'
   },
-  selectedStatusOptionText: {
-    fontWeight: 'bold'
-  },
   
   // 分类选择样式
   categoryDisplay: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
     flexDirection: 'row',
-    alignItems: 'center'
-  },
-  categoryIcon: {
-    marginRight: 8
+    alignItems: 'center',
+    justifyContent: 'flex-start'
   },
   categoryText: {
-    fontSize: 16,
-    color: '#333'
-  },
-  categoryModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end'
-  },
-  categoryModalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
-    maxHeight: '60%'
-  },
-  categoryModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
-  },
-  categoryModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
-  },
-  categoryModalClose: {
-    padding: 4
-  },
-  categoryList: {
-    flexGrow: 1,
-    marginBottom: 16
+    height: 16,
+    lineHeight: 16,
+    fontSize: 16
   },
   categoryItem: {
     flexDirection: 'row',
@@ -695,29 +656,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2196F3'
   },
-  categoryItemIcon: {
-    marginRight: 12
-  },
-  categoryItemText: {
-    fontSize: 16,
-    color: '#333',
-    flexGrow: 1
-  },
-  selectedCategoryItemText: {
-    color: '#2196F3',
-    fontWeight: '500'
-  },
-  categoryConfirmButton: {
-    backgroundColor: '#2196F3',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  categoryConfirmText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500'
-  },
   
   // 图标选择器样式
   iconGrid: {
@@ -729,14 +667,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center'
-  },
-  selectedIcon: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
-    borderWidth: 1
   },
   
   // 弹窗底部按钮样式
@@ -754,18 +686,12 @@ const styles = StyleSheet.create({
     borderColor: '#ddd'
   },
   cancelButtonText: {
-    color: '#666',
     fontWeight: '500'
   },
   saveButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#2196F3'
-  },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: '500'
+    borderRadius: 8
   },
   deleteButton: {
     paddingHorizontal: 20,

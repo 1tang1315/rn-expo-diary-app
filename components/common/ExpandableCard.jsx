@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeButton from "@/components/Theme/ThemeButton";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import { useTheme } from "@/context/ThemeContext";
 
 const ExpandableCard = ({ title, style, children }) => {
+  const { theme } = useTheme();
+  
   const [isExpanded, setIsExpanded] = useState(true);
   
   const handleToggle = () => {
@@ -9,22 +15,23 @@ const ExpandableCard = ({ title, style, children }) => {
   };
   
   return (
-    <View style={[styles.sectionCard, style]}>
+    <View style={[styles.sectionCard, style, {
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.card
+    }]}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <ThemeTitleText style={styles.sectionTitle}>{title}</ThemeTitleText>
         
-        <TouchableOpacity
+        <ThemeButton
+          title={isExpanded ? '收起' : '展开'}
           style={styles.sectionToggleButton}
+          textStyle={styles.sectionToggleText}
           onPress={handleToggle}
           activeOpacity={0.8}
-        >
-          <Text style={styles.sectionToggleText}>
-            {isExpanded ? '收起' : '展开'}
-          </Text>
-        </TouchableOpacity>
+        ></ThemeButton>
       </View>
       
-      {isExpanded && <View style={styles.sectionContent}>{children}</View>}
+      {isExpanded && <ThemeCard style={[styles.sectionContent,  {backgroundColor: theme.colors.border}]}>{children}</ThemeCard>}
     </View>
   );
 };
@@ -35,7 +42,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 16,
     borderRadius: 8,
-    backgroundColor: '#fff',
     elevation: 2,
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
   },
@@ -46,17 +52,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333'
+    fontWeight: '600'
   },
   sectionToggleButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
-    backgroundColor: '#007AFF',
+    borderRadius: 4
   },
   sectionToggleText: {
-    color: 'white',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -65,8 +68,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
-    lineHeight: 24,
-    backgroundColor: '#f5f5f5'
+    lineHeight: 24
   },
 });
 

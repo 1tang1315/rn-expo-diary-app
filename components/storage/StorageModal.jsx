@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Modal, Alert,
-  TouchableWithoutFeedback, Image, StyleSheet
+  View, Text, ScrollView, Platform, Modal, Alert,
+  TouchableWithoutFeedback, Image, StyleSheet, TouchableOpacity
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { createStorageItem, updateStorageItem, deleteStorageItem } from '@/db/storageDB';
@@ -11,6 +11,15 @@ import { formatDate } from "@/utils/formatTimeUtils";
 import { storageCategoryIcons, storageCategories } from "@/constants/commonConstans";
 import CategoryModal from "@/components/common/CategoryModal";
 import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
+import ThemeButton from "@/components/Theme/ThemeButton";
+import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
+import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import Icon from "@/components/common/Icon";
+import { useTheme } from "@/context/ThemeContext";
+import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeView from "@/components/Theme/ThemeView";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 
 /**
  * 储物项添加/编辑弹窗
@@ -22,6 +31,8 @@ const StorageItemModal = ({
   currentItem,
   onRefresh
 }) => {
+  const { theme } = useTheme();
+  
   const [formData, setFormData] = useState({
     name: '',
     category: currentTab,
@@ -140,16 +151,17 @@ const StorageItemModal = ({
   // 图标选择器
   const renderIconSelector = () => (
     <View style={styles.formGroup}>
-      <Text style={styles.formLabel}>选择图标</Text>
+      <ThemeSubTitleText style={styles.formLabel}>选择图标</ThemeSubTitleText>
       <View style={styles.iconGrid}>
         {currentIconOptions.map(icon => (
-          <TouchableOpacity
+          <ThemeButton
             key={icon}
-            style={[styles.iconOption, formData.icon === icon && styles.selectedIcon]}
+            iconLib="MaterialIcons"
+            iconName={icon}
+            active={formData.icon === icon}
+            style={styles.iconOption}
             onPress={() => handleInputChange('icon', icon)}
-          >
-            <MaterialIcons name={icon} size={24} color="#333" />
-          </TouchableOpacity>
+          ></ThemeButton>
         ))}
       </View>
     </View>
@@ -260,16 +272,18 @@ const StorageItemModal = ({
     const category = storageCategories.find(cat => cat.id === formData.category) || {};
     return (
       <View style={styles.formGroup}>
-        <Text style={styles.formLabel}>物品分类</Text>
-        <TouchableOpacity
+        <ThemeSubTitleText style={styles.formLabel}>物品分类</ThemeSubTitleText>
+        <ThemeButton
           style={styles.categoryDisplay}
+          iconLib="MaterialIcons"
+          iconName={category.icon || 'layers'}
+          iconSize={18}
+          title={category.name || '未选择分类'}
+          textStyle={styles.categoryText}
           onPress={() => setSelectors(prev => ({
             ...prev,
             showCategory: true
-          }))}>
-          <MaterialIcons name={category.icon || 'layers'} size={18} color="#3498db" style={styles.categoryIcon} />
-          <Text style={styles.categoryText}>{category.name || '未选择分类'}</Text>
-        </TouchableOpacity>
+          }))}></ThemeButton>
       </View>
     );
   };
@@ -279,11 +293,11 @@ const StorageItemModal = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
+              <ThemeView style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{currentItem ? '编辑物品' : '添加新物品'}</Text>
+                  <ThemeTitleText style={styles.modalTitle}>{currentItem ? '编辑物品' : '添加新物品'}</ThemeTitleText>
                   <TouchableOpacity onPress={onClose}>
-                    <Ionicons name="close-outline" size={24} color="#666" />
+                    <Icon lib="Ionicons" name="close-outline" size={24} />
                   </TouchableOpacity>
                 </View>
                 
@@ -301,8 +315,8 @@ const StorageItemModal = ({
                   />
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>物品名称（必填）</Text>
-                    <TextInput
+                    <ThemeSubTitleText style={styles.formLabel}>物品名称（必填）</ThemeSubTitleText>
+                    <ThemeTextInput
                       style={styles.formInput}
                       value={formData.name}
                       onChangeText={(val) => handleInputChange('name', val)}
@@ -312,8 +326,8 @@ const StorageItemModal = ({
                   </View>
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>物品价格（必填）</Text>
-                    <TextInput
+                    <ThemeSubTitleText style={styles.formLabel}>物品价格（必填）</ThemeSubTitleText>
+                    <ThemeTextInput
                       style={styles.formInput}
                       value={formData.price}
                       onChangeText={(val) => handleInputChange('price', val)}
@@ -327,8 +341,11 @@ const StorageItemModal = ({
                   {renderIconSelector()}
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>物品图片</Text>
-                    <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
+                    <ThemeSubTitleText style={styles.formLabel}>物品图片</ThemeSubTitleText>
+                    <ThemeTouchableOpacity
+                      onPress={pickImage}
+                      style={styles.imagePickerContainer}
+                    >
                       {formData.image ? (
                         <Image
                           source={{ uri: formData.image }}
@@ -337,16 +354,16 @@ const StorageItemModal = ({
                         />
                       ) : null}
 
-                      <View style={styles.imagePickerOverlay}>
-                        <Ionicons name="camera-outline" size={24} color="#fff" />
-                        <Text style={styles.imagePickerText}>选择图片</Text>
-                      </View>
-                    </TouchableOpacity>
+                      <ThemeCard style={styles.imagePickerOverlay}>
+                        <Icon lib="Ionicons" name="camera-outline" size={24} />
+                        <Text style={[styles.imagePickerText, { color: theme.colors.interactive}]}>选择图片</Text>
+                      </ThemeCard>
+                    </ThemeTouchableOpacity>
                   </View>
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>物品详情</Text>
-                    <TextInput
+                    <ThemeSubTitleText style={styles.formLabel}>物品详情</ThemeSubTitleText>
+                    <ThemeTextInput
                       style={[styles.formInput, styles.multilineInput]}
                       value={formData.detail}
                       onChangeText={(val) => handleInputChange('detail', val)}
@@ -357,14 +374,12 @@ const StorageItemModal = ({
                   </View>
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>
+                    <ThemeSubTitleText style={styles.formLabel}>
                       启用日期:
-                      <Text style={styles.dateDisplayText}> {formatDate(formData.startDate)}</Text>
-                    </Text>
+                      <Text style={[styles.dateDisplayText, {color: theme.colors.interactive}]}>{formatDate(formData.startDate)}</Text>
+                    </ThemeSubTitleText>
                     <View style={styles.dateButtonGroup}>
-                      <TouchableOpacity style={styles.dateButton} onPress={() => toggleDatetimePicker('start')}>
-                        <Text style={styles.dateButtonText}>修改日期</Text>
-                      </TouchableOpacity>
+                      <ThemeButton title="修改日期" onPress={() => toggleDatetimePicker('start')}></ThemeButton>
                     </View>
                     {selectors.showDatetime && selectors.datetimeTarget === 'start' && (
                       <DateTimePicker
@@ -379,24 +394,24 @@ const StorageItemModal = ({
                   </View>
                   
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>
+                    <ThemeSubTitleText style={styles.formLabel}>
                       退役日期（可选）:
-                      <Text style={styles.dateDisplayText}>
+                      <Text style={[styles.dateDisplayText, {color: theme.colors.interactive}]}>
                         {formData.endDate ? formatDate(formData.endDate) : '未设置'}
                       </Text>
-                    </Text>
+                    </ThemeSubTitleText>
                     <View style={styles.dateButtonGroup}>
-                      <TouchableOpacity style={styles.dateButton} onPress={() => toggleDatetimePicker('end')}>
-                        <Text style={styles.dateButtonText}>选择日期</Text>
-                      </TouchableOpacity>
+                      <ThemeButton title="选择日期" onPress={() => toggleDatetimePicker('end')}></ThemeButton>
                       {formData.endDate && (
-                        <TouchableOpacity
-                          style={[styles.dateButton, {
+                        <ThemeButton
+                          style={[styles.button, {
+                            borderWidth: 0,
                             backgroundColor: '#ff3b30'
                           }]}
+                          textStyle={[{ color: '#fff' }]}
+                          title="清除"
                           onPress={() => handleInputChange('endDate', null)}>
-                          <Text style={styles.dateButtonText}>清除</Text>
-                        </TouchableOpacity>
+                        </ThemeButton>
                       )}
                     </View>
                     {selectors.showDatetime && selectors.datetimeTarget === 'end' && (
@@ -414,18 +429,24 @@ const StorageItemModal = ({
                 
                 <View style={styles.modalFooter}>
                   {currentItem && (
-                    <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                    <ThemeButton style={styles.deleteButton} onPress={handleDelete}>
                       <Text style={styles.deleteButtonText}>删除</Text>
-                    </TouchableOpacity>
+                    </ThemeButton>
                   )}
-                  <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                    <Text style={styles.cancelButtonText}>取消</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>{currentItem ? '更新' : '保存'}</Text>
-                  </TouchableOpacity>
+                  <ThemeButton
+                    title="取消"
+                    active={false}
+                    style={styles.button}
+                    onPress={onClose}
+                  ></ThemeButton>
+                  
+                  <ThemeButton
+                    title={currentItem ? '更新' : '保存'}
+                    style={styles.button}
+                    onPress={handleSave}
+                  ></ThemeButton>
                 </View>
-              </View>
+              </ThemeView>
             </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -444,12 +465,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
     maxHeight: '85%',
-    minHeight: '85%'
+    minHeight: '85%',
+    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
   },
   modalHeader: {
     flexDirection: 'row',
@@ -459,23 +479,20 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
+    fontWeight: 'bold'
   },
   formScrollView: { flexGrow: 1 },
   formGroup: { marginBottom: 20 },
   formLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
-    color: '#555'
+    marginBottom: 8
   },
   formInput: {
     minHeight: 30,
     lineHeight: 30,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     fontSize: 16
   },
@@ -502,17 +519,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  selectedIcon: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
-    borderWidth: 1
-  },
   imagePickerContainer: {
     width: '100%',
     height: 180,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
     position: 'relative'
   },
   imagePreview: {
@@ -528,37 +539,23 @@ const styles = StyleSheet.create({
   },
   imagePickerText: {
     marginTop: 8,
-    fontSize: 14,
-    color: '#fff'
+    fontSize: 14
   },
   categoryDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: 'white'
+    borderRadius: 8
   },
   categoryIcon: { marginRight: 8 },
   categoryText: {
-    fontSize: 16,
-    color: '#333'
-  },
-  dateButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#3498db'
+    fontSize: 16
   },
   dateButtonGroup: {
     flexDirection: 'row',
     gap: 10
-  },
-  dateButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500'
   },
   dateDisplayText: {
     marginLeft: 8,
@@ -571,31 +568,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 10
   },
-  cancelButton: {
+  button: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd'
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: '500'
-  },
-  saveButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#3498db'
-  },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: '500'
+    borderWidth: 1
   },
   deleteButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
+    borderWidth: 0,
     backgroundColor: '#F44336'
   },
   deleteButtonText: {

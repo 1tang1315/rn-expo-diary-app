@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
   ActivityIndicator,
   Alert
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import dayjs from "dayjs";
 import { CloudSyncService } from '@/db/services/CloudSyncService';
 import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
@@ -16,9 +14,14 @@ import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
 import { getAllCloudDriveConfigs } from "@/db/cloudSyncDb";
 import SettingsMenu from '@/components/common/SettingsMenu';
 import { useNavigation } from "expo-router";
+import { useTheme } from '@/context/ThemeContext';
+import ThemeView from "@/components/Theme/ThemeView";
+import Icon from "@/components/common/Icon";
+import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 
 const Header = ({ selectedDate, onToday, userId = 1 }) => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDriveSelector, setShowDriveSelector] = useState(false);
@@ -82,12 +85,12 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
   };
   
   return (
-    <View style={styles.headerContainer}>
+    <ThemeView style={styles.headerContainer}>
       {/* 时间 日期 */}
-      <Text style={styles.headerDate}>{formatCurrentDate()}</Text>
+      <ThemeTitleText>{formatCurrentDate()}</ThemeTitleText>
       {/* 回到今日 */}
       <TouchableOpacity onPress={onToday} activeOpacity={0.8}>
-        <Ionicons name="today-outline" size={22} color="#000" />
+        <Icon lib="Ionicons" name="today-outline" />
       </TouchableOpacity>
       
       <View style={styles.headerRightButtons}>
@@ -99,9 +102,9 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           disabled={isSyncing}
         >
           {isSyncing ? (
-            <ActivityIndicator size="small" color="#000" />
+            <ActivityIndicator size="small" color={theme.colors.primary} />
           ) : (
-            <Ionicons name="sync-outline" size={22} color="#000" />
+            <Icon lib="Ionicons" name="sync-outline" />
           )}
         </TouchableOpacity>
         
@@ -110,7 +113,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           style={styles.headerButton}
           onPress={() => navigation.navigate('search-page')}
         >
-          <Ionicons name="search-outline" size={22} color="#000" />
+          <Icon lib="Ionicons" name="search-outline" />
         </TouchableOpacity>
         
         {/* 设置 */}
@@ -119,7 +122,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           onPress={() => setShowSettingsMenu(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="settings-outline" size={22} color="#000" />
+          <Icon lib="Ionicons" name="settings-outline" />
         </TouchableOpacity>
       </View>
       
@@ -166,7 +169,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           }
         }}
       />
-    </View>
+    </ThemeView>
   );
 };
 
@@ -178,17 +181,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 44 : 24,
     paddingBottom: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0',
-    elevation: 2,
-    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)'
-  },
-  headerDate: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '600'
+    borderBottomColor: '#f0f0f0'
   },
   headerRightButtons: {
     flexDirection: 'row',

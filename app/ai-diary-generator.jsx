@@ -3,7 +3,6 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, ScrollView
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AiDiaryService from '@/db/services/AiDiaryService';
 import dayjs from 'dayjs';
@@ -17,6 +16,7 @@ import { getPlainTextContent } from "@/utils/previewFormatter";
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import AIStreamText from "@/components/common/AIStreamText";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 export default function AiDiaryGenerator() {
   const [aiDiaryService, setAiDiaryService] = useState(null);
@@ -410,7 +410,7 @@ export default function AiDiaryGenerator() {
   };
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -542,14 +542,13 @@ export default function AiDiaryGenerator() {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff'
+    flex: 1
   },
   header: {
     flexDirection: 'row',

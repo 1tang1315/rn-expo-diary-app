@@ -6,7 +6,7 @@ import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
 import { getAllCloudDriveConfigs, deleteCloudDriveConfig } from '@/db/cloudSyncDb';
 import { getCurrentUserId } from '@/db/userDB';
 import { CloudSyncService, DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
-import { SafeAreaView } from "react-native-safe-area-context";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 
 const CloudDriveSettings = () => {
   const [drives, setDrives] = useState([]);
@@ -201,7 +201,7 @@ const CloudDriveSettings = () => {
   }
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView style={styles.container}>
       <Text style={styles.title}>云盘设置</Text>
       
       <TouchableOpacity
@@ -242,7 +242,7 @@ const CloudDriveSettings = () => {
         userId={userId}
         onConfigSuccess={handleConfigSuccess}
       />
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 };
 
