@@ -3,7 +3,6 @@ import {
   Dimensions, FlatList, Modal, StyleSheet, Text,
   TextInput, TouchableOpacity, View, Alert, TouchableWithoutFeedback
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
   deleteNote, deleteNotes, getAllNotes, getAllFolders,
@@ -21,6 +20,8 @@ import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
 import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
 import ThemeText from "@/components/Theme/ThemeText";
 import { useTheme } from "@/context/ThemeContext";
+import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeView from "@/components/Theme/ThemeView";
 
 const { width } = Dimensions.get("window");
 
@@ -428,9 +429,9 @@ export default function Diary() {
   );
   
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemeSafeAreaView>
       {/* 搜索栏 */}
-      <View style={styles.searchContainer}>
+      <ThemeView style={styles.searchContainer}>
         <ThemeTextInput
           ref={searchInputRef}
           style={styles.searchInput}
@@ -447,7 +448,7 @@ export default function Diary() {
         >
           <Icon lib="Ionicons" name="settings" size={22} />
         </TouchableOpacity>
-      </View>
+      </ThemeView>
       
       {/* 文件夹横向选择栏 */}
       <CategoryTab
@@ -465,8 +466,8 @@ export default function Diary() {
       
       {/* 批量删除栏 */}
       {isDeleting && (
-        <View style={styles.batchDeleteBar}>
-          <TouchableOpacity
+        <ThemeCard style={styles.batchDeleteBar}>
+          <ThemeTouchableOpacity
             style={styles.exitDeleteButton}
             onPress={() => {
               setIsDeleting(false);
@@ -474,12 +475,12 @@ export default function Diary() {
               setIsSelectAll(false);
             }}
           >
-            <Ionicons name="close" size={20} color="#333" />
-          </TouchableOpacity>
+            <Icon lib="Ionicons" name="close" size={20} />
+          </ThemeTouchableOpacity>
           
-          <Text style={styles.selectedCount}>
+          <ThemeText style={styles.selectedCount}>
             {`已选择 ${selectedIds.length} 项`}
-          </Text>
+          </ThemeText>
           
           <View style={styles.deleteActionGroup}>
             <ThemeButton
@@ -500,7 +501,7 @@ export default function Diary() {
               disabled={selectedIds.length === 0}
             ></ThemeButton>
           </View>
-        </View>
+        </ThemeCard>
       )}
       
       {/* 笔记列表 */}
@@ -509,7 +510,7 @@ export default function Diary() {
         data={groupByMonth(filterData())}
         keyExtractor={(group) => group.month}
         renderItem={({ item: group }) => (
-          <View style={styles.monthGroup}>
+          <ThemeView style={styles.monthGroup}>
             <ThemeTitleText
               style={styles.monthTitle}
               numberOfLines={1}
@@ -523,7 +524,7 @@ export default function Diary() {
               contentContainerStyle={styles.monthGroupList}
               scrollEnabled={false}
             />
-          </View>
+          </ThemeView>
         )}
         ListEmptyComponent={renderEmpty}
       />
@@ -586,14 +587,14 @@ export default function Diary() {
         onRequestClose={() => setFolderManageModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.folderManageModalContainer}>
+          <ThemeCard style={styles.folderManageModalContainer}>
             <View style={styles.folderManageHeader}>
-              <Text style={styles.folderManageTitle}>文件夹管理</Text>
+              <ThemeTitleText style={styles.folderManageTitle}>文件夹管理</ThemeTitleText>
               <TouchableOpacity
                 style={styles.closeModalButton}
                 onPress={() => setFolderManageModalVisible(false)}
               >
-                <Ionicons name="close" size={20} color="#333" />
+                <Icon lib="Ionicons" name="close" size={20} />
               </TouchableOpacity>
             </View>
             
@@ -618,7 +619,7 @@ export default function Diary() {
                 </View>
               )}
             />
-          </View>
+          </ThemeCard>
         </View>
       </Modal>
       
@@ -726,23 +727,17 @@ export default function Diary() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </ThemeSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f7fafd"
-  },
-  
   // 搜索栏
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#fff'
+    paddingVertical: 8
   },
   searchInput: {
     flex: 1,
@@ -770,8 +765,7 @@ const styles = StyleSheet.create({
   
   // 列表容器
   flatList: {
-    flexGrow: 1,
-    backgroundColor: '#fff'
+    flexGrow: 1
   },
   
   // 月份分组
@@ -852,9 +846,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
+    borderBottomWidth: 1
   },
   exitDeleteButton: {
     marginRight: 10,
@@ -872,11 +864,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#ff3b30'
+    backgroundColor: '#ff3b30',
+    borderWidth: 0
   },
   selectedCount: {
-    fontSize: 16,
-    color: '#333'
+    fontSize: 16
   },
   batchDeleteButtonDisabled: {
     opacity: 0.5
@@ -891,11 +883,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
-    borderWidth: 0
+    borderWidth: 1
   },
   selectAllText: {
-    fontSize: 14,
-    color: '#333'
+    fontSize: 14
   },
   
   // 空列表提示
@@ -1036,7 +1027,6 @@ const styles = StyleSheet.create({
   folderManageModalContainer: {
     width: width * 0.85,
     borderRadius: 12,
-    backgroundColor: '#fff',
     maxHeight: "80%"
   },
   // 文件夹管理弹窗头部
@@ -1050,8 +1040,7 @@ const styles = StyleSheet.create({
   },
   folderManageTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
+    fontWeight: 'bold'
   },
   closeModalButton: {
     width: 30,

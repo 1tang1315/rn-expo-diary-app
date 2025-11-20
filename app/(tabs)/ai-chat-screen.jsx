@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View
+  Alert, KeyboardAvoidingView, Modal, Platform, Pressable,
+  ScrollView, StyleSheet, Text, TouchableOpacity, View
 } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,11 +13,9 @@ import {
   getMessagesForConversation, updateConversation
 } from '@/db/aiDialogueDB';
 import AIStreamText from "@/components/common/AIStreamText";
-import AiDiaryService from "@/db/services/AiDiaryService";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import { HistoryMessage } from "@/components/chat/HistoryMessage";
 import { flushSync } from "react-dom";
-import { AsyncStorage } from "expo-sqlite/kv-store";
 import { getLocalDateTimeByDayjs } from "@/utils/formatTimeUtils";
 import FunctionBar from "@/components/chat/FuntionBar";
 import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
@@ -25,68 +23,20 @@ import ThemeCard from "@/components/Theme/ThemeCard";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
 import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import AISettingsModal from "@/components/chat/AISettingsModal";
+import { useAIConfig } from "@/context/AIConfigContext";
+import AiDiaryService from "@/db/services/AiDiaryService";
 
 const AiChatScreen = () => {
   const { theme } = useTheme();
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [config, setConfig] = useState({
-    apiKey: '',
-    model: 'Qwen/Qwen3-8B',
-    apiBaseUrl: 'https://api.siliconflow.cn/v1'
-  });
-  const [aiDiaryService, setAiDiaryService] = useState(null);
-  
-  const [presetModels, setPresetModels] = useState([
-    'Qwen/Qwen3-8B',
-    'Qwen/Qwen3-VL-30B-A3B-Instruct',
-    'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
-    'deepseek-ai/DeepSeek-V3.1-Terminus',
-    'internlm/internlm2_5-7b-chat',
-    'THUDM/glm-4-9b-chat'
-  ]);
-  
-  // 获取 ai 配置
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const savedApiKey = await AsyncStorage.getItem('AI_DIARY_API_KEY');
-        const savedModel = await AsyncStorage.getItem('AI_DIARY_MODEL');
-        const savedApiBaseUrl = await AsyncStorage.getItem('AI_DIARY_API_BASE_URL');
-        
-        const newConfig = {
-          apiKey: savedApiKey || '',
-          model: savedModel || 'Qwen/Qwen3-8B',
-          apiBaseUrl: savedApiBaseUrl || 'https://api.siliconflow.cn/v1'
-        };
-        setConfig(newConfig);
-        
-        const savedPresets = await AsyncStorage.getItem('AI_DIARY_PRESET_MODELS');
-        if(savedPresets) {
-          setPresetModels(JSON.parse(savedPresets));
-        }
-        
-        // 初始化服务实例
-        setAiDiaryService(new AiDiaryService(newConfig));
-      } catch(err) {
-        console.error('加载配置失败：', err);
-        const defaultService = new AiDiaryService();
-        setAiDiaryService(defaultService);
-      }
-    };
-    
-    loadConfig().then();
-  }, []);
-  
-  // 根据用户习惯更新 ai 模型
-  const updatePresetModels = (newModel) => {
-    if(!newModel.trim()) return;
-    
-    setPresetModels(prev => {
-      const filtered = prev.filter(model => model !== newModel);
-      return [newModel, ...filtered].slice(0, 6);
-    });
-  };
+  const { aiConfig } = useAIConfig();
+  const aiDiaryService = new AiDiaryService(
+    aiConfig.apiKey,
+    aiConfig.model,
+    aiConfig.apiBaseUrl
+  );
   
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -563,130 +513,10 @@ const AiChatScreen = () => {
         </View>
       </Modal>
       
-      <Modal
+      <AISettingsModal
         visible={showSettingsModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowSettingsModal(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowSettingsModal(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { maxHeight: '100%' }]}>
-                <KeyboardAvoidingView>
-                  <Text style={styles.modalTitle}>AI 配置设置</Text>
-                  
-                  <ScrollView style={{ maxHeight: '80%' }} showsVerticalScrollIndicator={false}>
-                    {/* API密钥输入 */}
-                    <Text style={styles.settingLabel}>API 密钥</Text>
-                    <TextInput
-                      style={styles.modalInput}
-                      placeholder="输入 Silicon Flow API 密钥"
-                      value={config.apiKey}
-                      onChangeText={(val) => setConfig(prev => ({
-                        ...prev,
-                        apiKey: val
-                      }))}
-                      secureTextEntry={false}
-                      multiline={true}
-                      maxHeight={80}
-                    />
-                    
-                    <Text style={styles.settingLabel}>模型名称</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={styles.modelPresetContainer}
-                      contentContainerStyle={styles.modelPresetContent}
-                    >
-                      {presetModels.map((model) => (
-                        <TouchableOpacity
-                          key={model}
-                          style={[
-                            styles.modelPresetBtn,
-                            config.model === model && styles.activeModelPresetBtn
-                          ]}
-                          onPress={() => setConfig(prev => ({
-                            ...prev,
-                            model
-                          }))}
-                        >
-                          <Text style={[
-                            styles.modelPresetText,
-                            config.model === model && styles.activeModelPresetText
-                          ]}>
-                            {model}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                    {/* 模型输入框 */}
-                    <TextInput
-                      style={styles.modalInput}
-                      placeholder="例如：Qwen/Qwen3-8B"
-                      value={config.model}
-                      onChangeText={(val) => setConfig(prev => ({
-                        ...prev,
-                        model: val
-                      }))}
-                    />
-                    
-                    {/* API基础地址输入 */}
-                    <Text style={styles.settingLabel}>API 基础地址</Text>
-                    <TextInput
-                      style={styles.modalInput}
-                      placeholder="例如：https://api.siliconflow.cn/v1"
-                      value={config.apiBaseUrl}
-                      onChangeText={(val) => setConfig(prev => ({
-                        ...prev,
-                        apiBaseUrl: val
-                      }))}
-                    />
-                  </ScrollView>
-                  
-                  <View style={styles.modalBtnContainer}>
-                    <TouchableOpacity
-                      style={styles.modalCancelBtn}
-                      onPress={() => setShowSettingsModal(false)}
-                    >
-                      <Text style={styles.modalCancelText}>取消</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.modalConfirmBtn}
-                      onPress={async () => {
-                        try {
-                          updatePresetModels(config.model);
-                          
-                          // 保存配置到本地存储
-                          await AsyncStorage.setItem('AI_DIARY_API_KEY', config.apiKey);
-                          await AsyncStorage.setItem('AI_DIARY_MODEL', config.model);
-                          await AsyncStorage.setItem('AI_DIARY_API_BASE_URL', config.apiBaseUrl);
-                          
-                          await AsyncStorage.setItem(
-                            'AI_DIARY_PRESET_MODELS',
-                            JSON.stringify(presetModels)
-                          );
-                          
-                          // 更新服务实例
-                          setAiDiaryService(new AiDiaryService(config));
-                          
-                          Alert.alert('成功', '配置已保存');
-                          setShowSettingsModal(false);
-                        } catch(err) {
-                          console.error('保存配置失败：', err);
-                          Alert.alert('错误', '保存配置失败，请重试');
-                        }
-                      }}
-                    >
-                      <Text style={styles.modalConfirmText}>保存</Text>
-                    </TouchableOpacity>
-                  </View>
-                </KeyboardAvoidingView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        onClose={() => setShowSettingsModal(false)}
+      />
     </ThemeSafeAreaView>
   );
 };
@@ -820,77 +650,6 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  
-  // 模态框
-  modalOverlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    maxWidth: 350,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalInput: {
-    minHeight: 30,
-    lineHeight: 30,
-    width: '100%',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  modalBtnContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalCancelBtn: {
-    flex: 1,
-    marginRight: 8,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
-  },
-  modalConfirmBtn: {
-    flex: 1,
-    marginLeft: 8,
-    padding: 12,
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalConfirmText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
   },
   
   // 聊天区域

@@ -2,15 +2,20 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
-export default function ThemeCard({ style, children, ...rest }) {
+export default function ThemePartingLine({
+  style,
+  children,
+  ...rest
+}) {
   const { theme } = useTheme();
   
   return (
     <View
       style={[
         {
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.card
+          marginVertical: 8,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.interactive,
         },
         style
       ]}

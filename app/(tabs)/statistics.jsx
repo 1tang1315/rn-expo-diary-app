@@ -11,6 +11,8 @@ import CategoryTab from "@/components/common/CategoryTab";
 import { categories } from "@/constants/commonConstans";
 import BarChart from "@/components/chart/BarChart";
 import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import { useFocusEffect } from "expo-router";
+import dayjs from "dayjs";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -103,7 +105,7 @@ export default function Statistics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const handleDateChange = useCallback((startDate, endDate) => {
+  const handleDateChange = useCallback((startDate = dayjs().startOf('day'), endDate) => {
     setLoading(true);
     
     getEventsByDateRange(startDate, endDate)
@@ -111,6 +113,12 @@ export default function Statistics() {
       .catch(err => setError(err))
       .finally(() => setLoading(false));
   }, []);
+  
+  useFocusEffect(
+    useCallback(() => {
+      handleDateChange();
+    }, [handleDateChange])
+  );
   
   const [currentTab, setCurrentTab] = useState('all');
   // 根据当前选中的分类筛选数据
@@ -130,6 +138,7 @@ export default function Statistics() {
     setChartType(prev => (prev === 'pie' ? 'bar' : 'pie'));
     setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
   };
+  
   return (
     <ThemeSafeAreaView style={styles.container}>
       <ScrollView style={styles.contentContainer}>

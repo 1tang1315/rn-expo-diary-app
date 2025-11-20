@@ -60,6 +60,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="pie-chart" color={color} size={size} />
           ),
+          unmountOnBlur: true
         }}
       />
       <Tabs.Screen
@@ -69,6 +70,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" color={color} size={size} />
           ),
+          unmountOnBlur: true
         }}
       />
     </Tabs>

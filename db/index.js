@@ -12,15 +12,15 @@ export async function getDB() {
     
     await db.execAsync(`PRAGMA journal_mode = WAL;`);
     
-    await db.execAsync(`DROP TABLE IF EXISTS user;`);
-    await db.execAsync(`DROP TABLE IF EXISTS event;`);
-    await db.execAsync(`DROP TABLE IF EXISTS folders;`);
-    await db.execAsync(`DROP TABLE IF EXISTS notes;`);
-    await db.execAsync(`DROP TABLE IF EXISTS conversations;`);
-    await db.execAsync(`DROP TABLE IF EXISTS messages;`);
-    await db.execAsync(`DROP TABLE IF EXISTS storage;`);
-    await db.execAsync(`DROP TABLE IF EXISTS cloud_drive_config;`);
-    await db.execAsync(`DROP TABLE IF EXISTS sync_checkpoint;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS user;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS event;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS folders;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS notes;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS conversations;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS messages;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS storage;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS cloud_drive_config;`);
+    // await db.execAsync(`DROP TABLE IF EXISTS sync_checkpoint;`);
     
     // 用户表
     await db.execAsync(`

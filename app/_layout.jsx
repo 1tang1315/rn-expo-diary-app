@@ -7,6 +7,7 @@ import updateLocale from 'dayjs/plugin/updateLocale';
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useEffect, useState } from "react";
 import { AsyncStorage } from "expo-sqlite/kv-store";
+import { AIConfigProvider } from "@/context/AIConfigContext";
 
 dayjs.extend(weekday);
 dayjs.extend(localeData);
@@ -30,7 +31,11 @@ export default function RootLayout() {
       const primary = await AsyncStorage.getItem('theme_primary');
       const scene = await AsyncStorage.getItem('theme_scene');
       
-      setConfig({ mode, primary, scene });
+      setConfig({
+        mode,
+        primary,
+        scene
+      });
       await SplashScreen.hideAsync();
     };
     
@@ -38,11 +43,13 @@ export default function RootLayout() {
     init().then();
   }, []);
   
-  if (!config) return null;
-
+  if(!config) return null;
+  
   return (
     <ThemeProvider initialConfig={config}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <AIConfigProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AIConfigProvider>
     </ThemeProvider>
   );
 }

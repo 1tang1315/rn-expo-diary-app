@@ -12,6 +12,8 @@ export default function ThemeTitleText({ style, children, ...rest }) {
       style={[
         {
           flex: 1,
+          minHeight: 16,
+          lineHeight: 16,
           fontSize: 16,
           fontWeight: '600',
           color: theme.colors.interactive
