@@ -139,6 +139,16 @@ export default function Statistics() {
     setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
   };
   
+  const legendItemsWithProgress = chartData.map(item => {
+    const progress = totalMinutes === 0 ? 0 : precisionDivide(item.value, totalMinutes, 4);
+    const percentage = precisionMultiply(progress, 100, 2);
+    return {
+      ...item,
+      progress,
+      percentage
+    };
+  });
+  
   return (
     <ThemeSafeAreaView style={styles.container}>
       <ScrollView style={styles.contentContainer}>
@@ -164,6 +174,10 @@ export default function Statistics() {
           ) : completedEvents.length === 0 ? (
             <View style={styles.statusContainer}>
               <Text style={styles.noDataText}>暂无已完成的事件数据</Text>
+            </View>
+          ) : totalMinutes === 0 ? (
+            <View style={styles.statusContainer}>
+              <Text style={styles.noDataText}>所选时间段内的事件总时长为0分钟</Text>
             </View>
           ) : (
             <>

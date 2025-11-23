@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { statusColors, statusTextMap, categories } from '@/constants/commonConstans';
 import { updateEventStatus } from "@/db/eventDB";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
-import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
@@ -98,7 +97,6 @@ const TimelineList = ({
     if(item.status !== newStatus) {
       try {
         await updateEventStatus(item.id, newStatus);
-        console.log(`事件 ${item.id} 状态更新为：${newStatus}`);
       } catch(err) {
         console.error('更新失败:', err);
       }
@@ -126,9 +124,7 @@ const TimelineList = ({
     categorizedData.forEach(item => {
       const newStatus = getFinalStatus(item);
       if(item.status !== newStatus) {
-        updateEventStatus(item.id, newStatus)
-          .then(() => console.log(`事件 ${item.id} 状态更新为：${newStatus}`))
-          .catch(err => console.error('更新失败:', err));
+        updateEventStatus(item.id, newStatus).then()
       }
     });
   }, [categorizedData]);

@@ -167,7 +167,7 @@ const EventModal = ({
     // 时间校验
     const startDatetime = new Date(formData.startDatetime);
     const endDatetime = new Date(formData.endDatetime);
-    if(startDatetime >= endDatetime) {
+    if(startDatetime > endDatetime) {
       Alert.alert('时间错误', '结束日期时间必须晚于开始日期时间');
       return;
     }

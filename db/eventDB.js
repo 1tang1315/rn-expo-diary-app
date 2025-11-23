@@ -228,7 +228,7 @@ export async function deleteEvent(id) {
  * @param {number} limit - 最多返回数量，默认10个
  * @returns {Promise<Array<string>>} 常用标题数组
  */
-export async function getCommonTitlesByCategory(category, limit = 10) {
+export async function getCommonTitlesByCategory(category, limit = 5) {
   const db = await getDB();
   const result = await db.getAllAsync(
     `SELECT title, COUNT(title) AS useCount
