@@ -275,8 +275,15 @@ export function ThemeProvider({ initialConfig, children }) {
   const [primaryApplication, setPrimaryApplication] = useState(initialConfig.scene);
   const [primaryColor, setPrimaryColor] = useState(initialConfig.primary || PRESET_COLORS[0]);
   const [theme, setTheme] = useState(buildTheme(initialConfig.mode, initialConfig.scene, initialConfig.primary));
-
-  // 状态变化时更新主题并保存（优化后）
+  
+  useEffect(() => {
+    if (!initialConfig) return;
+    setMode(initialConfig.mode || 'light');
+    setPrimaryApplication(initialConfig.scene || 'interactive');
+    setPrimaryColor(initialConfig.primary || PRESET_COLORS[0]);
+  }, [initialConfig]);
+  
+  // 状态变化时更新主题并保存
   useEffect(() => {
     if (mode && primaryApplication && primaryColor) {
       const newTheme = buildTheme(mode, primaryApplication, primaryColor);
