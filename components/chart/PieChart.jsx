@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: 20,
+    borderRadius: 10,
     backgroundColor: "#fff",
   },
   tooltip: {

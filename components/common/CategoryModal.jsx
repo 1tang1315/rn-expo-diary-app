@@ -5,6 +5,7 @@ import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
 import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeCard from "@/components/Theme/ThemeCard";
 
 /**
  * 分类选择弹窗独立组件
@@ -14,7 +15,9 @@ import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
  * @props {Array} categories - 分类列表数据
  * @props {Function} onSelect - 选择分类后的回调
  */
-const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelect }) => {
+const CategoryModal = ({
+  visible, onClose, selectedCategory, categories, onSelect
+}) => {
   const { theme } = useTheme();
   
   return (
@@ -27,19 +30,31 @@ const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelec
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.categoryModalOverlay}>
           <TouchableWithoutFeedback>
-            <ThemeView style={styles.categoryModalContent}>
+            <ThemeCard
+              margin={0}
+              borderRadius={0}
+              style={styles.categoryModalContent}
+            >
               {/* 弹窗头部 */}
-              <ThemeView style={styles.categoryModalHeader}>
+              <View style={styles.categoryModalHeader}>
                 <ThemeTitleText style={styles.categoryModalTitle}>选择分类</ThemeTitleText>
                 <TouchableOpacity style={styles.categoryModalClose} onPress={onClose}>
                   <Icon lib="MaterialIcons" name="close" size={24} />
                 </TouchableOpacity>
-              </ThemeView>
+              </View>
               
               {/* 分类列表 */}
               <ScrollView
-                style={styles.categoryList}
+                style={[
+                  styles.categoryList,
+                  {
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: theme.colors.innerCard
+                  }
+                ]}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{paddingBottom: 10}}
               >
                 {categories
                   .filter(tab => !tab.isFixed) // 排除"全部"分类
@@ -50,7 +65,8 @@ const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelec
                         styles.categoryItem,
                         selectedCategory === category.id && {
                           borderWidth: 1,
-                          borderColor: theme.colors.interactive
+                          borderColor: theme.colors.interactive,
+                          backgroundColor: theme.colors.innerCard
                         }
                       ]}
                       onPress={() => onSelect(category.id)}
@@ -77,7 +93,7 @@ const CategoryModal = ({ visible, onClose, selectedCategory, categories, onSelec
                     </ThemeTouchableOpacity>
                   ))}
               </ScrollView>
-            </ThemeView>
+            </ThemeCard>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -94,17 +110,15 @@ const styles = StyleSheet.create({
   },
   categoryModalContent: {
     maxHeight: '60%',
-    padding: 20,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16
+    padding: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10
   },
   categoryModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1
+    marginBottom: 10
   },
   categoryModalTitle: {
     fontSize: 18
@@ -113,8 +127,7 @@ const styles = StyleSheet.create({
     padding: 4
   },
   categoryList: {
-    flexGrow: 1,
-    marginBottom: 16
+    flexGrow: 1
   },
   categoryItem: {
     flexDirection: 'row',

@@ -13,6 +13,7 @@ import BarChart from "@/components/chart/BarChart";
 import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
 import { useFocusEffect } from "expo-router";
 import dayjs from "dayjs";
+import ThemeCard from "@/components/Theme/ThemeCard";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -130,7 +131,7 @@ export default function Statistics() {
     chartData,
     totalMinutes,
     completedEvents
-  } = processStatistics(filteredStatsData);
+  } = processStatistics(filteredStatsData, currentTab === 'all');
   
   const [chartType, setChartType] = useState('pie'); // 'bar' 或 'pie'
   const [chartTypeName, setChartTypeName] = useState('饼'); // 'bar' 或 'pie'
@@ -139,7 +140,7 @@ export default function Statistics() {
     setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
   };
   
-  const legendItemsWithProgress = chartData.map(item => {
+  chartData.map(item => {
     const progress = totalMinutes === 0 ? 0 : precisionDivide(item.value, totalMinutes, 4);
     const percentage = precisionMultiply(progress, 100, 2);
     return {
@@ -150,12 +151,15 @@ export default function Statistics() {
   });
   
   return (
-    <ThemeSafeAreaView style={styles.container}>
-      <ScrollView style={styles.contentContainer}>
+    <ThemeSafeAreaView>
+      <ScrollView
+        style={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <DateSelector hasRadius={false} onDataChange={handleDateChange} />
         
         {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
-        <View>
+        <ThemeCard style={{ flex: 1 }}>
           <CategoryTab
             categories={categories}
             currentTab={currentTab}
@@ -189,7 +193,7 @@ export default function Statistics() {
                 {chartType === 'pie' ? (
                   <PieChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
                 ) : (
-                  <BarChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`}/>
+                  <BarChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
                 )}
               </View>
               
@@ -229,17 +233,13 @@ export default function Statistics() {
               </View>
             </>
           )}
-        </View>
+        </ThemeCard>
       </ScrollView>
     </ThemeSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f7fafd'
-  },
   contentContainer: {
     flex: 1
   },
@@ -248,7 +248,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     minHeight: 450,
-    padding: 20,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: '#fff',
     boxShadow: '0 2px 2px rgba(0, 0, 0, 0.05)'
   },
@@ -271,10 +272,7 @@ const styles = StyleSheet.create({
   chartContainer: {
     display: "flex",
     justifyContent: "center",
-    height: 280,
-    elevation: 2,
-    backgroundColor: "#fff",
-    boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)'
+    height: 280
   },
   toggleButton: {
     position: 'absolute',
@@ -293,7 +291,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     marginVertical: 10,
-    padding: 20,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: "#fff",
     boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)'
   },

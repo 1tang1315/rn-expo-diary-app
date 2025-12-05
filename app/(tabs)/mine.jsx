@@ -118,7 +118,7 @@ export default function Mine() {
   
   return (
     <ThemeSafeAreaView>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView>
         {/* AI设置卡片 */}
         <ThemeCard style={styles.card}>
           <View style={styles.row}>
@@ -271,12 +271,10 @@ export default function Mine() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
   card: {
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    marginBottom: 20
+    borderWidth: 1
   },
   row: {
     flexDirection: 'row',

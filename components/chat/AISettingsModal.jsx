@@ -10,7 +10,6 @@ import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
 import ThemeView from "@/components/Theme/ThemeView";
 import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 import ThemeButton from "@/components/Theme/ThemeButton";
-import ThemePartingLine from "@/components/Theme/ThemePartingLine";
 
 const AISettingsModal = ({
   visible,
@@ -83,10 +82,15 @@ const AISettingsModal = ({
               >
                 <ThemeTitleText style={styles.modalTitle}>AI 配置设置</ThemeTitleText>
                 
-                <ThemePartingLine></ThemePartingLine>
-                
                 <ScrollView
-                  style={styles.scrollViewContent}
+                  style={[
+                    styles.scrollViewContent,
+                    {
+                      padding: 10,
+                      borderRadius: 10,
+                      backgroundColor: theme.colors.innerCard,
+                    }
+                  ]}
                   showsVerticalScrollIndicator={false}
                 >
                   {/* API密钥输入 */}
@@ -136,8 +140,6 @@ const AISettingsModal = ({
                   />
                 </ScrollView>
                 
-                <ThemePartingLine></ThemePartingLine>
-                
                 <View style={styles.modalBtnContainer}>
                   <ThemeButton
                     style={styles.modalBtn}
@@ -171,9 +173,9 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 350,
     maxHeight: '60%',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -186,8 +188,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   scrollViewContent: {
-    flexGrow: 1,
-    marginTop: 10,
+    flexGrow: 1
   },
   modalTitle: {
     fontSize: 18,

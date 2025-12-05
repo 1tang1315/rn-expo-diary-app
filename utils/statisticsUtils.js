@@ -3,12 +3,15 @@ import { statisticsColors as colors } from "@/constants/commonConstans";
 import { getTotalMinutes } from "@/utils/formatTimeUtils";
 import { getCategoryName } from "@/utils/categoryUtils";
 
-export const processStatistics = (data) => {
+export const processStatistics = (data, groupByCategory = false) => {
   const completedEvents = data.filter(item => item.status === 'completed');
   
   const groupedData = {};
   completedEvents.forEach(item => {
-    const key = item.title && item.title.trim() !== '' ? item.title : getCategoryName(item.category);
+    const key = groupByCategory
+      ? getCategoryName(item.category) // all时用分类名称作为key
+      : (item.title && item.title.trim() !== '' ? item.title : getCategoryName(item.category));
+    
     
     // 计算时长（分钟）
     const durationMinutes = getTotalMinutes(item.start_datetime, item.end_datetime);

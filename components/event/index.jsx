@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { StyleSheet, Alert } from 'react-native';
 import CategoryTab from '@/components/common/CategoryTab';
 import TimelineList from './TimelineList';
 import AddEventButton from '../common/AddButton';
 import EventModal from './EventModal';
 import { getEventsByDateRange } from '@/db/eventDB';
 import { categories } from "@/constants/commonConstans";
+import ThemeCard from "@/components/Theme/ThemeCard";
 
 const TimelinePanel = ({ selectedDate }) => {
   const [currentTab, setCurrentTab] = useState('all');
@@ -70,21 +71,23 @@ const TimelinePanel = ({ selectedDate }) => {
   };
   
   return (
-    <View style={styles.container}>
-      {/* 分类标签栏 */}
+    <ThemeCard style={styles.container}>
       <CategoryTab
         categories={categories}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
       />
       
-      {/* 事件列表 */}
-      <TimelineList
-        categorizedData={categorizedData}
-        isLoading={isLoading}
-        currentTab={currentTab}
-        openEditModal={openEditModal} // 传递编辑回调
-      />
+      {/* 分类标签栏 */}
+      <ThemeCard innerCard={true} style={{flex: 1}}>
+        {/* 事件列表 */}
+        <TimelineList
+          categorizedData={categorizedData}
+          isLoading={isLoading}
+          currentTab={currentTab}
+          openEditModal={openEditModal} // 传递编辑回调
+        />
+      </ThemeCard>
       
       {/* 导入的独立组件：浮动添加按钮 */}
       <AddEventButton onPress={openAddModal} />
@@ -98,17 +101,14 @@ const TimelinePanel = ({ selectedDate }) => {
         currentTab={currentTab}
         onRefresh={fetchEvents}
       />
-    </View>
+    </ThemeCard>
   );
 };
 
 // 主组件样式（仅保留与时间线、列表相关的样式）
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
     flex: 1,
-    overflow: 'hidden',
-    elevation: 4
   }
 });
 

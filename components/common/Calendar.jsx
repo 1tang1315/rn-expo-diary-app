@@ -6,8 +6,8 @@ import {
 } from 'react-native';
 import dayjs from 'dayjs';
 import solarLunar from 'solarlunar';
-import ThemeView from "@/components/Theme/ThemeView";
 import { useTheme } from "@/context/ThemeContext";
+import ThemeCard from "@/components/Theme/ThemeCard";
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -243,7 +243,7 @@ export default function Calendar({
     return () => {
       combinedPanResponder.current = null;
     };
-  }, [expanded]);
+  }, [expanded, handlePeriodChange]);
   
   const getCurrentData = useCallback(() => {
     const targetDate = expanded ? base : anchor;
@@ -329,7 +329,7 @@ export default function Calendar({
   
   if(currentData.length === 0) {
     return (
-      <View style={styles.container}>
+      <View>
         <View style={styles.row}>
           {WEEK_LABELS.map((label, idx) => (
             <View key={`empty-week-${idx}`} style={styles.weekCell}>
@@ -345,12 +345,9 @@ export default function Calendar({
   }
   
   const styles = StyleSheet.create({
-    container: {
-      marginBottom: 10
-    },
     pageContainer: {
       flexShrink: 0,
-      paddingVertical: 8
+      paddingBottom: 8
     },
     row: {
       flexDirection: 'row',
@@ -401,16 +398,16 @@ export default function Calendar({
       lineHeight: 12
     },
     footer: {
-      marginTop: 8,
-      paddingTop: 4,
-      borderTopWidth: StyleSheet.hairlineWidth
+      paddingVertical: 4,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.dim
     },
     lineIcon: {
       marginLeft: 'auto',
       marginRight: 'auto',
       width: 30,
       height: 4,
-      backgroundColor: theme.colors.dim,
+      backgroundColor: theme.colors.primary,
       borderRadius: 2
     },
     emptyState: {
@@ -424,7 +421,10 @@ export default function Calendar({
   });
   
   return (
-    <ThemeView style={styles.container} {...(combinedPanResponder.current ? combinedPanResponder.current.panHandlers : {})}>
+    <ThemeCard
+      innerCard={true}
+      padding={0}
+      {...(combinedPanResponder.current ? combinedPanResponder.current.panHandlers : {})}>
       {/* 星期标签栏 */}
       <View style={styles.row}>
         {WEEK_LABELS.map((label, idx) => (
@@ -436,8 +436,10 @@ export default function Calendar({
       
       <View style={styles.pageContainer}>{renderPageRows(currentData)}</View>
       
-      <ThemeView style={styles.footer}><View style={styles.lineIcon} /></ThemeView>
-    </ThemeView>
+      <View style={styles.footer}>
+        <View style={styles.lineIcon} />
+      </View>
+    </ThemeCard>
   );
   
 }

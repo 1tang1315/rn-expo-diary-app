@@ -279,7 +279,11 @@ const EventModal = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
-            <ThemeView style={styles.modalContent}>
+            <ThemeCard
+              margin={0}
+              borderRadius={0}
+              style={styles.modalContent}
+            >
               {/* 弹窗头部 */}
               <View style={styles.modalHeader}>
                 <ThemeTitleText style={styles.modalTitle}>
@@ -292,7 +296,14 @@ const EventModal = ({
               
               {/* 表单内容区 */}
               <ScrollView
-                style={styles.formScrollView}
+                style={[
+                  styles.formScrollView,
+                  {
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: theme.colors.innerCard
+                  }
+                ]}
                 showsVerticalScrollIndicator={false}
               >
                 {renderCategorySelector()}
@@ -502,7 +513,7 @@ const EventModal = ({
                   is24Hour={true}
                 />
               )}
-            </ThemeView>
+            </ThemeCard>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -520,15 +531,15 @@ const styles = StyleSheet.create({
   modalContent: {
     maxHeight: '85%',
     minHeight: '85%',
-    padding: 20,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16
+    padding: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20
+    marginBottom: 10
   },
   modalTitle: {
     fontSize: 18,
@@ -543,7 +554,7 @@ const styles = StyleSheet.create({
   
   // 表单通用样式
   formGroup: {
-    marginBottom: 20
+    marginBottom: 15
   },
   formLabel: {
     marginBottom: 8,
@@ -675,7 +686,7 @@ const styles = StyleSheet.create({
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 20,
+    marginTop: 10,
     gap: 10
   },
   cancelButton: {

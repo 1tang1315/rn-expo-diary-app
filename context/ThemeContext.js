@@ -49,6 +49,7 @@ const baseThemes = {
   light: {
     background: '#ffffff',
     card: '#f8fafc',
+    innerCard: '#f1f5f9',
     text: '#0f172a',
     subText: '#475569',
     border: '#e2e8f0',
@@ -66,6 +67,7 @@ const baseThemes = {
   dark: {
     background: '#0b1220',
     card: '#1e293b',
+    innerCard: '#273449',
     text: '#e6eef8',
     subText: '#94a3b8',
     border: '#334155',
@@ -81,8 +83,9 @@ const baseThemes = {
     success: '#4ade80',
   },
   blue: {
-    background: '#ffffff',
-    card: '#f0f9ff',
+    background: '#f0f7ff',
+    card: '#e0e7ff',
+    innerCard: '#c7d2fe',
     text: '#0f172a',
     subText: '#334155',
     border: '#bfdbfe',
@@ -98,8 +101,9 @@ const baseThemes = {
     success: '#10b981',
   },
   green: {
-    background: '#ffffff',
-    card: '#f0fdf4',
+    background: '#f0fdf4',
+    card: '#dcfce7',
+    innerCard: '#bbf7d0',
     text: '#0f172a',
     subText: '#334155',
     border: '#a7f3d0',
@@ -115,8 +119,9 @@ const baseThemes = {
     success: '#10b981',
   },
   purple: {
-    background: '#ffffff',
-    card: '#faf5ff',
+    background: '#faf5ff',
+    card: '#f3e8ff',
+    innerCard: '#e9d5ff',
     text: '#0f172a',
     subText: '#334155',
     border: '#e9d5ff',
@@ -130,7 +135,7 @@ const baseThemes = {
     error: '#ef4444',
     warning: '#f59e0b',
     success: '#10b981',
-  },
+  }
 };
 
 function hexToRgb(hex) {
@@ -214,7 +219,7 @@ function hexWithAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function getLuminance(hex) {
+export function getLuminance(hex) {
   const { r, g, b } = hexToRgb(hex);
   const sRGB = [r / 255, g / 255, b / 255].map(v => {
     return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);

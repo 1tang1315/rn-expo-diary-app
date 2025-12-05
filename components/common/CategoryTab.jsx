@@ -85,7 +85,7 @@ const CategoryTab = ({
         style={[
           styles.tabItem,
           isActive && {
-            backgroundColor: theme.colors.card
+            backgroundColor: theme.colors.innerCard
           },
           isFixed && isScrolled && styles.collapsedFixedTab
         ]}
@@ -136,7 +136,7 @@ const CategoryTab = ({
   };
   
   return (
-    <ThemeView style={styles.container}>
+    <View style={{ marginBottom: 10 }}>
       <View style={styles.tabBar}>
         {/* 渲染固定标签 */}
         <View>
@@ -150,26 +150,18 @@ const CategoryTab = ({
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          contentContainerStyle={styles.scrollContentContainer}
         >
           {scrollableTabs?.map(tab => renderTab(tab))}
         </ScrollView>
       </View>
-    </ThemeView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-  },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center'
-  },
-  scrollContentContainer: {
-    paddingVertical: 8,
   },
   tabItem: {
     flexDirection: 'row',

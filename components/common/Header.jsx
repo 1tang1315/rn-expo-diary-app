@@ -3,7 +3,6 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ActivityIndicator,
   Alert
 } from 'react-native';
@@ -15,7 +14,6 @@ import { getAllCloudDriveConfigs } from "@/db/cloudSyncDb";
 import SettingsMenu from '@/components/common/SettingsMenu';
 import { useNavigation } from "expo-router";
 import { useTheme } from '@/context/ThemeContext';
-import ThemeView from "@/components/Theme/ThemeView";
 import Icon from "@/components/common/Icon";
 import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 
@@ -85,7 +83,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
   };
   
   return (
-    <ThemeView style={styles.headerContainer}>
+    <View style={styles.headerContainer}>
       {/* 时间 日期 */}
       <ThemeTitleText>{formatCurrentDate()}</ThemeTitleText>
       {/* 回到今日 */}
@@ -102,7 +100,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           disabled={isSyncing}
         >
           {isSyncing ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator color={theme.colors.primary} />
           ) : (
             <Icon lib="Ionicons" name="sync-outline" />
           )}
@@ -159,7 +157,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
               navigation.navigate('data-generation-page');
               break;
             case 'about':
-              console.log('处理关于我们');
+              navigation.navigate('about-us');
               break;
             case 'help':
               console.log('处理帮助中心');
@@ -169,7 +167,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           }
         }}
       />
-    </ThemeView>
+    </View>
   );
 };
 
@@ -178,11 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 44 : 24,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0'
+    marginBottom: 5
   },
   headerRightButtons: {
     flexDirection: 'row',

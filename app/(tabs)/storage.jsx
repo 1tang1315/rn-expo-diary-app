@@ -267,7 +267,8 @@ const styles = StyleSheet.create({
   },
   // 顶部资产卡片
   statsCard: {
-    margin: 16,
+    marginHorizontal: 15,
+    marginBottom: 10,
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',

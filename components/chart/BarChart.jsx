@@ -111,7 +111,10 @@ export default BarChart;
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center"
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#fff'
   },
   labels: {
     flexDirection: "row",

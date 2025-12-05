@@ -736,8 +736,8 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8
+    padding: 10,
+    paddingTop: 0
   },
   searchInput: {
     flex: 1,

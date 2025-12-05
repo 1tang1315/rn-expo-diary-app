@@ -7,12 +7,8 @@ import ThemeCard from "@/components/Theme/ThemeCard";
 import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 import { useTheme } from "@/context/ThemeContext";
 import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
-import ThemeView from "@/components/Theme/ThemeView";
 
-const DateSelector = ({
-  onDataChange,
-  hasRadius = true
-}) => {
+const DateSelector = ({ onDataChange }) => {
   const { theme } = useTheme();
   
   const [dateType, setDateType] = useState('single');
@@ -50,11 +46,9 @@ const DateSelector = ({
   }, [dateType, startDate, endDate, onDataChange]);
   
   return (
-    <ThemeView style={[
-      styles.sectionCard,
-      { borderRadius: hasRadius ? 8 : 0 }
-    ]}>
+    <ThemeCard>
       <ThemeTitleText style={styles.sectionTitle}>选择日期范围</ThemeTitleText>
+      
       <View style={styles.dateTypeSwitcher}>
         <ThemeTouchableOpacity
           style={[styles.dateTypeBtn, dateType === 'single' && ({backgroundColor: theme.colors.interactive})]}
@@ -82,7 +76,7 @@ const DateSelector = ({
         </TouchableOpacity>
       </View>
       
-      <ThemeCard style={styles.datePickerContainer}>
+      <ThemeCard padding={0} style={styles.datePickerContainer}>
         {dateType === 'single' ? (
           <TouchableOpacity style={styles.dateSelectBtn} onPress={() => handleShowDatePicker('start')}>
             <Ionicons name="calendar-outline" size={18} color={theme.colors.interactive} style={styles.dateIcon} />
@@ -111,20 +105,13 @@ const DateSelector = ({
           maximumDate={new Date()} // 禁止选择未来日期
         />
       )}
-    </ThemeView>
+    </ThemeCard>
   );
 };
 
 export default DateSelector;
 
 const styles = StyleSheet.create({
-  sectionCard: {
-    marginTop: 1,
-    marginBottom: 10,
-    padding: 16,
-    elevation: 2,
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -133,7 +120,7 @@ const styles = StyleSheet.create({
   dateTypeSwitcher: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   dateTypeBtn: {
     flex: 1,
@@ -167,7 +154,7 @@ const styles = StyleSheet.create({
   dateSelectBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     backgroundColor: '#F5F7FA',
   },

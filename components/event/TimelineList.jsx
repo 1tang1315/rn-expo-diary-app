@@ -243,14 +243,12 @@ const TimelineList = ({
 const styles = StyleSheet.create({
   // 列表容器
   timelineList: {
-    padding: 20,
-    paddingTop: 10,
     flexGrow: 1, // 占满父容器剩余空间
   },
   // 单个事件项容器
   timelineItemContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 10,
     position: 'relative',
   },
   // 左侧时间线列
