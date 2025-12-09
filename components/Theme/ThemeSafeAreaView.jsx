@@ -32,6 +32,7 @@ export default function ThemeSafeAreaView({ style, children, ...rest }) {
           style
         ]}
         {...rest}
+        edges={['top']}
       >{children}</SafeAreaView>
     </>
   );
