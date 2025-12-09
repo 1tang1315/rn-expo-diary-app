@@ -107,19 +107,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    marginBottom: 8
+    marginBottom: 10
   },
   userMessageBubble: {
     maxWidth: '100%',
     padding: 12,
-    marginRight: 8,
     backgroundColor: '#2196F3',
-    borderRadius: 16
+    borderRadius: 10
   },
   userMessageText: {
     fontSize: 16,
     color: '#fff',
-    lineHeight: 24,
+    lineHeight: 24
   },
   
   // AI消息
@@ -127,21 +126,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
-    marginBottom: 8
+    marginBottom: 10
   },
   aiMessageBubble: {
     maxWidth: '100%',
     padding: 12,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    borderRadius: 10
   },
   
   thoughtContainer: {
@@ -149,8 +140,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#828181',
-    marginBottom: 10,
+    borderColor: '#828181'
   },
   thoughtHeader: {
     flexDirection: 'row',

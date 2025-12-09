@@ -442,6 +442,7 @@ export default function Diary() {
           autoCapitalize="none"
           autoCorrect={false}
         />
+        
         <TouchableOpacity
           style={styles.settingButton}
           onPress={() => setSettingModalVisible(true)}
@@ -475,7 +476,7 @@ export default function Diary() {
               setIsSelectAll(false);
             }}
           >
-            <Icon lib="Ionicons" name="close" size={20} />
+            <Icon lib="Ionicons" name="close" size={25} />
           </ThemeTouchableOpacity>
           
           <ThemeText style={styles.selectedCount}>
@@ -506,11 +507,12 @@ export default function Diary() {
       
       {/* 笔记列表 */}
       <FlatList
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.flatList}
         data={groupByMonth(filterData())}
         keyExtractor={(group) => group.month}
         renderItem={({ item: group }) => (
-          <ThemeView style={styles.monthGroup}>
+          <ThemeView padding={0} margin={0}>
             <ThemeTitleText
               style={styles.monthTitle}
               numberOfLines={1}
@@ -521,7 +523,6 @@ export default function Diary() {
               keyExtractor={(item) => item.id}
               renderItem={renderItem}
               numColumns={2}
-              contentContainerStyle={styles.monthGroupList}
               scrollEnabled={false}
             />
           </ThemeView>
@@ -736,14 +737,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    paddingTop: 0
+    padding: 0,
+    marginBottom: 10
   },
   searchInput: {
     flex: 1,
-    minHeight: 30,
-    lineHeight: 30,
-    paddingHorizontal: 15,
     borderRadius: 20,
     fontSize: 14
   },
@@ -755,31 +753,15 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   
-  searchButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8
-  },
-  
   // 列表容器
   flatList: {
     flexGrow: 1
-  },
-  
-  // 月份分组
-  monthGroup: {
-    marginBottom: 15
   },
   monthTitle: {
     marginLeft: 8,
     marginTop: 8,
     fontSize: 16,
     fontWeight: 'bold'
-  },
-  monthGroupList: {
-    paddingHorizontal: 10
   },
   
   // 列表项
@@ -844,9 +826,7 @@ const styles = StyleSheet.create({
   batchDeleteBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomWidth: 1
+    padding: 10
   },
   exitDeleteButton: {
     marginRight: 10,
@@ -862,7 +842,7 @@ const styles = StyleSheet.create({
   },
   batchDeleteButton: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
     backgroundColor: '#ff3b30',
     borderWidth: 0

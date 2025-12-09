@@ -154,7 +154,7 @@ export default function Storage() {
   };
 
   return (
-    <ThemeSafeAreaView edges={['top']}>
+    <ThemeSafeAreaView>
       <LinearGradient
         colors={[theme.colors.interactive, theme.colors.interactiveLight]}
         style={styles.statsCard}
@@ -208,7 +208,6 @@ export default function Storage() {
       
       <View style={styles.sectionContainer}>
         <FlatList
-          style={{paddingHorizontal: 16}}
           data={[
             { key: 'active', title: `未退役(${activeItems.length}件)`, items: activeItems },
             { key: 'retired', title: `已退役(${retiredItems.length}件)`, items: retiredItems },
@@ -267,7 +266,6 @@ const styles = StyleSheet.create({
   },
   // 顶部资产卡片
   statsCard: {
-    marginHorizontal: 15,
     marginBottom: 10,
     borderRadius: 12,
     padding: 16,
@@ -326,7 +324,6 @@ const styles = StyleSheet.create({
   },
   
   sectionContainer: {
-    flex: 1,
-    paddingVertical: 10
+    flex: 1
   }
 });

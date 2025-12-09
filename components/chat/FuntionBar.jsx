@@ -150,11 +150,10 @@ const FunctionBar = ({
   };
   
   return (
-    <View style={styles.container}>
+    <View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.functionScroll}
       >
         <View style={styles.functionsContainer}>
           <TouchableOpacity
@@ -325,24 +324,16 @@ const FunctionBar = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fff"
-  },
-  functionScroll: {
-    paddingVertical: 8,
-  },
   functionsContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingTop: 10,
+    gap: 10,
   },
   functionButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 12,
+    padding: 10,
     backgroundColor: "#F5F7FA",
     borderRadius: 8,
     minWidth: 120,

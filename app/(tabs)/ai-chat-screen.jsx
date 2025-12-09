@@ -26,6 +26,8 @@ import ThemeTextInput from "@/components/Theme/ThemeTextInput";
 import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useAIConfig } from "@/context/AIConfigContext";
 import AiDiaryService from "@/db/services/AiDiaryService";
+import ThemePartingLine from "@/components/Theme/ThemePartingLine";
+import ThemeView from "@/components/Theme/ThemeView";
 
 const AiChatScreen = () => {
   const { theme } = useTheme();
@@ -375,7 +377,7 @@ const AiChatScreen = () => {
   };
   
   return (
-    <ThemeSafeAreaView style={styles.container} edges={['top']}>
+    <ThemeSafeAreaView>
       <ThemeCard style={styles.header}>
         <TouchableOpacity
           style={styles.headerIconContainer}
@@ -407,8 +409,7 @@ const AiChatScreen = () => {
         <ScrollView
           ref={messageScrollRef}
           style={styles.messageList}
-          contentContainerStyle={styles.messageListContent}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           {/* 空状态提示 */}
@@ -439,6 +440,9 @@ const AiChatScreen = () => {
             setInputText(prev => prev ? `${prev}\n\n${prompt}` : prompt);
           }}
         />
+        
+        <ThemePartingLine />
+        
         <View style={styles.inputContainer}>
           <ThemeTextInput
             ref={inputRef}
@@ -452,7 +456,10 @@ const AiChatScreen = () => {
             onSubmitEditing={handleSendMessage}
           />
           <TouchableOpacity
-            style={[styles.sendBtn, { backgroundColor: theme.colors.interactive }]}
+            style={[
+              styles.sendBtn,
+              { backgroundColor: theme.colors.interactive }
+            ]}
             onPress={handleSendMessage}
           >
             <Icon lib="Ionicons" name="send" size={20} color="#fff" />
@@ -473,16 +480,22 @@ const AiChatScreen = () => {
             onPress={() => setSidebarVisible(false)}
           />
           
-          <View style={styles.sidebarContent}>
+          <ThemeCard
+            margin={0} padding={0} borderRadius={0}
+            style={styles.sidebarContent}
+          >
             <TouchableOpacity
-              style={styles.newConversationBtn}
+              style={[
+                { backgroundColor: theme.colors.interactive },
+                styles.newConversationBtn
+              ]}
               onPress={() => handleCreateNewConversation()}
             >
               <Ionicons name="add" size={18} color="#fff" />
               <Text style={styles.newConversationText}>新建对话</Text>
             </TouchableOpacity>
             
-            <ScrollView style={styles.conversationList}>
+            <ScrollView style={styles.conversationList} showsVerticalScrollIndicator={false}>
               {conversations.map(conversation => (
                 <TouchableOpacity
                   key={conversation.id}
@@ -509,7 +522,7 @@ const AiChatScreen = () => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+          </ThemeCard>
         </View>
       </Modal>
       
@@ -522,28 +535,12 @@ const AiChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-  },
-  
   // 顶部导航栏
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 56,
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    zIndex: 10,
+    height: 56
   },
   headerIconContainer: {
     width: 40,
@@ -553,7 +550,6 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    marginHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -583,16 +579,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: '80%',
-    maxWidth: 300,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 2,
-      height: 0
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    maxWidth: 300
   },
   
   // 新建对话按钮
@@ -600,10 +587,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 16,
-    padding: 12,
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
+    margin: 8,
+    padding: 10,
+    borderRadius: 10,
   },
   newConversationText: {
     marginLeft: 8,
@@ -658,11 +644,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   messageList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  messageListContent: {
-    paddingVertical: 16,
+    flex: 1
   },
   
   // AI加载中提示
@@ -687,64 +669,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    minHeight: 60,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    marginBottom: 20
   },
   input: {
     flex: 1,
     minHeight: 30,
     maxHeight: 200,
-    lineHeight: 30,
-    padding: 12,
+    lineHeight: 25,
+    padding: 10,
     marginRight: 8,
     borderRadius: 24,
     fontSize: 16,
     textAlignVertical: 'top',
   },
   sendBtn: {
-    width: 48,
-    height: 48,
+    width: 35,
+    height: 35,
+    paddingLeft: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
-  },
-  
-  settingLabel: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    fontSize: 14,
-    color: '#666'
-  },
-  modelPresetContainer: {
-    marginBottom: 12,
-    height: 36,
-  },
-  modelPresetContent: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  modelPresetBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeModelPresetBtn: {
-    backgroundColor: '#2196F3',
-  },
-  modelPresetText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  activeModelPresetText: {
-    color: '#fff',
-    fontWeight: '500',
+    borderRadius: '50%',
   }
 });
 

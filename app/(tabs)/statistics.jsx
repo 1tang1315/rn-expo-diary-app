@@ -152,20 +152,20 @@ export default function Statistics() {
   
   return (
     <ThemeSafeAreaView>
-      <ScrollView
-        style={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <DateSelector hasRadius={false} onDataChange={handleDateChange} />
+      <DateSelector hasRadius={false} onDataChange={handleDateChange} />
+      
+      {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
+      <ThemeCard style={{ flex: 1 }}>
+        <CategoryTab
+          categories={categories}
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+        />
         
-        {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
-        <ThemeCard style={{ flex: 1 }}>
-          <CategoryTab
-            categories={categories}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
-          />
-          
+        <ScrollView
+          style={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
           {loading ? (
             <View style={styles.statusContainer}>
               <ActivityIndicator size="large" color="#3498db" />
@@ -233,8 +233,8 @@ export default function Statistics() {
               </View>
             </>
           )}
-        </ThemeCard>
-      </ScrollView>
+        </ScrollView>
+      </ThemeCard>
     </ThemeSafeAreaView>
   );
 }

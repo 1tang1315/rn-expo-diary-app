@@ -78,8 +78,6 @@ const TimelinePanel = ({ selectedDate }) => {
         setCurrentTab={setCurrentTab}
       />
       
-      {/* 分类标签栏 */}
-      <ThemeCard innerCard={true} style={{flex: 1}}>
         {/* 事件列表 */}
         <TimelineList
           categorizedData={categorizedData}
@@ -87,7 +85,6 @@ const TimelinePanel = ({ selectedDate }) => {
           currentTab={currentTab}
           openEditModal={openEditModal} // 传递编辑回调
         />
-      </ThemeCard>
       
       {/* 导入的独立组件：浮动添加按钮 */}
       <AddEventButton onPress={openAddModal} />
@@ -108,8 +105,7 @@ const TimelinePanel = ({ selectedDate }) => {
 // 主组件样式（仅保留与时间线、列表相关的样式）
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingBottom: 0
+    flex: 1
   }
 });
 

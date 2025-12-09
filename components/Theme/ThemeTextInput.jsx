@@ -9,20 +9,20 @@ export default function ThemeTextInput({ style, ...rest }) {
   const baseStyle = {
     minHeight: 30,
     lineHeight: 30,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderRadius: 4,
     fontSize: 16,
     color: theme.colors.interactive,
     backgroundColor: theme.colors.card,
     borderColor: theme.colors.interactive,
-    placeholderTextColor: theme.colors.subText,
     selectionColor: theme.colors.interactive
   };
   
   return (
     <TextInput
+      placeholderTextColor={theme.colors.subText}
       style={[baseStyle, style]}
       {...rest}
     />
