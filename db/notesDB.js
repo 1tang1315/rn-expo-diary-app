@@ -316,7 +316,12 @@ export const checkDiaryExists = async (dateStr) => {
   const db = await getDB();
   const result = await db.getFirstAsync(
     `SELECT id FROM notes
-     WHERE title = ? AND folder_id = (SELECT id FROM folders WHERE name = '日记')`,
+     WHERE title = ?
+       AND folder_id = (SELECT id FROM folders
+         WHERE name = '日记'
+         AND deleted_at IS NULL
+       )
+       AND deleted_at IS NULL`,
     [`${dateStr}`]
   );
   return !!result;

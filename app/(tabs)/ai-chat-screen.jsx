@@ -27,7 +27,6 @@ import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useAIConfig } from "@/context/AIConfigContext";
 import AiDiaryService from "@/db/services/AiDiaryService";
 import ThemePartingLine from "@/components/Theme/ThemePartingLine";
-import ThemeView from "@/components/Theme/ThemeView";
 
 const AiChatScreen = () => {
   const { theme } = useTheme();
