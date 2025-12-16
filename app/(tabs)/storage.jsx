@@ -13,7 +13,7 @@ import { storageCategories } from "@/constants/commonConstans";
 import { getAllStorageItems } from '@/db/storageDB';
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 // 常量定义
 const MS_PER_DAY = 1000 * 60 * 60 * 24; // 每天的毫秒数

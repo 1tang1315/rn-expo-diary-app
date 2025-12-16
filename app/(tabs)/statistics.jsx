@@ -10,10 +10,10 @@ import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
 import { categories } from "@/constants/commonConstans";
 import BarChart from "@/components/chart/BarChart";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import { useFocusEffect } from "expo-router";
 import dayjs from "dayjs";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 /**
  * 高精度除法计算（无浮点数精度误差）

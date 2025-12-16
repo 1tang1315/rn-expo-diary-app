@@ -2,13 +2,13 @@ import React, { useCallback, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import TimeRangePicker from "@/components/common/TimeRangePicker";
 import CheckStat from "@/components/habit-tracking/CheckStat";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
-import ThemeView from "@/components/Theme/ThemeView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import ThemeView from "@/components/theme/ThemeView";
 import StatsCard from "@/components/habit-tracking/StatsCard";
 import dayjs from "dayjs";
 import { getEventsByDateRange } from "@/db/eventDB";
 import { useFocusEffect } from "expo-router";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 const HabitTracking = () => {
   const [statsData, setStatsData] = useState([]);

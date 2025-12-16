@@ -18,15 +18,15 @@ import { HistoryMessage } from "@/components/chat/HistoryMessage";
 import { flushSync } from "react-dom";
 import { getLocalDateTimeByDayjs } from "@/utils/formatTimeUtils";
 import FunctionBar from "@/components/chat/FuntionBar";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import ThemeCard from "@/components/theme/ThemeCard";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useAIConfig } from "@/context/AIConfigContext";
 import AiDiaryService from "@/db/services/AiDiaryService";
-import ThemePartingLine from "@/components/Theme/ThemePartingLine";
+import ThemePartingLine from "@/components/theme/ThemePartingLine";
 
 const AiChatScreen = () => {
   const { theme } = useTheme();

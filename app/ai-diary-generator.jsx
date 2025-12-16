@@ -16,7 +16,7 @@ import { getPlainTextContent } from "@/utils/previewFormatter";
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import AIStreamText from "@/components/common/AIStreamText";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 export default function AiDiaryGenerator() {
   const [aiDiaryService, setAiDiaryService] = useState(null);

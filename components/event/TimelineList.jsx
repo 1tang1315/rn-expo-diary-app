@@ -6,11 +6,11 @@ import { updateEventStatus } from "@/db/eventDB";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
 import { useTheme } from "@/context/ThemeContext";
 import EmptyContainer from "@/components/common/EmptyContainer";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 import { LinearGradient } from "expo-linear-gradient";
-import ThemeText from "@/components/Theme/ThemeText";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeText from "@/components/theme/ThemeText";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 // 判断两个日期是否为同一天（只比较年/月/日）
 const isSameDate = (date1, date2) => {

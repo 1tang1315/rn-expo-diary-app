@@ -15,7 +15,7 @@ import SettingsMenu from '@/components/common/SettingsMenu';
 import { useNavigation } from "expo-router";
 import { useTheme } from '@/context/ThemeContext';
 import Icon from "@/components/common/Icon";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 
 const Header = ({ selectedDate, onToday, userId = 1 }) => {
   const navigation = useNavigation();

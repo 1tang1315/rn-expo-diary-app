@@ -11,17 +11,17 @@ import {
 import dayjs from 'dayjs';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
 import CategoryTab from "@/components/common/CategoryTab";
-import ThemeCard from "@/components/Theme/ThemeCard";
-import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import Icon from "@/components/common/Icon";
-import ThemeButton from "@/components/Theme/ThemeButton";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
-import ThemeText from "@/components/Theme/ThemeText";
+import ThemeButton from "@/components/theme/ThemeButton";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import ThemeText from "@/components/theme/ThemeText";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
-import ThemeView from "@/components/Theme/ThemeView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import ThemeView from "@/components/theme/ThemeView";
 
 const { width } = Dimensions.get("window");
 

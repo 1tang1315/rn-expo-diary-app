@@ -6,7 +6,7 @@ import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
 import { getAllCloudDriveConfigs, deleteCloudDriveConfig } from '@/db/cloudSyncDb';
 import { getCurrentUserId } from '@/db/userDB';
 import { CloudSyncService, DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 const CloudDriveSettings = () => {
   const [drives, setDrives] = useState([]);

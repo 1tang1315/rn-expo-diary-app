@@ -7,7 +7,7 @@ import {
 import dayjs from 'dayjs';
 import solarLunar from 'solarlunar';
 import { useTheme } from "@/context/ThemeContext";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 

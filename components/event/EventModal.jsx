@@ -14,15 +14,15 @@ import {
 } from "@/db/eventDB";
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import CategoryModal from "@/components/common/CategoryModal";
-import ThemeView from "@/components/Theme/ThemeView";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeView from "@/components/theme/ThemeView";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 import Icon from "@/components/common/Icon";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
-import ThemeCard from "@/components/Theme/ThemeCard";
-import ThemeTextInput from "@/components/Theme/ThemeTextInput";
-import ThemeButton from "@/components/Theme/ThemeButton";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
+import ThemeButton from "@/components/theme/ThemeButton";
 
 /**
  * 事件添加/编辑弹窗

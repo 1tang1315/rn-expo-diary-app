@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 import { getEventStats } from "@/db/eventDB";
 
 const StatsCard = ({ stats = [] }) => {

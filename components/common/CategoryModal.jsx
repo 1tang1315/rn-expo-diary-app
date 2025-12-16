@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 /**
  * 分类选择弹窗独立组件

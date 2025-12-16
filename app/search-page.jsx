@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import { getEventsByTitleOrDescriptionSearch } from "@/db/eventDB";
 import { getCategoryInfo } from "@/utils/categoryUtils";
 import EventModal from "@/components/event/EventModal";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 const SearchPage = () => {
   // 状态管理：搜索输入、搜索结果、加载状态

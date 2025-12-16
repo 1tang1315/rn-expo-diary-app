@@ -6,7 +6,7 @@ import AddEventButton from '../common/AddButton';
 import EventModal from './EventModal';
 import { getEventsByDateRange } from '@/db/eventDB';
 import { categories } from "@/constants/commonConstans";
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 
 const TimelinePanel = ({ selectedDate }) => {
   const [currentTab, setCurrentTab] = useState('all');

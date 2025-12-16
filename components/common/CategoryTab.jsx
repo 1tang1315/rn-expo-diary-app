@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated
 } from 'react-native';
-import ThemeView from "@/components/Theme/ThemeView";
+import ThemeView from "@/components/theme/ThemeView";
 import { useTheme } from "@/context/ThemeContext";
 import Icon from "@/components/common/Icon";
 

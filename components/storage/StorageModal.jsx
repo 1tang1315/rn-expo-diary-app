@@ -11,15 +11,15 @@ import { formatDate } from "@/utils/formatTimeUtils";
 import { storageCategoryIcons, storageCategories } from "@/constants/commonConstans";
 import CategoryModal from "@/components/common/CategoryModal";
 import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
-import ThemeButton from "@/components/Theme/ThemeButton";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
-import ThemeTextInput from "@/components/Theme/ThemeTextInput";
+import ThemeButton from "@/components/theme/ThemeButton";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeCard from "@/components/Theme/ThemeCard";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
-import ThemeView from "@/components/Theme/ThemeView";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import ThemeView from "@/components/theme/ThemeView";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 
 /**
  * 储物项添加/编辑弹窗

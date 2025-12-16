@@ -3,10 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import ThemeCard from "@/components/Theme/ThemeCard";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 
 const DateSelector = ({ onDataChange }) => {
   const { theme } = useTheme();

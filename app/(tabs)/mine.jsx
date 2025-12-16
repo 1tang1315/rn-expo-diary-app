@@ -1,19 +1,19 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import Icon from "@/components/common/Icon";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAllCloudDriveConfigs } from '@/db/cloudSyncDb';
 import { getCurrentUserId } from '@/db/userDB';
 import { DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
-import ThemeCard from "@/components/Theme/ThemeCard";
+import ThemeCard from "@/components/theme/ThemeCard";
 import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useNavigation } from '@react-navigation/native';
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
-import ThemeButton from "@/components/Theme/ThemeButton";
-import ThemePartingLine from "@/components/Theme/ThemePartingLine";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import ThemeButton from "@/components/theme/ThemeButton";
+import ThemePartingLine from "@/components/theme/ThemePartingLine";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import { Link, useFocusEffect } from "expo-router";
 import { useAIConfig } from "@/context/AIConfigContext";
 

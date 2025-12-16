@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import ThemeCard from "@/components/Theme/ThemeCard";
-import ThemeButton from "@/components/Theme/ThemeButton";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeButton from "@/components/theme/ThemeButton";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
 import { useTheme } from "@/context/ThemeContext";
 
 const ExpandableCard = ({ title, style, children }) => {

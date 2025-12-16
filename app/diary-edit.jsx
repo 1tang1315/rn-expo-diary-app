@@ -10,7 +10,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 export default function DiaryEdit() {
   const { theme } = useTheme();

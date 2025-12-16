@@ -1,5 +1,5 @@
 import { Text } from "react-native";
-import ThemeSafeAreaView from "@/components/Theme/ThemeSafeAreaView";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 
 export default function AboutUs() {
   return (

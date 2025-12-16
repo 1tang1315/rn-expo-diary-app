@@ -1,7 +1,7 @@
 import { Image, View, Text, StyleSheet } from "react-native";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { formatDate } from "@/utils/formatTimeUtils";
-import ThemeTouchableOpacity from "@/components/Theme/ThemeTouchableOpacity";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 
 const StorageCard = ({ item, onPress }) => {
   // 判断是否为退役产品（有结束时间且已过期）

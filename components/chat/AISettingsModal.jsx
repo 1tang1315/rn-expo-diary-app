@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import { useTheme } from "@/context/ThemeContext";
 import { useAIConfig } from "@/context/AIConfigContext";
-import ThemeTextInput from "@/components/Theme/ThemeTextInput";
-import ThemeSubTitleText from "@/components/Theme/ThemeSubTitleText";
-import ThemeView from "@/components/Theme/ThemeView";
-import ThemeTitleText from "@/components/Theme/ThemeTitleText";
-import ThemeButton from "@/components/Theme/ThemeButton";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import ThemeView from "@/components/theme/ThemeView";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import ThemeButton from "@/components/theme/ThemeButton";
 
 const AISettingsModal = ({
   visible,
