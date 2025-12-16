@@ -12,36 +12,35 @@ const EmptyContainer = ({
   const { theme } = useTheme();
   
   return (
-    <View style={[styles.container, model === 'box' && styles.boxContainer]}>
+    <View style={[
+      styles.container,
+      model === 'box' && {
+        borderRadius: 10,
+        backgroundColor: theme.colors.innerCard
+      }
+    ]}>
       {iconName && (
-        <Icon lib={iconLib} name={iconName} size={48} />
+        <Icon lib={iconLib} name={iconName} size={40} />
       )}
-      <Text style={[styles.text, { color: theme.colors.interactive }]}>
-        {text}
-      </Text>
+      <Text style={[
+        styles.text,
+        { color: theme.colors.interactive }
+      ]}>{text}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  boxContainer: {
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    elevation: 2,
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-  },
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 400,
-    padding: 24
+    alignItems: 'center'
   },
   text: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: 16,
   },
 });
 

@@ -241,3 +241,47 @@ export async function getCommonTitlesByCategory(category, limit = 5) {
   );
   return result.map(item => item.title);
 }
+
+/**
+ * 获取事件统计数据
+ * @returns {Promise<Object>} 包含事件总数、记录次数、总时长、记录天数的统计对象
+ */
+export async function getEventStats() {
+  const db = await getDB();
+  
+  // 1. 事件总数（排除软删除）
+  const [totalEventsResult] = await db.getAllAsync(
+    'SELECT COUNT(*) AS count FROM event WHERE deleted_at IS NULL'
+  );
+  const totalEvents = totalEventsResult.count;
+  
+  // 2. 记录次数（每条事件算一次记录）
+  const [totalRecordsResult] = await db.getAllAsync(
+    'SELECT COUNT(*) AS count FROM event WHERE deleted_at IS NULL'
+  );
+  const totalRecords = totalRecordsResult.count;
+  
+  // 3. 总时长（计算所有事件的结束时间-开始时间总和，单位：小时，保留1位小数）
+  const [totalDurationResult] = await db.getAllAsync(`
+    SELECT SUM(
+      (JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24
+    ) AS totalHours FROM event WHERE deleted_at IS NULL
+  `);
+  const totalDuration = totalDurationResult.totalHours
+    ? `${totalDurationResult.totalHours.toFixed(1)}小时`
+    : '0小时';
+  
+  // 4. 记录天数（去重统计有事件的日期数量）
+  const [recordDaysResult] = await db.getAllAsync(`
+    SELECT COUNT(DISTINCT DATE(start_datetime)) AS count
+    FROM event WHERE deleted_at IS NULL
+  `);
+  const recordDays = `${recordDaysResult.count}天`;
+  
+  return {
+    totalEvents: `${totalEvents}个`,
+    totalRecords: `${totalRecords}次`,
+    totalDuration,
+    recordDays
+  };
+}

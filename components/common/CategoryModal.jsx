@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import ThemeView from "@/components/Theme/ThemeView";
 import ThemeTitleText from "@/components/Theme/ThemeTitleText";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
@@ -101,7 +100,7 @@ const CategoryModal = ({
   );
 };
 
-// 弹窗专属样式（从原styles提取）
+// 弹窗专属样式
 const styles = StyleSheet.create({
   categoryModalOverlay: {
     flex: 1,

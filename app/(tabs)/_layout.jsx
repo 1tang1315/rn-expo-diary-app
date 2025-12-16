@@ -64,6 +64,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="habit-tracking"
+        options={{
+          title: "打卡",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkbox" color={color} size={size} />
+          ),
+          unmountOnBlur: true
+        }}
+      />
+      <Tabs.Screen
         name="mine"
         options={{
           title: "我的",
