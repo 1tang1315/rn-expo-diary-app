@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 
 const DAYS = ['一', '二', '三', '四', '五', '六', '日'];
 
-const WeekHeader = () => (
+const WeekHeader = ({ size = 38 }) => (
   <View style={styles.row}>
     {DAYS.map(d => (
-      <Text key={d} style={styles.text}>{d}</Text>
+      <Text key={d} style={[styles.text, { width: size }]}>{d}</Text>
     ))}
   </View>
 );
@@ -18,7 +18,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   text: {
-    width: 36,
     textAlign: 'center',
     fontSize: 12,
     color: '#86909C',

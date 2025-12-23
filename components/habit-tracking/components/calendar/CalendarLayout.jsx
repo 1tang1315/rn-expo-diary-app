@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import EmptyCell from "@/components/habit-tracking/components/calendar/EmptyCell";
+import { View } from "react-native";
 import DateCell from "@/components/habit-tracking/components/calendar/DateCell";
 
 /**
@@ -70,9 +70,9 @@ export const generateMonthCells = (year, month) => {
 /**
  * 日历格子渲染函数
  */
-export const renderCalendarCell = ({ item, cardItem }) => {
+export const renderCalendarCell = ({ item, cardItem, size = 38 }) => {
   if (item.type === 'empty') {
-    return <EmptyCell />;
+    return <View style={{ width: size, height: size }} />;
   }
   
   const count = cardItem.dailyCounts[item.dateKey] || 0;
@@ -81,6 +81,7 @@ export const renderCalendarCell = ({ item, cardItem }) => {
       dayNum={item.dayNum}
       count={count}
       color={cardItem.color}
+      size={size}
     />
   );
 };

@@ -2,10 +2,10 @@ import React, { memo, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import TitleHeader from '../components/TitleHeader';
 import WeekHeader from '../components/calendar/WeekHeader';
-import { useTheme } from "@/context/ThemeContext";
 import {
   generateMonthCells, renderCalendarCell
 } from "@/components/habit-tracking/components/calendar/CalendarLayout";
+import { useTheme } from "@/context/ThemeContext";
 
 const MonthView = memo(({ items, year, month }) => {
   const { theme } = useTheme();
@@ -15,6 +15,8 @@ const MonthView = memo(({ items, year, month }) => {
   
   // 渲染单个卡片
   const renderMonthCard = ({ item: cardItem }) => {
+    const cellSize = 38; // 月视图使用标准大小
+    
     return (
       <View style={[
         styles.cardContainer,
@@ -26,24 +28,25 @@ const MonthView = memo(({ items, year, month }) => {
           totalDuration={cardItem.totalDurationStr}
         />
         
-        <WeekHeader />
+        <WeekHeader size={cellSize} />
         
         <FlatList
+          style={styles.monthGrid}
           data={calendarCells}
-          renderItem={(props) => renderCalendarCell({ ...props, cardItem })}
+          renderItem={(props) => renderCalendarCell({ ...props, cardItem, size: cellSize })}
           keyExtractor={(item) => item.key}
           numColumns={7}
           scrollEnabled={false}
-          style={styles.monthGrid}
           columnWrapperStyle={{
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            columnGap: 4
           }}
           removeClippedSubviews={true}
           maxToRenderPerBatch={7}
           windowSize={3}
           getItemLayout={(data, index) => ({
-            length: 36,
-            offset: 36 * index,
+            length: cellSize,
+            offset: cellSize * index,
             index,
           })}
           extraData={items}
@@ -90,6 +93,11 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingTop: 0,
     borderRadius: 10
+  },
+  
+  monthGrid: {
+    width: '100%',
+    rowGap: 4
   },
   
   noDataContainer: {

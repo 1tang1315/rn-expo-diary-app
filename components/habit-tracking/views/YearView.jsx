@@ -1,8 +1,10 @@
 import React, { memo, useMemo } from "react";
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
-import { generateMonthCells, padZero, renderCalendarCell } from "@/components/habit-tracking/components/calendar/CalendarLayout";
 import WeekHeader from "@/components/habit-tracking/components/calendar/WeekHeader";
 import TitleHeader from "@/components/habit-tracking/components/TitleHeader";
+import {
+  generateMonthCells, padZero, renderCalendarCell
+} from "@/components/habit-tracking/components/calendar/CalendarLayout";
 import { useTheme } from "@/context/ThemeContext";
 
 const YearView = memo(({ items, year }) => {
@@ -35,6 +37,7 @@ const YearView = memo(({ items, year }) => {
   
   // 独立渲染单个月份的日历
   const renderSingleMonthCalendar = (month, cardItem) => {
+    const cellSize = 24; // 年视图使用更小的格子大小
     const monthCells = allMonthCells[month];
     if (!monthCells) return null;
     
@@ -43,15 +46,26 @@ const YearView = memo(({ items, year }) => {
     const hasMonthData = cardItem.monthlyCounts[monthKey] > 0;
     if (!hasMonthData) return null;
     
+    // 基于cellSize动态计算月份卡片的宽度和高度
+    const padding = 10;
+    const monthCardWidth = cellSize * 7 + padding * 2;
+    const monthCardHeight = (cellSize * 6) + 30 + padding * 2; // 6行日历格子 + 标题高度 + 内边距
+    
     return (
-      <View key={`${cardItem.title}-${month}`} style={styles.yearMonthCard}>
+      <View
+        key={`${cardItem.title}-${month}`}
+        style={[styles.yearMonthCard, {
+          width: monthCardWidth,
+          minHeight: monthCardHeight
+        }]}
+      >
         <Text style={styles.monthTitle}>{year}年{month}月</Text>
-        <WeekHeader />
+        <WeekHeader size={cellSize} />
         
-        <View style={styles.calendarGridContainer}>
+        <View style={[styles.calendarGridContainer, { width: cellSize * 7 + 10 }]}>
           <FlatList
             data={monthCells}
-            renderItem={(props) => renderCalendarCell({ ...props, cardItem })}
+            renderItem={(props) => renderCalendarCell({ ...props, cardItem, size: cellSize })}  
             keyExtractor={(item) => item.key}
             numColumns={7}
             scrollEnabled={false}
@@ -64,8 +78,8 @@ const YearView = memo(({ items, year }) => {
             maxToRenderPerBatch={28} // 一个月最多28-31天，设置足够大的批次
             windowSize={1}
             getItemLayout={(data, index) => ({
-              length: 36,
-              offset: 36 * index,
+              length: cellSize,
+              offset: cellSize * index,
               index,
             })}
             extraData={items}
@@ -99,6 +113,10 @@ const YearView = memo(({ items, year }) => {
       );
     }
     
+    const cellSize = 24; // 年视图使用更小的格子大小
+    // 基于cellSize动态计算滚动容器的最小高度
+    const scrollContainerMinHeight = (cellSize * 6) + 50; // 6行日历格子 + 足够的额外空间
+    
     return (
       <View style={[styles.cardContainer, { backgroundColor: theme.colors.innerCard }]}>
         <TitleHeader
@@ -110,7 +128,9 @@ const YearView = memo(({ items, year }) => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.yearMonthsScrollContainer}
+          contentContainerStyle={[styles.yearMonthsScrollContainer, {
+            minHeight: scrollContainerMinHeight
+          }]}
         >
           {cardValidMonths.map(month => renderSingleMonthCalendar(month, cardItem))}
         </ScrollView>
@@ -146,38 +166,34 @@ YearView.displayName = 'YearView';
 export default YearView;
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 10,
-    paddingTop: 0,
-    paddingBottom: 0
-  },
-  
-  cardContainer: {
-    marginBottom: 8,
-    padding: 10,
-    paddingTop: 0,
-    borderRadius: 10
-  },
-  
-  calendarGridContainer: {
-    width: 36 * 7,
-    alignItems: 'center',
-  },
+    scrollContainer: {
+      flexGrow: 1,
+      padding: 10,
+      paddingTop: 0,
+      paddingBottom: 0
+    },
+    
+    cardContainer: {
+      marginBottom: 8,
+      padding: 10,
+      paddingTop: 0,
+      borderRadius: 10
+    },
+    
+    calendarGridContainer: {
+      alignItems: 'center',
+    },
   monthGrid: {
     width: '100%',
-    rowGap: 3
+    rowGap: 2
   },
   
   yearMonthsScrollContainer: {
     flexDirection: 'row',
     gap: 10,
-    minHeight: 36 * 6 + 20,
     paddingHorizontal: 2
   },
   yearMonthCard: {
-    width: 36 * 7 + 16,
-    minHeight: 36 * 6 + 30,
     padding: 5,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.02)'

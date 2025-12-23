@@ -1,13 +1,12 @@
 import React, { memo } from 'react';
 import {
-  FlatList, View, StyleSheet
+  FlatList, StyleSheet, View
 } from 'react-native';
-import dayjs from "dayjs";
 import TitleHeader from '../components/TitleHeader';
 import WeekHeader from '../components/calendar/WeekHeader';
-import ThemeCard from "@/components/theme/ThemeCard";
 import DateCell from "@/components/habit-tracking/components/calendar/DateCell";
-import EmptyCell from "@/components/habit-tracking/components/calendar/EmptyCell";
+import ThemeCard from "@/components/theme/ThemeCard";
+import dayjs from "dayjs";
 
 const WeekView = memo(({ items, weekStartDate }) => {
   const generateWeekCells = (weeklyCounts) => {
@@ -37,33 +36,38 @@ const WeekView = memo(({ items, weekStartDate }) => {
       showsVerticalScrollIndicator={false}
       data={items}
       keyExtractor={i => i.title}
-      renderItem={({ item }) => (
-        <ThemeCard innerCard={true}>
-          <TitleHeader
-            title={item.title}
-            count={item.count}
-            totalDuration={item.totalDurationStr}
-          />
+      renderItem={({ item }) => {
+        const cellSize = 38; // 周视图使用标准大小
+        
+        return (
+          <ThemeCard innerCard={true}>
+            <TitleHeader
+              title={item.title}
+              count={item.count}
+              totalDuration={item.totalDurationStr}
+            />
           
-          <WeekHeader />
+            <WeekHeader size={cellSize} />
           
-          <View style={styles.row}>
-            {generateWeekCells(item.weeklyCounts).map((cell) => {
-              if (cell.type === 'empty') {
-                return <EmptyCell key={cell.key} />;
-              }
-              return (
-                <DateCell
-                  key={cell.key}
-                  dayNum={cell.dayNum}
-                  count={cell.count}
-                  color={item.color}
-                />
-              );
-            })}
-          </View>
-        </ThemeCard>
-      )}
+            <View style={styles.row}>
+              {generateWeekCells(item.weeklyCounts).map((cell) => {
+                if (cell.type === 'empty') {
+                  return <View key={cell.key} style={{ width: cellSize, height: cellSize }} />;
+                }
+                return (
+                  <DateCell
+                    key={cell.key}
+                    dayNum={cell.dayNum}
+                    count={cell.count}
+                    color={item.color}
+                    size={cellSize}
+                  />
+                );
+              })}
+            </View>
+          </ThemeCard>
+        )
+      }}
     />
   );
 }, (prev, next) => {
