@@ -69,7 +69,9 @@ const TimeRangePicker = ({
         startDate: currentRange.start.toDate(),
         endDate: currentRange.end.toDate(),
         startText: currentRange.startText,
-        endText: currentRange.endText
+        endText: currentRange.endText,
+        startDayjs: currentRange.start,
+        endDayjs: currentRange.end
       });
     }
   }, [activeType, currentRange, onRangeChange]);
@@ -204,8 +206,7 @@ const TimeRangePicker = ({
   
   // 渲染周显示的文本
   const renderWeekText = useCallback(() => {
-    const start = currentDate.startOf('week');
-    const end = currentDate.endOf('week');
+    const { start, end } = currentRange;
     
     // 如果跨年
     if(start.year() !== end.year()) {
@@ -219,7 +220,7 @@ const TimeRangePicker = ({
     else {
       return `${start.format('YYYY年MM月DD日')} - ${end.format('DD日')}`;
     }
-  }, [currentDate]);
+  }, [currentRange]);
   
   // 渲染显示的文本
   const renderDisplayText = useCallback(() => {
@@ -253,7 +254,6 @@ const TimeRangePicker = ({
             ]}
             onPress={() => {
               setActiveType(item.key);
-              setCurrentDate(dayjs());
             }}
           >
             <Text style={[
@@ -350,14 +350,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     textAlign: 'center'
-  },
-  androidPicker: {
-    width: '100%',
-    height: 260
-  },
-  iosPicker: {
-    width: '100%',
-    backgroundColor: '#fff'
   }
 });
 

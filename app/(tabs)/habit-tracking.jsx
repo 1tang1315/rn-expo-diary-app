@@ -49,39 +49,32 @@ const HabitTracking = () => {
   
   return (
     <ThemeSafeAreaView>
-      <ThemeView style={styles.container}>
-        {/* 统计卡片 */}
-        <StatsCard />
+      {/* 统计卡片 */}
+      <StatsCard />
+      
+      {/* 打卡统计 */}
+      <ThemeCard style={styles.checkStatContainer}>
+        <TimeRangePicker onRangeChange={handleDateChange} />
         
-        {/* 打卡统计 */}
-        <ThemeCard style={styles.checkStatContainer}>
-          <TimeRangePicker onRangeChange={handleDateChange} />
-          
-          {loading ? (
-            <View style={styles.loading}>
-              <Text>加载数据中...</Text>
-            </View>
-          ) : (
-            <CheckStat
-              data={statsData}
-              viewType={viewType}
-              dateRange={dateRange}
-            />
-          )}
-        </ThemeCard>
-      </ThemeView>
+        {loading ? (
+          <View style={styles.loading}>
+            <Text>加载数据中...</Text>
+          </View>
+        ) : (
+          <CheckStat
+            data={statsData}
+            viewType={viewType}
+            dateRange={dateRange}
+          />
+        )}
+      </ThemeCard>
     </ThemeSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 0
-  },
   checkStatContainer: {
-    flex: 1,
-    padding: 10
+    flex: 1
   },
   loading: {
     flex: 1,

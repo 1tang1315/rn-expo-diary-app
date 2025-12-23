@@ -62,16 +62,13 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 162,
-    height: 80,
-    paddingTop: 0,
-    marginTop: 0
+    width: '49%',
+    height: 70
   },
   statValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
+    color: '#333'
   },
   statLabel: {
     fontSize: 12,
