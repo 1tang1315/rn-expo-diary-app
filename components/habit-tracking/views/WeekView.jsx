@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React from 'react';
 import {
   FlatList, StyleSheet, View
 } from 'react-native';
@@ -8,7 +8,7 @@ import DateCell from "@/components/habit-tracking/components/calendar/DateCell";
 import ThemeCard from "@/components/theme/ThemeCard";
 import dayjs from "dayjs";
 
-const WeekView = memo(({ items, weekStartDate }) => {
+const WeekView = ({ items, weekStartDate }) => {
   const generateWeekCells = (weeklyCounts) => {
     const cells = [];
     const firstDayOfWeek = weekStartDate || dayjs().startOf('week');
@@ -70,11 +70,7 @@ const WeekView = memo(({ items, weekStartDate }) => {
       }}
     />
   );
-}, (prev, next) => {
-    return prev.weekStartDate === next.weekStartDate &&
-      prev.items.length === next.items.length;
-});
-WeekView.displayName = 'WeekView';
+};
 
 const styles = StyleSheet.create({
   scrollContainer: {

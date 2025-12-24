@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import TitleHeader from '../components/TitleHeader';
 import WeekHeader from '../components/calendar/WeekHeader';
@@ -7,7 +7,7 @@ import {
 } from "@/components/habit-tracking/components/calendar/CalendarLayout";
 import { useTheme } from "@/context/ThemeContext";
 
-const MonthView = memo(({ items, year, month }) => {
+const MonthView = ({ items, year, month }) => {
   const { theme } = useTheme();
   
   // 预生成日历格子数据
@@ -74,11 +74,7 @@ const MonthView = memo(({ items, year, month }) => {
       extraData={items}
     />
   );
-}, (prev, next) => {
-  return prev.month === next.month &&
-    prev.items.length === next.items.length;
-});
-MonthView.displayName = 'MonthView';
+};
 
 const styles = StyleSheet.create({
   scrollContainer: {

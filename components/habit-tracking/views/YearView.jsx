@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react";
+import React, { useMemo } from "react";
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
 import WeekHeader from "@/components/habit-tracking/components/calendar/WeekHeader";
 import TitleHeader from "@/components/habit-tracking/components/TitleHeader";
@@ -7,7 +7,7 @@ import {
 } from "@/components/habit-tracking/components/calendar/CalendarLayout";
 import { useTheme } from "@/context/ThemeContext";
 
-const YearView = memo(({ items, year }) => {
+const YearView = ({ items, year }) => {
   const { theme } = useTheme();
   
   // 预计算有数据的月份
@@ -157,12 +157,7 @@ const YearView = memo(({ items, year }) => {
       extraData={items}
     />
   );
-}, (prev, next) => {
-  return prev.year === next.year &&
-    prev.items.length === next.items.length;
-});
-YearView.displayName = 'YearView';
-
+};
 export default YearView;
 
 const styles = StyleSheet.create({
