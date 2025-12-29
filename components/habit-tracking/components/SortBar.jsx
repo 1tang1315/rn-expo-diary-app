@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { useTheme } from "@/context/ThemeContext";
 import ThemeText from "@/components/theme/ThemeText";
 import { SORT_TYPES, useSortConfig } from "@/context/SortConfigContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const SortModal = ({ visible, onClose, sortOptions, currentSort, onSelect, theme }) => {
   if (!visible) return null;
@@ -47,10 +48,10 @@ const SortModal = ({ visible, onClose, sortOptions, currentSort, onSelect, theme
 
 const SortBar = () => {
   const { theme } = useTheme();
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const { currentSort, updateSort } = useSortConfig();
   
-  // 排序选项
   const sortOptions = [
     { label: '默认排序', value: SORT_TYPES.DEFAULT },
     { label: '名称升序', value: SORT_TYPES.NAME_ASC },
@@ -59,9 +60,20 @@ const SortBar = () => {
     { label: '次数降序', value: SORT_TYPES.COUNT_DESC },
     { label: '时长升序', value: SORT_TYPES.DURATION_ASC },
     { label: '时长降序', value: SORT_TYPES.DURATION_DESC },
+    { label: '自定义排序', value: SORT_TYPES.CUSTOM },
   ];
   
   const label = sortOptions.find(i => i.value === currentSort)?.label || '默认排序';
+  
+  const handleSelectSort = (sortType) => {
+    if (sortType === SORT_TYPES.CUSTOM) {
+      setModalVisible(false);
+      router.push('/drag-drop-list-page');
+    } else {
+      updateSort(sortType);
+      setModalVisible(false);
+    }
+  };
   
   return (
     <>
@@ -82,7 +94,7 @@ const SortBar = () => {
         onClose={() => setModalVisible(false)}
         sortOptions={sortOptions}
         currentSort={currentSort}
-        onSelect={updateSort} // 直接调用Context的修改方法
+        onSelect={handleSelectSort}
         theme={theme}
       />
     </>

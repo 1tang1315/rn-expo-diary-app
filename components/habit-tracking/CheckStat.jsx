@@ -1,17 +1,17 @@
+import EmptyContainer from '@/components/common/EmptyContainer';
+import { useTheme } from '@/context/ThemeContext';
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import EmptyContainer from '@/components/common/EmptyContainer';
 import SortBar from './components/SortBar';
 
-import DayView from './views/DayView';
-import WeekView from './views/WeekView';
-import MonthView from './views/MonthView';
-import YearView from './views/YearView';
-import dayjs from "dayjs";
+import { useSortConfig } from "@/context/SortConfigContext";
 import { getCategoryName } from "@/utils/categoryUtils";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
-import { useSortConfig } from "@/context/SortConfigContext";
+import dayjs from "dayjs";
+import DayView from './views/DayView';
+import MonthView from './views/MonthView';
+import WeekView from './views/WeekView';
+import YearView from './views/YearView';
 
 // region start 常量 + 函数(折叠代码注释)
 const VIEW_TYPES = {
@@ -153,8 +153,14 @@ const formatEventData = (eventMap, viewType) => {
 };
 
 // 排序数据
-const sortEventData = (data, sortType) => {
+const sortEventData = (data, sortType, customSortData = []) => {
   const sortedData = [...data]; // 避免修改原数组
+  
+  // 支持自定义排序函数
+  if (typeof sortType === 'function') {
+    return sortedData.sort(sortType);
+  }
+  
   switch (sortType) {
     case 'name_asc':
       return sortedData.sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'));
@@ -168,6 +174,23 @@ const sortEventData = (data, sortType) => {
       return sortedData.sort((a, b) => a.totalMinutes - b.totalMinutes);
     case 'duration_desc':
       return sortedData.sort((a, b) => b.totalMinutes - a.totalMinutes);
+    case 'custom':
+      if (customSortData.length > 0) {
+        const sortOrderMap = new Map(
+          customSortData.map((item, index) => [item.title, index])
+        );
+        return sortedData.sort((a, b) => {
+          const orderA = sortOrderMap.get(a.title);
+          const orderB = sortOrderMap.get(b.title);
+          if (orderA !== undefined && orderB !== undefined) {
+            return orderA - orderB;
+          }
+          if (orderA !== undefined) return -1;
+          if (orderB !== undefined) return 1;
+          return 0;
+        });
+      }
+      return sortedData;
     default:
       return sortedData;
   }
@@ -180,7 +203,7 @@ const CheckStat = ({
   dateRange
 }) => {
   const { theme } = useTheme();
-  const { currentSort, isLoading } = useSortConfig();
+  const { currentSort, isLoading, customSortData } = useSortConfig();
   
   // 解析当前年月 周范围
   const { currentYear, currentMonth, weekStartDate } = useMemo(() => {
@@ -213,8 +236,8 @@ const CheckStat = ({
     const formattedData = formatEventData(eventMap, viewType);
     
     // 4. 排序数据
-    return sortEventData(formattedData, currentSort);
-  }, [isLoading, data, viewType, currentSort, dateRange]);
+    return sortEventData(formattedData, currentSort, customSortData);
+  }, [isLoading, data, viewType, currentSort, customSortData, dateRange]);
   
   if(!viewData.length) {
     return (

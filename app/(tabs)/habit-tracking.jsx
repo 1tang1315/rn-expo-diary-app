@@ -3,7 +3,6 @@ import { StyleSheet, View, Text } from 'react-native';
 import TimeRangePicker from "@/components/common/TimeRangePicker";
 import CheckStat from "@/components/habit-tracking/CheckStat";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
-import ThemeView from "@/components/theme/ThemeView";
 import StatsCard from "@/components/habit-tracking/StatsCard";
 import dayjs from "dayjs";
 import { getEventsByDateRange } from "@/db/eventDB";
@@ -52,7 +51,6 @@ const HabitTracking = () => {
       {/* 统计卡片 */}
       <StatsCard />
       
-      {/* 打卡统计 */}
       <ThemeCard style={styles.checkStatContainer}>
         <TimeRangePicker onRangeChange={handleDateChange} />
         

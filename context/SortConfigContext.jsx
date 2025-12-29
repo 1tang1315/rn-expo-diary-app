@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 // 创建Context
 const SortConfigContext = createContext();
@@ -13,7 +13,11 @@ export const SORT_TYPES = {
   COUNT_DESC: 'count_desc',
   DURATION_ASC: 'duration_asc',
   DURATION_DESC: 'duration_desc',
+  CUSTOM: 'custom',
 };
+
+// 自定义排序数据存储key
+const CUSTOM_SORT_STORAGE_KEY = 'check_stat_custom_sort';
 
 // 默认排序值
 const DEFAULT_SORT = SORT_TYPES.DEFAULT;
@@ -24,14 +28,18 @@ const STORAGE_KEY = 'check_stat_sort';
 export const SortConfigProvider = ({ children }) => {
   const [currentSort, setCurrentSort] = useState(DEFAULT_SORT);
   const [isLoading, setIsLoading] = useState(true);
+  const [customSortData, setCustomSortData] = useState([]);
   
   // 初始化：从本地加载排序配置
   useEffect(() => {
     const loadSortConfig = async () => {
       try {
         const savedSort = await AsyncStorage.getItem(STORAGE_KEY);
-        // 优先使用本地存储，无则用默认值
+        const savedCustomSort = await AsyncStorage.getItem(CUSTOM_SORT_STORAGE_KEY);
         setCurrentSort(savedSort || DEFAULT_SORT);
+        if (savedCustomSort) {
+          setCustomSortData(JSON.parse(savedCustomSort));
+        }
       } catch (err) {
         console.error('加载排序配置失败：', err);
         setCurrentSort(DEFAULT_SORT);
@@ -54,12 +62,28 @@ export const SortConfigProvider = ({ children }) => {
     }
   }, []);
   
+  // 更新自定义排序数据
+  const updateCustomSort = useCallback(async (sortedData) => {
+    try {
+      const dataWithIds = sortedData.map((item, index) => ({
+        ...item,
+        customSortOrder: index
+      }));
+      setCustomSortData(dataWithIds);
+      await AsyncStorage.setItem(CUSTOM_SORT_STORAGE_KEY, JSON.stringify(dataWithIds));
+    } catch (err) {
+      console.error('保存自定义排序失败：', err);
+    }
+  }, []);
+  
   
   // 暴露给子组件的上下文值
   const value = {
     currentSort,
     isLoading,
     updateSort,
+    updateCustomSort,
+    customSortData,
     SORT_TYPES,
   };
   
