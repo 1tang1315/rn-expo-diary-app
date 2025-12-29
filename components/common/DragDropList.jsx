@@ -5,6 +5,7 @@ import {
 } from 'react-native-gesture-handler';
 import Icon from "@/components/common/Icon";
 import EmptyContainer from "@/components/common/EmptyContainer";
+import { useTheme } from "@/context/ThemeContext";
 
 // 适配Android布局动画
 if(Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,6 +34,8 @@ const DragDropList = ({
   keyExtractor = (item) => item.id, // 自定义key提取函数
   renderItem = (item) => <Text style={styles.defaultItemText}>{item.text}</Text>, // 自定义渲染每一项
 }) => {
+  const { theme } = useTheme();
+  
   // 内部维护一份数据副本用于拖拽操作
   const [list, setList] = useState([...data]);
   
@@ -55,8 +58,11 @@ const DragDropList = ({
   const isAnimating = useRef(false); // 吸附动画锁
   const autoScrollTimer = useRef(null); // 自动滚动定时器
   
-  const memoizedKeyExtractor = keyExtractor;
-  const memoizedRenderItem = renderItem;
+  // 提前初始化自动滚动方向引用，避免undefined报错
+  const autoScrollDirection = useRef(null);
+  
+  const memoizedKeyExtractor = useCallback((item) => keyExtractor(item), [keyExtractor]);
+  const memoizedRenderItem = useCallback((item) => renderItem(item), [renderItem]);
   
   // 监听外部数据变化，同步更新内部列表
   useEffect(() => {
@@ -78,7 +84,9 @@ const DragDropList = ({
   }, [list.length, dragY]);
   
   const stopAutoScroll = useCallback(() => {
-    autoScrollDirection.current = null;
+    if (autoScrollDirection.current) {
+      autoScrollDirection.current = null;
+    }
     if(autoScrollTimer.current) {
       clearInterval(autoScrollTimer.current);
       autoScrollTimer.current = null;
@@ -99,6 +107,7 @@ const DragDropList = ({
       toValue: snapOffset,
       duration: SNAP_ANIMATION_DURATION,
       useNativeDriver: false,
+      isInteraction: false, // 新增：避免动画阻塞滚动交互
     }).start(() => {
       // 动画完成后更新列表
       if(targetIndex !== activeIndex) {
@@ -121,6 +130,7 @@ const DragDropList = ({
     });
   }, [draggingItemId, activeIndex, targetIndex, list, dragY, stopAutoScroll, onSortEnd]);
   
+  // 调整自动滚动速度，提升顺滑度
   const startAutoScroll = useCallback((direction, distance) => {
     if(autoScrollDirection.current === direction) return;
     
@@ -128,37 +138,47 @@ const DragDropList = ({
     autoScrollDirection.current = direction;
     
     autoScrollTimer.current = setInterval(() => {
-      const speed = Math.max(4, distance * 0.8); // 最小速度保障
+      const speed = Math.max(2, distance * 0.4); // 降低最小速度和系数，提升顺滑度
       
       let nextY =
         direction === 'up'
           ? scrollY.current - speed
           : scrollY.current + speed;
       
-      const maxY = contentHeight.current - containerHeight.current;
+      const maxY = Math.max(0, contentHeight.current - containerHeight.current);
       nextY = Math.max(0, Math.min(maxY, nextY));
       
-      scrollViewRef.current?.scrollTo({
-        y: nextY,
-        animated: false
-      });
+      // 避免重复滚动，提升性能
+      if (scrollY.current !== nextY) {
+        scrollY.current = nextY;
+        scrollViewRef.current?.scrollTo({
+          y: nextY,
+          animated: false
+        });
+      }
     }, 16);
   }, [stopAutoScroll]);
   
+  // 结合滚动偏移计算手势位置，准确触发自动滚动
   const checkAutoScroll = useCallback((fingerY) => {
-    if(!containerHeight.current || list.length === 0) return;
+    if(!containerHeight.current || list.length === 0 || draggingItemId === null) return;
     
     const topEdge = AUTO_SCROLL_THRESHOLD;
     const bottomEdge = containerHeight.current - AUTO_SCROLL_THRESHOLD;
+    const adjustedFingerY = fingerY - scrollY.current; // 结合当前滚动偏移，修正手势位置
     
-    if(fingerY < topEdge) {
-      startAutoScroll('up', topEdge - fingerY);
-    } else if(fingerY > bottomEdge) {
-      startAutoScroll('down', fingerY - bottomEdge);
+    if(adjustedFingerY < topEdge) {
+      // 向上自动滚动
+      const distance = topEdge - adjustedFingerY;
+      startAutoScroll('up', distance);
+    } else if(adjustedFingerY > bottomEdge) {
+      // 向下自动滚动
+      const distance = adjustedFingerY - bottomEdge;
+      startAutoScroll('down', distance);
     } else {
       stopAutoScroll();
     }
-  }, [list.length, startAutoScroll, stopAutoScroll]);
+  }, [list.length, draggingItemId, startAutoScroll, stopAutoScroll]);
   
   // 处理手势移动的监听函数
   const gestureEventListener = useCallback((event) => {
@@ -195,6 +215,7 @@ const DragDropList = ({
     }
   );
   
+  // 合并重复手势，添加手势优先级配置，解决冲突
   const onPanStateChange = useCallback((e, item, index) => {
     // 空数据时直接返回
     if(list.length === 0) return;
@@ -208,7 +229,7 @@ const DragDropList = ({
     }
     
     if(state === State.ACTIVE) {
-      // 如果手指提前移动，取消长按
+      // 如果手指提前移动，取消长按，优先响应滚动
       if(!draggingItemId) {
         clearTimeout(longPressTimer.current);
       }
@@ -220,9 +241,6 @@ const DragDropList = ({
       stopAutoScroll(); // 停止自动滚动
     }
   }, [list.length, draggingItemId, handleGestureStart, handleGestureEnd, stopAutoScroll, memoizedKeyExtractor]);
-  
-  // 自动滚动方向引用
-  const autoScrollDirection = useRef(null);
   
   // 处理ScrollView滚动
   const handleScroll = useCallback((event) => {
@@ -300,8 +318,7 @@ const DragDropList = ({
   }, []);
   
   return (
-    <GestureHandlerRootView
-      style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       {list.length === 0 ? (
         <EmptyContainer />
       ) : (
@@ -313,6 +330,11 @@ const DragDropList = ({
           onContentSizeChange={handleContentSizeChange}
           onLayout={handleContainerLayout}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={!draggingItemId}
+          bounces={true}
+          decelerationRate="normal"
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={true}
         >
           <View style={[
             styles.listContainer,
@@ -328,7 +350,6 @@ const DragDropList = ({
             
             {/* 可拖拽列表项 */}
             {list.map((item, index) => {
-              // 原有列表项渲染逻辑保持不变
               const itemId = memoizedKeyExtractor(item);
               return (
                 <Animated.View
@@ -337,39 +358,26 @@ const DragDropList = ({
                     styles.listItem,
                     getItemStyle(item, index),
                     draggingItemId === itemId && styles.draggingItem,
+                    {backgroundColor: theme.colors.innerCard || '#f5f5f5'} // 增加默认值，避免报错
                   ]}
                 >
-                  {/* 原有列表项内容保持不变 */}
+                  {/* 内容区 */}
+                  <View style={styles.content}>
+                    {memoizedRenderItem(item)}
+                  </View>
+                  
+                  {/* 拖拽手柄区 */}
                   <PanGestureHandler
                     onHandlerStateChange={(e) => onPanStateChange(e, item, index)}
                     onGestureEvent={handleGestureEvent}
-                  >
-                    <View style={styles.content}>
-                      {memoizedRenderItem(item)}
-                    </View>
-                  </PanGestureHandler>
-                  
-                  <PanGestureHandler
-                    onHandlerStateChange={(e) => {
-                      if(list.length === 0) return;
-                      if(e.nativeEvent.state === State.BEGAN) {
-                        handleGestureStart(e, itemId, index);
-                      }
-                      if(
-                        e.nativeEvent.state === State.END ||
-                        e.nativeEvent.state === State.CANCELLED
-                      ) {
-                        handleGestureEnd();
-                      }
-                    }}
-                    onGestureEvent={handleGestureEvent}
+                    shouldCancelWhenOutside={false} // 避免移出组件后取消手势
+                    minDist={5} // 最小移动距离，避免误触
                   >
                     <View style={styles.handle}>
                       <Icon
                         lib={"MaterialIcons"}
                         name="drag-handle"
                         size={24}
-                        color="#fff"
                       />
                     </View>
                   </PanGestureHandler>
@@ -414,7 +422,7 @@ const styles = StyleSheet.create({
   },
   defaultItemText: {
     fontSize: 18,
-    color: '#fff',
+    color: '#333',
     fontWeight: '500'
   },
   listItem: {
@@ -436,10 +444,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'grab'
-  },
-  handleIcon: {
-    fontSize: 22,
-    color: '#fff'
   }
 });
 

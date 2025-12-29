@@ -141,7 +141,7 @@ const DragDropListPage = () => {
     return (
       <View style={styles.itemContent}>
         <Text style={[styles.itemText, { color: theme.colors.text }]}>{item.title}</Text>
-        <Text style={[styles.itemCount, { color: theme.colors.textSecondary }]}>次数: {item.count}</Text>
+        <Text style={[styles.itemCount, { color: theme.colors.subText }]}>次数: {item.count}</Text>
       </View>
     );
   }, [theme]);

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import ThemeCard from "@/components/theme/ThemeCard";
 import { getEventStats } from "@/db/eventDB";
+import ThemeText from "@/components/theme/ThemeText";
+import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 
 const StatsCard = ({ stats = [] }) => {
   const [realStats, setRealStats] = useState([]);
@@ -45,8 +47,8 @@ const StatsCard = ({ stats = [] }) => {
     <View style={styles.cardContainer}>
       {renderStats.map((item, index) => (
         <ThemeCard key={index} style={styles.statItem}>
-          <Text style={styles.statValue}>{item.value}</Text>
-          <Text style={styles.statLabel}>{item.label}</Text>
+          <ThemeText style={styles.statValue}>{item.value}</ThemeText>
+          <ThemeSubTitleText style={styles.statLabel}>{item.label}</ThemeSubTitleText>
         </ThemeCard>
       ))}
     </View>
@@ -67,12 +69,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#333'
+    fontWeight: '700'
   },
   statLabel: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12
   },
 });
 

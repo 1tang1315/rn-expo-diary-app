@@ -67,8 +67,13 @@ const SortBar = () => {
   
   const handleSelectSort = (sortType) => {
     if (sortType === SORT_TYPES.CUSTOM) {
-      setModalVisible(false);
-      router.push('/drag-drop-list-page');
+      if (currentSort === SORT_TYPES.CUSTOM) {
+        setModalVisible(false);
+        router.push('/drag-drop-list-page');
+      } else {
+        updateSort(sortType);
+        setModalVisible(false);
+      }
     } else {
       updateSort(sortType);
       setModalVisible(false);
@@ -85,7 +90,7 @@ const SortBar = () => {
           style={styles.sortButton}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={styles.sortText}>{label}</Text>
+          <ThemeText style={styles.sortText}>{label}</ThemeText>
         </TouchableOpacity>
       </View>
       
@@ -180,7 +185,8 @@ const styles = StyleSheet.create({
   sortText: {
     marginRight: 4,
     fontSize: 14,
-    fontWeight: '500'
+    fontWeight: '500',
+    textAlign: 'center'
   },
 });
 
