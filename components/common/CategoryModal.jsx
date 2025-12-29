@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import ThemeTitleText from "@/components/theme/ThemeTitleText";
-import Icon from "@/components/common/Icon";
-import { useTheme } from "@/context/ThemeContext";
+import {
+  Text, ScrollView, StyleSheet
+} from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import Icon from '@/components/common/Icon';
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
-import ThemeCard from "@/components/theme/ThemeCard";
+import BaseModal from "@/components/common/BaseModal";
 
 /**
- * 分类选择弹窗独立组件
+ * 基于BaseModal的分类选择弹窗组件
  * @props {boolean} visible - 弹窗显示状态
  * @props {Function} onClose - 关闭弹窗回调
  * @props {string} selectedCategory - 当前选中的分类ID
@@ -15,125 +16,102 @@ import ThemeCard from "@/components/theme/ThemeCard";
  * @props {Function} onSelect - 选择分类后的回调
  */
 const CategoryModal = ({
-  visible, onClose, selectedCategory, categories, onSelect
+  visible,
+  onClose,
+  selectedCategory,
+  categories,
+  onSelect
 }) => {
   const { theme } = useTheme();
   
+  // 选择分类并关闭弹窗
+  const handleSelect = (categoryId) => {
+    onSelect(categoryId);
+    onClose(); // 选择后自动关闭弹窗
+  };
+  
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
+    <BaseModal
       visible={visible}
-      onRequestClose={onClose}
+      onClose={onClose}
+      title="选择分类"
+      showFooter={false}
+      style={styles.categoryModalContent}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.categoryModalOverlay}>
-          <TouchableWithoutFeedback>
-            <ThemeCard
-              margin={0}
-              borderRadius={0}
-              style={styles.categoryModalContent}
+      {/* 分类列表内容 */}
+      <ScrollView
+        style={[
+          styles.categoryList,
+          {
+            backgroundColor: theme.colors.innerCard
+          }
+        ]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          gap: 8
+        }}
+      >
+        {categories
+          .filter(tab => !tab.isFixed) // 排除"全部"分类
+          .map(category => (
+            <ThemeTouchableOpacity
+              key={category.id}
+              style={[
+                styles.categoryItem,
+                selectedCategory === category.id && {
+                  borderWidth: 1,
+                  borderColor: theme.colors.interactive,
+                  backgroundColor: theme.colors.innerCard
+                }
+              ]}
+              onPress={() => handleSelect(category.id)}
             >
-              {/* 弹窗头部 */}
-              <View style={styles.categoryModalHeader}>
-                <ThemeTitleText style={styles.categoryModalTitle}>选择分类</ThemeTitleText>
-                <TouchableOpacity style={styles.categoryModalClose} onPress={onClose}>
-                  <Icon lib="MaterialIcons" name="close" size={24} />
-                </TouchableOpacity>
-              </View>
-              
-              {/* 分类列表 */}
-              <ScrollView
-                style={[
-                  styles.categoryList,
-                  {
-                    padding: 10,
-                    borderRadius: 10,
-                    backgroundColor: theme.colors.innerCard
-                  }
-                ]}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom: 10}}
-              >
-                {categories
-                  .filter(tab => !tab.isFixed) // 排除"全部"分类
-                  .map(category => (
-                    <ThemeTouchableOpacity
-                      key={category.id}
-                      style={[
-                        styles.categoryItem,
-                        selectedCategory === category.id && {
-                          borderWidth: 1,
-                          borderColor: theme.colors.interactive,
-                          backgroundColor: theme.colors.innerCard
-                        }
-                      ]}
-                      onPress={() => onSelect(category.id)}
-                    >
-                      <Icon
-                        lib="MaterialIcons"
-                        name={category.icon}
-                        size={20}
-                        color={ selectedCategory === category.id ? theme.colors.interactive : theme.colors.interactiveLight }
-                      />
-                      <Text style={[
-                        styles.categoryItemText,
-                        {color: theme.colors.interactiveLight},
-                        selectedCategory === category.id && {
-                          fontWeight: '500',
-                          color: theme.colors.interactive
-                        }
-                      ]}>
-                        {category.name}
-                      </Text>
-                      {selectedCategory === category.id && (
-                        <Icon lib="MaterialIcons" name="check" size={18} />
-                      )}
-                    </ThemeTouchableOpacity>
-                  ))}
-              </ScrollView>
-            </ThemeCard>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+              <Icon
+                lib="MaterialIcons"
+                name={category.icon}
+                size={20}
+                color={selectedCategory === category.id ? theme.colors.interactive : theme.colors.interactiveLight}
+              />
+              <Text style={[
+                styles.categoryItemText,
+                { color: theme.colors.interactiveLight },
+                selectedCategory === category.id && {
+                  fontWeight: '500',
+                  color: theme.colors.interactive
+                }
+              ]}>
+                {category.name}
+              </Text>
+              {selectedCategory === category.id && (
+                <Icon
+                  lib="MaterialIcons"
+                  name="check"
+                  size={18}
+                  color={theme.colors.interactive}
+                />
+              )}
+            </ThemeTouchableOpacity>
+          ))}
+      </ScrollView>
+    </BaseModal>
   );
 };
 
-// 弹窗专属样式
 const styles = StyleSheet.create({
-  categoryModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end'
-  },
   categoryModalContent: {
     maxHeight: '60%',
-    padding: 10,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10
-  },
-  categoryModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10
-  },
-  categoryModalTitle: {
-    fontSize: 18
-  },
-  categoryModalClose: {
-    padding: 4
+    minHeight: '60%'
   },
   categoryList: {
-    flexGrow: 1
+    flexGrow: 1,
+    padding: 1,
+    borderRadius: 10
   },
   categoryItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderRadius: 8,
-    marginBottom: 8,
     justifyContent: 'space-between'
   },
   categoryItemText: {

@@ -21,7 +21,7 @@ export const categoryIcons = {
   daily: [
     'access-time', 'face', 'bathtub', 'bathroom', 'local-laundry-service',
     'cleaning-services', 'home', 'air', 'child-care', 'pets', 'smoke-free',
-    'free-breakfast', 'mood', 'sentiment-very-satisfied'
+    'free-breakfast', 'mood'
   ],
   work: [
     'work', 'meeting-room', 'file-copy', 'task', 'business', 'call',
