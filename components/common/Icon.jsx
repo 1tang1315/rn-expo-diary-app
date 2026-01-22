@@ -1,7 +1,9 @@
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { FontAwesome, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  Ionicons, AntDesign, FontAwesome, FontAwesome5,
+  MaterialIcons, MaterialCommunityIcons
+} from '@expo/vector-icons';
 
 export default function Icon({
   lib = 'Ionicons',
@@ -18,8 +20,14 @@ export default function Icon({
     case 'Ionicons':
       IconComponent = Ionicons;
       break;
+    case 'AntDesign':
+      IconComponent = AntDesign;
+      break;
     case 'FontAwesome':
       IconComponent = FontAwesome;
+      break;
+    case 'FontAwesome5':
+      IconComponent = FontAwesome5;
       break;
     case 'MaterialIcons':
       IconComponent = MaterialIcons;
