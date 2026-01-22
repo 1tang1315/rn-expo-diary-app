@@ -135,7 +135,25 @@ const baseThemes = {
     error: '#ef4444',
     warning: '#f59e0b',
     success: '#10b981',
-  }
+  },
+  cream: {
+    background: '#FBF6E5', // 核心色调 #FBF6E5
+    card: '#F9F1D8',       // 基于核心色微调的浅色调
+    innerCard: '#F7EBCB',   // 基于核心色微调的更深一点的色调
+    text: '#0f172a',
+    subText: '#475569',
+    border: '#EFE6CC',     // 基于核心色微调的边框色
+    dim: '#D4C8A0',        // 基于核心色微调的暗色调
+    primary: '#D9B97B',    // 搭配的主色调（暖棕色，适配奶油色）
+    active: '#C8A665',     // 激活态色调
+    inactive: '#E8D9B0',   // 未激活态色调
+    weekend: '#C8A665',    // 周末标识色
+    holiday: '#dc2626',
+    today: '#16a34a',
+    error: '#ef4444',
+    warning: '#f59e0b',
+    success: '#10b981',
+  },
 };
 
 function hexToRgb(hex) {

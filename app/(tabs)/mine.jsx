@@ -37,6 +37,10 @@ const MODE_LIST = [
   {
     key: 'purple',
     label: '紫色'
+  },
+  {
+    key: 'cream',
+    label: '奶油色'
   }
 ];
 
