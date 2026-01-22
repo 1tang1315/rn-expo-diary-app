@@ -1,7 +1,11 @@
-import React, { useState } from "react";
-import { Text, TouchableOpacity, View, StyleSheet, Pressable, Alert, Modal } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Clipboard from 'expo-clipboard';
+import React, { useState } from "react";
+import {
+  Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View
+} from "react-native";
+import ThemeCard from "@/components/theme/ThemeCard";
+import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 
 export const HistoryMessage = ({ message }) => {
   const [isThoughtCollapsed, setIsThoughtCollapsed] = useState(true);
@@ -41,9 +45,9 @@ export const HistoryMessage = ({ message }) => {
             key={message.id}
             style={styles.aiMessageContainer}
           >
-            <View style={styles.aiMessageBubble}>
+            <ThemeCard style={styles.aiMessageBubble}>
               {message.thought?.trim() && (
-                <View style={styles.thoughtContainer}>
+                <ThemeCard innerCard={true}>
                   <TouchableOpacity
                     style={styles.thoughtHeader}
                     onPress={() => setIsThoughtCollapsed(!isThoughtCollapsed)}
@@ -60,15 +64,11 @@ export const HistoryMessage = ({ message }) => {
                       {message.thought.trim()}
                     </Text>
                   )}
-                </View>
+                </ThemeCard>
               )}
               
-              <View style={styles.outputContainer}>
-                <Text style={styles.outputText}>
-                  {message.content.trim()}
-                </Text>
-              </View>
-            </View>
+              <MarkdownRenderer content={message.content.trim()} />
+            </ThemeCard>
           </Pressable>
         )
       }
@@ -131,17 +131,9 @@ const styles = StyleSheet.create({
   aiMessageBubble: {
     maxWidth: '100%',
     padding: 12,
-    backgroundColor: '#fff',
     borderRadius: 10
   },
   
-  thoughtContainer: {
-    backgroundColor: '#f4f4f4',
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#828181'
-  },
   thoughtHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -158,17 +150,6 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 18,
     fontStyle: 'italic',
-  },
-  outputContainer: {
-    padding: 10,
-    minHeight: 20,
-    borderRadius: 5,
-    backgroundColor: '#fff',
-  },
-  outputText: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
   },
   
   // 弹窗相关样式

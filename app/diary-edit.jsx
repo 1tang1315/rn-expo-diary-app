@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from "react";
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, ScrollView
-} from "react-native";
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { getNoteById, updateNote, createNote } from '@/db/notesDB';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { formatDatetime } from "@/utils/formatTimeUtils";
 import Icon from "@/components/common/Icon";
-import { useTheme } from "@/context/ThemeContext";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import { useTheme } from "@/context/ThemeContext";
+import { createNote, getNoteById, updateNote } from '@/db/notesDB';
+import { formatDatetime } from "@/utils/formatTimeUtils";
+import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View,
+  StyleSheet
+} from "react-native";
+import MarkdownEditor from "@/components/common/MarkdownEditor";
 
 export default function DiaryEdit() {
   const { theme } = useTheme();
@@ -207,13 +206,15 @@ export default function DiaryEdit() {
             disabled={historyIndex <= 0 || isLoading}
             style={styles.iconButton}
           >
-            <MaterialCommunityIcons
+            <Icon
+              lib={"MaterialCommunityIcons"}
               name="undo-variant"
               size={24}
               color={
                 historyIndex <= 0 || isLoading
                   ? theme.colors.interactiveLight
-                  : theme.colors.interactive}
+                  : theme.colors.interactive
+            }
             />
           </TouchableOpacity>
           
@@ -223,7 +224,8 @@ export default function DiaryEdit() {
             disabled={historyIndex >= history.length - 1 || isLoading}
             style={styles.iconButton}
           >
-            <MaterialCommunityIcons
+            <Icon
+              lib={"MaterialCommunityIcons"}
               name="redo-variant"
               size={24}
               color={
@@ -238,7 +240,8 @@ export default function DiaryEdit() {
             onPress={handleSave}
             style={styles.iconButton}
           >
-            <Ionicons
+            <Icon
+              lib={"Ionicons"}
               name="checkmark"
               size={24}
               color={
@@ -258,13 +261,10 @@ export default function DiaryEdit() {
         </View>
       )}
       
-      <ScrollView
-        style={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.titleContent}>
+      <View style={styles.contentContainer}>
+        <View>
           <TextInput
-            style={styles.titleInput}
+            style={[styles.titleInput, {color: theme.colors.interactive}]}
             value={title}
             onChangeText={setTitle}
             placeholder="请输入标题"
@@ -291,25 +291,20 @@ export default function DiaryEdit() {
           </View>
         </View>
         
-        {/* 内容输入区 */}
-        <TextInput
-          style={styles.contentInput}
-          multiline
+        <MarkdownEditor
           value={content}
           onChangeText={setContent}
           placeholder="请输入日记内容..."
-          textAlignVertical="top"
           editable={!isLoading}
         />
-      </ScrollView>
+      </View>
     </ThemeSafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 16
+    flex: 1
   },
   loadingContainer: {
     flex: 1,
@@ -347,10 +342,6 @@ const styles = StyleSheet.create({
   
   contentContainer: {
     flex: 1,
-    gap: 12,
-  },
-  titleContent: {
-    paddingBottom: 8,
   },
   titleInput: {
     minHeight: 30,
@@ -358,14 +349,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 0,
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: 'bold'
   },
   infoBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 5,
   },
   infoLeft: {
     width: '50%',
@@ -387,15 +377,5 @@ const styles = StyleSheet.create({
   infoSeparator: {
     fontSize: 12,
     color: '#666',
-  },
-  
-  contentInput: {
-    flex: 1,
-    minHeight: '88%',
-    fontSize: 16,
-    lineHeight: 24,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
   }
 });

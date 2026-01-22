@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ScrollView, Text, TouchableOpacity, View, StyleSheet
+} from 'react-native';
+import MarkdownRenderer from './MarkdownRenderer';
+import ThemeCard from '@/components/theme/ThemeCard';
 
 const AIStreamText = ({
   content = {},
@@ -166,9 +170,9 @@ const AIStreamText = ({
         ) : null}
         
         {outputText && showOutput ? (
-          <View style={styles.outputContainer}>
-            <Text style={styles.outputText}>{display.output}</Text>
-          </View>
+          <ThemeCard>
+            <MarkdownRenderer content={display.output} />
+          </ThemeCard>
         ) : null}
       </ScrollView>
     </View>
@@ -205,18 +209,7 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 18,
     fontStyle: 'italic',
-  },
-  outputContainer: {
-    padding: 10,
-    minHeight: 20,
-    borderRadius: 5,
-    backgroundColor: '#fff',
-  },
-  outputText: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
-  },
+  }
 });
 
 export default AIStreamText;
