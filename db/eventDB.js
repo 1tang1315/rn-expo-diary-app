@@ -100,21 +100,14 @@ export async function getEventsByDateRange(startDate, endDate, sortOrder = 'desc
  */
 export async function getEventsByTitleOrDescriptionSearch(keyword) {
   const db = await getDB();
-  // 改进权重计算，优先完全匹配、开头匹配和更精确的匹配
   return await db.getAllAsync(
     `SELECT *,
        CASE
-         -- 标题完全匹配权重最高
          WHEN title = ? THEN 1
-         -- 标题以关键词开头
          WHEN title LIKE ? THEN 2
-         -- 标题包含关键词
          WHEN title LIKE ? THEN 3
-         -- 描述完全匹配
          WHEN description = ? THEN 4
-         -- 描述以关键词开头
          WHEN description LIKE ? THEN 5
-         -- 描述包含关键词
          WHEN description LIKE ? THEN 6
          ELSE 7
          END AS search_priority
@@ -122,19 +115,89 @@ export async function getEventsByTitleOrDescriptionSearch(keyword) {
      WHERE
        deleted_at IS NULL
        AND (title LIKE ? OR description LIKE ?)
-     -- 先按匹配优先级，再按开始时间倒序
      ORDER BY search_priority ASC, start_datetime DESC`,
     [
-      keyword,                   // 标题完全匹配
-      `${keyword}%`,             // 标题以关键词开头
-      `%${keyword}%`,            // 标题包含关键词
-      keyword,                   // 描述完全匹配
-      `${keyword}%`,             // 描述以关键词开头
-      `%${keyword}%`,            // 描述包含关键词
-      `%${keyword}%`,            // 用于WHERE子句的标题匹配
-      `%${keyword}%`             // 用于WHERE子句的描述匹配
+      keyword,
+      `${keyword}%`,
+      `%${keyword}%`,
+      keyword,
+      `${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`
     ]
   );
+}
+
+/**
+ * 按条件筛选搜索事件（支持搜索类型、日期范围、排序方式）
+ * @param {Object} options - 筛选选项
+ * @param {string} options.keyword - 搜索关键词
+ * @param {'title' | 'description' | 'both'} options.searchType - 搜索类型：标题/描述/全部
+ * @param {string} options.startDate - 开始日期，格式：YYYY-MM-DD
+ * @param {string} options.endDate - 结束日期，格式：YYYY-MM-DD
+ * @param {'asc' | 'desc'} options.sortOrder - 排序方式：升序/降序
+ * @returns {Promise<Array>} 匹配的事件数组
+ */
+export async function getEventsByFilters(options) {
+  const {
+    keyword,
+    searchType = 'both',
+    startDate,
+    endDate,
+    sortOrder = 'desc'
+  } = options;
+
+  const db = await getDB();
+  const validSortOrders = ['asc', 'desc'];
+  const finalSortOrder = validSortOrders.includes(sortOrder.toLowerCase())
+    ? sortOrder.toLowerCase()
+    : 'desc';
+
+  let whereConditions = ['deleted_at IS NULL'];
+  let params = [];
+
+  if (keyword && keyword.trim()) {
+    const trimmedKeyword = keyword.trim();
+    if (searchType === 'title') {
+      whereConditions.push('(title LIKE ?)');
+      params.push(`%${trimmedKeyword}%`);
+    } else if (searchType === 'description') {
+      whereConditions.push('(description LIKE ?)');
+      params.push(`%${trimmedKeyword}%`);
+    } else {
+      whereConditions.push('(title LIKE ? OR description LIKE ?)');
+      params.push(`%${trimmedKeyword}%`, `%${trimmedKeyword}%`);
+    }
+  }
+
+  if (startDate) {
+    const formattedStartDate = formatDate(startDate);
+    const formattedEndDate = formatDate(endDate) || formattedStartDate;
+    whereConditions.push(`
+      (
+        (DATE(start_datetime) BETWEEN ? AND ?)
+        OR
+        (DATE(end_datetime) BETWEEN ? AND ?)
+        OR
+        (DATE(start_datetime) <= ? AND DATE(end_datetime) >= ?)
+      )
+    `);
+    params.push(
+      formattedStartDate, formattedEndDate,
+      formattedStartDate, formattedEndDate,
+      formattedStartDate, formattedEndDate
+    );
+  }
+
+  const sql = `
+    SELECT *
+    FROM event
+    WHERE ${whereConditions.join(' AND ')}
+    ORDER BY start_datetime ${finalSortOrder}
+  `;
+
+  return await db.getAllAsync(sql, params);
 }
 
 /**
