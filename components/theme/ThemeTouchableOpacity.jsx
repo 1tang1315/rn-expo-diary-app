@@ -11,6 +11,7 @@ export default function ThemeTouchableOpacity({
   
   const combinedStyle = StyleSheet.flatten([
     {
+      minHeight: 40,
       padding: 10,
       color: theme.colors.textInverse,
       borderRadius: 10,
