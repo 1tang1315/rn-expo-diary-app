@@ -1,5 +1,6 @@
 import EmptyContainer from "@/components/common/EmptyContainer";
 import EventModal from "@/components/event/EventModal";
+import ThemePartingLine from "@/components/theme/ThemePartingLine";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeText from "@/components/theme/ThemeText";
@@ -11,13 +12,13 @@ import { getCategoryInfo } from "@/utils/categoryUtils";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
+import { AsyncStorage } from "expo-sqlite/kv-store";
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Modal,
-  StyleSheet,
+  ActivityIndicator, Alert, FlatList,
+  StyleSheet, Text,
   TouchableOpacity, View
 } from 'react-native';
-import { AsyncStorage } from "expo-sqlite/kv-store";
 
 const SearchPage = () => {
   const { theme } = useTheme();
@@ -47,9 +48,9 @@ const SearchPage = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   
   const handleSearch = async (keywordParam) => {
     try {
@@ -143,16 +144,6 @@ const SearchPage = () => {
   };
   
   const handleFilterChange = async () => {
-    setShowFilterModal(false);
-    await handleSearch();
-  };
-  
-  const handleResetFilters = async () => {
-    setSearchType('both');
-    setSortOrder('desc');
-    setStartDate(null);
-    setEndDate(null);
-    setShowFilterModal(false);
     await handleSearch();
   };
   
@@ -347,16 +338,6 @@ const SearchPage = () => {
         )}
         <TouchableOpacity
           style={[
-            styles.filterBtn, {
-              backgroundColor: theme.colors.subText
-            }
-          ]}
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Ionicons name="options-outline" size={20} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
             styles.searchBtn, {
               backgroundColor: theme.colors.interactive
             }
@@ -366,6 +347,158 @@ const SearchPage = () => {
           <Ionicons name="search-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
+      
+      {/* 过滤栏 */}
+      {(inputValue.trim() !== '' || searchResults.length > 0) && (
+        <View style={[styles.filterContainer, { backgroundColor: theme.colors.card }]}>
+          <TouchableOpacity
+            style={styles.filterHeader}
+            onPress={() => setIsFilterExpanded(!isFilterExpanded)}
+          >
+            <ThemeText style={{ fontWeight: '600' }}>筛选条件</ThemeText>
+            <Ionicons 
+              name={isFilterExpanded ? "chevron-up" : "chevron-down"} 
+              size={18} 
+              color={theme.colors.subText} 
+            />
+          </TouchableOpacity>
+          
+          {isFilterExpanded && (
+            <View style={styles.filterContent}>
+              <View style={styles.filterOptions}>
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: searchType === 'both' ? theme.colors.interactive : theme.colors.border,
+                    backgroundColor: searchType === 'both' ? theme.colors.interactive : 'transparent',
+                  }}
+                  onPress={() => setSearchType('both')}
+                >
+                  <ThemeText style={{
+                    color: searchType === 'both' ? '#fff' : theme.colors.subText,
+                    textAlign: 'center',
+                  }}>全部</ThemeText>
+                </ThemeTouchableOpacity>
+                
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: searchType === 'title' ? theme.colors.interactive : theme.colors.border,
+                    backgroundColor: searchType === 'title' ? theme.colors.interactive : 'transparent',
+                  }}
+                  onPress={() => setSearchType('title')}
+                >
+                  <ThemeText style={{
+                    color: searchType === 'title' ? '#fff' : theme.colors.subText,
+                    textAlign: 'center',
+                  }}>标题</ThemeText>
+                </ThemeTouchableOpacity>
+                
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: searchType === 'description' ? theme.colors.interactive : theme.colors.border,
+                    backgroundColor: searchType === 'description' ? theme.colors.interactive : 'transparent',
+                  }}
+                  onPress={() => setSearchType('description')}
+                >
+                  <ThemeText style={{
+                    color: searchType === 'description' ? '#fff' : theme.colors.subText,
+                    textAlign: 'center',
+                  }}>详情</ThemeText>
+                </ThemeTouchableOpacity>
+              </View>
+              
+              <ThemePartingLine />
+              
+              <View style={styles.dateRangeContainer}>
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                  onPress={() => setShowStartDatePicker(true)}
+                >
+                  <Text style={{
+                    color: theme.colors.text,
+                  }}>
+                    {startDate ? dayjs(startDate).format('YYYY-MM-DD') : '开始日期'}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={16} color={theme.colors.subText} />
+                </ThemeTouchableOpacity>
+                
+                <ThemeText style={{
+                  flex: 1,
+                  color: theme.colors.subText,
+                  textAlign: 'center',
+                  marginHorizontal: 10,
+                }}>至</ThemeText>
+                
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                  onPress={() => setShowEndDatePicker(true)}
+                >
+                  <Text style={{
+                    color: theme.colors.text,
+                  }}>
+                    {endDate ? dayjs(endDate).format('YYYY-MM-DD') : '结束日期'}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={16} color={theme.colors.subText} />
+                </ThemeTouchableOpacity>
+              </View>
+              <ThemePartingLine />
+              
+              <View style={styles.filterOptions}>
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: sortOrder === 'desc' ? theme.colors.interactive : theme.colors.border,
+                    backgroundColor: sortOrder === 'desc' ? theme.colors.interactive : 'transparent',
+                  }}
+                  onPress={() => setSortOrder('desc')}
+                >
+                  <ThemeText style={{
+                    color: sortOrder === 'desc' ? '#fff' : theme.colors.subText,
+                    textAlign: 'center',
+                  }}>降序</ThemeText>
+                </ThemeTouchableOpacity>
+                <ThemeTouchableOpacity
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: sortOrder === 'asc' ? theme.colors.interactive : theme.colors.border,
+                    backgroundColor: sortOrder === 'asc' ? theme.colors.interactive : 'transparent',
+                  }}
+                  onPress={() => setSortOrder('asc')}
+                >
+                  <ThemeText style={{
+                    color: sortOrder === 'asc' ? '#fff' : theme.colors.subText,
+                    textAlign: 'center',
+                  }}>升序</ThemeText>
+                </ThemeTouchableOpacity>
+              </View>
+              
+              <ThemeTouchableOpacity
+                style={[styles.applyButton, { backgroundColor: theme.colors.interactive }]}
+                onPress={handleFilterChange}
+              >
+                <ThemeText style={{ color: '#fff' }}>应用筛选</ThemeText>
+              </ThemeTouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
       
       {/* 历史搜索区 */}
       {!isLoading && inputValue.trim() === '' && searchResults.length === 0 && searchHistory.length > 0 && (
@@ -497,213 +630,6 @@ const SearchPage = () => {
         onRefresh={handleSearch}
       />
       
-      <Modal
-        visible={showFilterModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowFilterModal(false)}
-        >
-          <View style={[
-            styles.filterModalContent, {
-              backgroundColor: theme.colors.card
-            }
-          ]} activeOpacity={1}>
-            <View style={styles.filterHeader}>
-              <ThemeSubTitleText style={styles.filterTitle}>筛选条件</ThemeSubTitleText>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <ThemeText style={styles.filterLabel}>搜索类型</ThemeText>
-              <View style={styles.filterOptions}>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.filterOption,
-                    { borderColor: theme.colors.border },
-                    searchType === 'both' && [
-                      styles.filterOptionActive, {
-                        backgroundColor: theme.colors.interactive,
-                        borderColor: theme.colors.interactive
-                      }
-                    ]
-                  ]}
-                  onPress={() => setSearchType('both')}
-                >
-                  <ThemeText style={[
-                    styles.filterOptionText,
-                    { color: theme.colors.subText },
-                    searchType === 'both' && [styles.filterOptionTextActive, { color: '#fff' }]
-                  ]}>全部</ThemeText>
-                </ThemeTouchableOpacity>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.filterOption,
-                    { borderColor: theme.colors.border },
-                    searchType === 'title' && [
-                      styles.filterOptionActive, {
-                        backgroundColor: theme.colors.interactive,
-                        borderColor: theme.colors.interactive
-                      }
-                    ]
-                  ]}
-                  onPress={() => setSearchType('title')}
-                >
-                  <ThemeText style={[
-                    styles.filterOptionText,
-                    { color: theme.colors.subText },
-                    searchType === 'title' && [styles.filterOptionTextActive, { color: '#fff' }]
-                  ]}>标题</ThemeText>
-                </ThemeTouchableOpacity>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.filterOption,
-                    { borderColor: theme.colors.border },
-                    searchType === 'description' && [
-                      styles.filterOptionActive, {
-                        backgroundColor: theme.colors.interactive,
-                        borderColor: theme.colors.interactive
-                      }
-                    ]
-                  ]}
-                  onPress={() => setSearchType('description')}
-                >
-                  <ThemeText style={[
-                    styles.filterOptionText,
-                    { color: theme.colors.subText },
-                    searchType === 'description' && [styles.filterOptionTextActive, { color: '#fff' }]
-                  ]}>详情</ThemeText>
-                </ThemeTouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <ThemeText style={styles.filterLabel}>日期范围</ThemeText>
-              <View style={styles.dateRangeContainer}>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.dateButton, {
-                      borderColor: theme.colors.border
-                    }
-                  ]}
-                  onPress={() => setShowStartDatePicker(true)}
-                >
-                  <ThemeText style={[
-                    styles.dateButtonText, {
-                      color: theme.colors.text
-                    }
-                  ]}>
-                    {startDate ? dayjs(startDate).format('YYYY-MM-DD') : '开始日期'}
-                  </ThemeText>
-                  <Ionicons name="calendar-outline" size={16} color={theme.colors.subText} />
-                </ThemeTouchableOpacity>
-                <ThemeText style={[
-                  styles.dateSeparator, {
-                    color: theme.colors.subText
-                  }
-                ]}>至</ThemeText>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.dateButton, {
-                      borderColor: theme.colors.border
-                    }
-                  ]}
-                  onPress={() => setShowEndDatePicker(true)}
-                >
-                  <ThemeText style={[
-                    styles.dateButtonText, {
-                      color: theme.colors.text
-                    }
-                  ]}>
-                    {endDate ? dayjs(endDate).format('YYYY-MM-DD') : '结束日期'}
-                  </ThemeText>
-                  <Ionicons name="calendar-outline" size={16} color={theme.colors.subText} />
-                </ThemeTouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.filterSection}>
-              <ThemeText style={styles.filterLabel}>排序方式</ThemeText>
-              <View style={styles.filterOptions}>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.filterOption,
-                    { borderColor: theme.colors.border },
-                    sortOrder === 'desc' && [
-                      styles.filterOptionActive, {
-                        backgroundColor: theme.colors.interactive,
-                        borderColor: theme.colors.interactive
-                      }
-                    ]
-                  ]}
-                  onPress={() => setSortOrder('desc')}
-                >
-                  <ThemeText style={[
-                    styles.filterOptionText,
-                    { color: theme.colors.subText },
-                    sortOrder === 'desc' && [styles.filterOptionTextActive, { color: '#fff' }]
-                  ]}>降序</ThemeText>
-                </ThemeTouchableOpacity>
-                <ThemeTouchableOpacity
-                  style={[
-                    styles.filterOption,
-                    { borderColor: theme.colors.border },
-                    sortOrder === 'asc' && [
-                      styles.filterOptionActive, {
-                        backgroundColor: theme.colors.interactive,
-                        borderColor: theme.colors.interactive
-                      }
-                    ]
-                  ]}
-                  onPress={() => setSortOrder('asc')}
-                >
-                  <ThemeText style={[
-                    styles.filterOptionText,
-                    { color: theme.colors.subText },
-                    sortOrder === 'asc' && [styles.filterOptionTextActive, { color: '#fff' }]
-                  ]}>升序</ThemeText>
-                </ThemeTouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.filterActions}>
-              <ThemeTouchableOpacity
-                style={[
-                  styles.resetButton,
-                  { borderColor: theme.colors.border }
-                ]}
-                onPress={handleResetFilters}
-              >
-                <ThemeText style={[
-                  styles.resetButtonText, {
-                    color: theme.colors.subText
-                  }
-                ]}>重置</ThemeText>
-              </ThemeTouchableOpacity>
-              <ThemeTouchableOpacity
-                style={[
-                  styles.applyButton,
-                  { backgroundColor: theme.colors.interactive }
-                ]}
-                onPress={handleFilterChange}
-              >
-                <ThemeText style={[
-                  styles.applyButtonText, {
-                    color: '#fff'
-                  }
-                ]}>应用</ThemeText>
-              </ThemeTouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-      
       {showStartDatePicker && (
         <DateTimePicker
           value={startDate ? dayjs(startDate).toDate() : new Date()}
@@ -743,7 +669,7 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     position: 'absolute',
-    right: 110,
+    right: 60,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 2,
@@ -811,102 +737,19 @@ const styles = StyleSheet.create({
   itemCategory: {
     flex: 0
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end'
-  },
-  filterModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  filterTitle: {
-    fontSize: 18,
-    fontWeight: '600'
-  },
-  filterSection: {
-    marginBottom: 24
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12
-  },
   filterOptions: {
     flexDirection: 'row',
     gap: 8
-  },
-  filterOption: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  filterOptionActive: {
-    borderRadius: 8
-  },
-  filterOptionText: {
-    fontSize: 14
-  },
-  filterOptionTextActive: {
-    fontSize: 14
   },
   dateRangeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8
   },
-  dateButton: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 8
-  },
-  dateButtonText: {
-    fontSize: 14
-  },
-  dateSeparator: {
-    fontSize: 14
-  },
   filterActions: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 8
-  },
-  resetButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  resetButtonText: {
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  applyButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  applyButtonText: {
-    fontSize: 16,
-    fontWeight: '600'
   },
   historyHeader: {
     flexDirection: 'row',
@@ -934,6 +777,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8
+  },
+  filterContainer: {
+    marginBottom: 10,
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  filterContent: {
+    gap: 12
+  },
+  applyButton: {
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8
   }
 });
 
