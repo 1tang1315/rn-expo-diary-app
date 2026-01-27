@@ -11,7 +11,9 @@ export default function ThemeTouchableOpacity({
   
   const combinedStyle = StyleSheet.flatten([
     {
+      padding: 10,
       color: theme.colors.textInverse,
+      borderRadius: 10,
       borderColor: theme.colors.interactive,
       backgroundColor: theme.colors.card
     },
