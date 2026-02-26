@@ -1,6 +1,6 @@
-import { Tabs } from "expo-router";
-import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { useTheme } from "@/context/ThemeContext";
+import { Tabs } from "expo-router";
+import Icon from "@/components/common/Icon";
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -22,7 +22,7 @@ export default function TabLayout() {
         options={{
           title: "首页",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
+            <Icon name="home" color={color} size={size} />
           ),
         }}
       />
@@ -31,7 +31,7 @@ export default function TabLayout() {
         options={{
           title: "储物",
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome6 name="box-archive" color={color} size={size} />
+            <Icon lib={"FontAwesome6"} name="box-archive" color={color} size={size} />
           ),
         }}
       />
@@ -40,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: "日记",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" color={color} size={size} />
+            <Icon name="book" color={color} size={size} />
           ),
         }}
       />
@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: "AI",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbox" color={color} size={size} />
+            <Icon name="chatbox" color={color} size={size} />
           ),
         }}
       />
@@ -58,7 +58,7 @@ export default function TabLayout() {
         options={{
           title: "统计",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pie-chart" color={color} size={size} />
+            <Icon name="pie-chart" color={color} size={size} />
           ),
           unmountOnBlur: true
         }}
@@ -68,7 +68,17 @@ export default function TabLayout() {
         options={{
           title: "打卡",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkbox" color={color} size={size} />
+            <Icon name="checkbox" color={color} size={size} />
+          ),
+          unmountOnBlur: true
+        }}
+      />
+      <Tabs.Screen
+        name="analyse"
+        options={{
+          title: "分析",
+          tabBarIcon: ({ color, size }) => (
+            <Icon lib={"MaterialIcons"} name="analytics" color={color} size={size} />
           ),
           unmountOnBlur: true
         }}
@@ -78,7 +88,7 @@ export default function TabLayout() {
         options={{
           title: "我的",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
+            <Icon name="person" color={color} size={size} />
           ),
           unmountOnBlur: true
         }}
