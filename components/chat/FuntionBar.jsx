@@ -326,7 +326,6 @@ const FunctionBar = ({
 const styles = StyleSheet.create({
   functionsContainer: {
     flexDirection: "row",
-    paddingTop: 10,
     gap: 10,
   },
   functionButton: {

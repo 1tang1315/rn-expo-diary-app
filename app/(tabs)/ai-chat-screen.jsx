@@ -405,21 +405,21 @@ const AiChatScreen = () => {
         style={styles.chatContainer}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
+        {/* 空状态提示 */}
+        {messages.length === 0 && !isAIGenerating && (
+          <EmptyContainer
+            icon="chatbubbles"
+            IconComponent={Ionicons}
+            text="开始与AI对话吧~"
+          />
+        )}
+        
         <ScrollView
           ref={messageScrollRef}
           style={styles.messageList}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* 空状态提示 */}
-          {messages.length === 0 && !isAIGenerating && (
-            <EmptyContainer
-              icon="chatbubbles"
-              IconComponent={Ionicons}
-              text="开始与AI对话吧~"
-            />
-          )}
-          
           {/* 历史消息 */}
           {messages.map(message => (
             <React.Fragment key={message.id}>
@@ -431,39 +431,41 @@ const AiChatScreen = () => {
         </ScrollView>
         
         {/* 底部输入框区域 */}
-        <FunctionBar
-          onEventDataSelected={(data) => {
-            setInputText(prev => prev ? `${prev}\n${data}` : data);
-          }}
-          onPromptSelected={(prompt) => {
-            setInputText(prev => prev ? `${prev}\n\n${prompt}` : prompt);
-          }}
-        />
-        
-        <ThemePartingLine />
-        
-        <View style={styles.inputContainer}>
-          <ThemeTextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder="输入消息..."
-            value={inputText}
-            onChangeText={setInputText}
-            multiline={true}
-            maxHeight={120} // 输入框最大高度（防止过长）
-            returnKeyType="send"
-            onSubmitEditing={handleSendMessage}
+        <ThemeCard>
+          <FunctionBar
+            onEventDataSelected={(data) => {
+              setInputText(prev => prev ? `${prev}\n${data}` : data);
+            }}
+            onPromptSelected={(prompt) => {
+              setInputText(prev => prev ? `${prev}\n\n${prompt}` : prompt);
+            }}
           />
-          <TouchableOpacity
-            style={[
-              styles.sendBtn,
-              { backgroundColor: theme.colors.interactive }
-            ]}
-            onPress={handleSendMessage}
-          >
-            <Icon lib="Ionicons" name="send" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+          
+          <ThemePartingLine />
+          
+          <View style={styles.inputContainer}>
+            <ThemeTextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="输入消息..."
+              value={inputText}
+              onChangeText={setInputText}
+              multiline={true}
+              maxHeight={120} // 输入框最大高度（防止过长）
+              returnKeyType="send"
+              onSubmitEditing={handleSendMessage}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendBtn,
+                { backgroundColor: theme.colors.interactive }
+              ]}
+              onPress={handleSendMessage}
+            >
+              <Icon lib="Ionicons" name="send" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </ThemeCard>
       </KeyboardAvoidingView>
       
       {/* 历史对话侧边栏 */}
@@ -667,8 +669,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    marginBottom: 20
+    justifyContent: 'flex-end'
   },
   input: {
     flex: 1,
