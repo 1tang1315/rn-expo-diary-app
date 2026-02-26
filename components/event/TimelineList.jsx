@@ -163,14 +163,14 @@ const TimelineList = ({
         
         {/* 事件内容卡片（点击触发编辑） */}
         <ThemeTouchableOpacity
-          style={styles.contentCard}
+          style={{flex: 1, paddingTop: 0, paddingHorizontal: 5}}
           onPress={() => openEditModal(item)}
         >
           <LinearGradient
             colors={[theme.colors.interactive, theme.colors.interactiveLight]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={{padding: 16}}
+            style={styles.contentCard}
           >
             <ThemeText style={[styles.title, {color: theme.colors.textInverse}]}>{displayTitle}</ThemeText>
             <Text style={[styles.description, theme.colors.dim]}>{item.description}</Text>
@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
   // 左侧时间线列
   timelineColumn: {
     alignItems: 'center',
-    marginRight: 16,
     width: 40,
     alignSelf: 'stretch',
     position: 'relative',
@@ -297,8 +296,8 @@ const styles = StyleSheet.create({
   // 事件内容卡片
   contentCard: {
     flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden'
+    padding: 10,
+    borderRadius: 10
   },
   // 事件标题
   title: {
