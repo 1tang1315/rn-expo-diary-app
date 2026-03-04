@@ -8,7 +8,7 @@ import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import ThemeText from "@/components/theme/ThemeText";
 import { useSortConfig } from "@/context/SortConfigContext";
 import { useTheme } from "@/context/ThemeContext";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import dayjs from "dayjs";
 import { getCategoryName } from "@/utils/categoryUtils";
 import Icon from "@/components/common/Icon";
@@ -35,7 +35,7 @@ const DragDropListPage = () => {
       // 优化：dayjs 日期格式化，确保传递给数据库的格式统一
       const endDate = dayjs().endOf('year').toISOString();
       const startDate = dayjs().startOf('year').toISOString();
-      const events = await getEventsByDateRange(startDate, endDate);
+      const events = await eventApi.getByDateRangeAndCategory({ startDate, endDate });
       
       if(!events || !Array.isArray(events)) {
         setListData([]);

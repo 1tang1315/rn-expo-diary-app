@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { StyleSheet, Alert } from 'react-native';
+import { eventApi } from "@/api";
 import CategoryTab from '@/components/common/CategoryTab';
-import TimelineList from './TimelineList';
+import ThemeCard from "@/components/theme/ThemeCard";
+import { categories } from "@/constants/commonConstans";
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet } from 'react-native';
 import AddEventButton from '../common/AddButton';
 import EventModal from './EventModal';
-import { getEventsByDateRange } from '@/db/eventDB';
-import { categories } from "@/constants/commonConstans";
-import ThemeCard from "@/components/theme/ThemeCard";
+import TimelineList from './TimelineList';
 
 const TimelinePanel = ({ selectedDate }) => {
   const [currentTab, setCurrentTab] = useState('all');
@@ -17,41 +17,27 @@ const TimelinePanel = ({ selectedDate }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState(null);
   
-  // 过滤当前分类的事件
-  const categorizedData = useMemo(() => {
-    return currentTab === 'all'
-      ? timelineData
-      : timelineData.filter(item => item.category === currentTab);
-  }, [timelineData, currentTab]);
-  
   // 拉取事件数据
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
-    try {
-      const events = await getEventsByDateRange(selectedDate.startOf('day'));
-      
-      // 格式化事件
-      const formattedEvents = events.map(event => ({
-        id: event.id.toString(),
-        startTime: event.start_datetime.split(' ')[1]?.slice(0, 5) || '00:00',
-        endTime: event.end_datetime.split(' ')[1]?.slice(0, 5) || '00:00',
-        startDatetime: event.start_datetime,
-        endDatetime: event.end_datetime,
-        title: event.title,
-        description: event.description,
-        status: event.status || 'upcoming',
-        icon: event.icon,
-        category: event.category
-      }));
-      
-      setTimelineData(formattedEvents);
-    } catch (error) {
-      console.error('拉取日程失败:', error);
-      Alert.alert('错误', '获取日程数据失败，请稍后再试');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedDate]);
+    
+    const events = await eventApi.getByDateRangeAndCategory({
+      startDate: selectedDate.startOf('day'),
+      category: currentTab
+    });
+    
+    // 格式化事件
+    const formattedEvents = events?.map(event => ({
+      ...event,
+      startTime: event.startDatetime?.split(' ')[1]?.slice(0, 5) || '00:00',
+      endTime: event.endDatetime?.split(' ')[1]?.slice(0, 5) || '00:00',
+      status: event.status || 'upcoming'
+    }));
+    
+    setTimelineData(formattedEvents);
+    
+    setIsLoading(false);
+  }, [selectedDate, currentTab]);
   
   // 选中日期变化时重新拉取事件
   useEffect(() => {
@@ -78,13 +64,13 @@ const TimelinePanel = ({ selectedDate }) => {
         setCurrentTab={setCurrentTab}
       />
       
-        {/* 事件列表 */}
-        <TimelineList
-          categorizedData={categorizedData}
-          isLoading={isLoading}
-          currentTab={currentTab}
-          openEditModal={openEditModal} // 传递编辑回调
-        />
+      {/* 事件列表 */}
+      <TimelineList
+        categorizedData={timelineData}
+        isLoading={isLoading}
+        currentTab={currentTab}
+        openEditModal={openEditModal} // 传递编辑回调
+      />
       
       {/* 导入的独立组件：浮动添加按钮 */}
       <AddEventButton onPress={openAddModal} />

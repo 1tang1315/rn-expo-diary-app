@@ -7,7 +7,7 @@ import ThemeText from "@/components/theme/ThemeText";
 import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 import { useTheme } from "@/context/ThemeContext";
-import { getEventsByFilters } from "@/db/eventDB";
+import { EventController } from "@/core/controller";
 import { getCategoryInfo } from "@/utils/categoryUtils";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -19,6 +19,8 @@ import {
   StyleSheet, Text,
   TouchableOpacity, View
 } from 'react-native';
+
+const eventController = new EventController();
 
 const SearchPage = () => {
   const { theme } = useTheme();
@@ -58,13 +60,14 @@ const SearchPage = () => {
       if(!keyword) return;
       
       setIsLoading(true);
-      const results = await getEventsByFilters({
+      const response = await eventController.getByFilters({
         keyword,
         searchType,
         startDate,
         endDate,
         sortOrder
       });
+      const results = response.data || [];
       setSearchResults(results);
       
       // Update search history
@@ -113,13 +116,14 @@ const SearchPage = () => {
     
     try {
       // Get events with title matching the keyword
-      const results = await getEventsByFilters({
+      const response = await eventController.getByFilters({
         keyword,
         searchType: 'title',
         startDate: null,
         endDate: null,
         sortOrder: 'desc'
       });
+      const results = response.data || [];
       
       // Extract just the titles for suggestions
       const titleSuggestions = results.map(event => event.title);

@@ -5,12 +5,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { categories, categoryIcons, statusColors, statusTextMap } from '@/constants/commonConstans';
-import {
-  createEvent,
-  getCommonTitlesByCategory,
-  updateEvent,
-  deleteEvent as deleteEventApi,
-} from "@/db/eventDB";
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import CategoryModal from "@/components/common/CategoryModal";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
@@ -21,6 +15,8 @@ import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import ThemeButton from "@/components/theme/ThemeButton";
 import BaseModal from '@/components/common/BaseModal';
+import { eventApi } from "@/api";
+import { parseInt } from "lodash/string";
 
 /**
  * 事件添加/编辑弹窗
@@ -120,13 +116,8 @@ const EventModal = ({
   const [titleCount, setTitleCount] = useState(5);
   const [commonTitles, setCommonTitles] = useState([]);
   const fetchCommonTitles = useCallback(async (category) => {
-    try {
-      const titles = await getCommonTitlesByCategory(category, titleCount);
-      setCommonTitles(titles);
-    } catch(error) {
-      console.error('获取常用标题失败:', error);
-      setCommonTitles([]); // 失败时重置，避免显示旧数据
-    }
+    const titles = await eventApi.getCommonTitles(category, titleCount);
+    setCommonTitles(titles);
   }, [titleCount]);
   
   useEffect(() => {
@@ -184,20 +175,15 @@ const EventModal = ({
       icon: formData.icon
     };
     
-    try {
-      if(currentEvent) {
-        await updateEvent(parseInt(currentEvent.id), eventParams);
-        Alert.alert('成功', '日程更新完成');
-      } else {
-        await createEvent(eventParams);
-        Alert.alert('成功', '新日程添加完成');
-      }
-      onRefresh();
-      onClose();
-    } catch(error) {
-      console.error('保存事件失败:', error);
-      Alert.alert('错误', currentEvent ? '更新日程失败' : '添加日程失败');
+    if(currentEvent) {
+      await eventApi.update(parseInt(currentEvent.id), eventParams);
+      Alert.alert('成功', '日程更新完成');
+    } else {
+      await eventApi.create(eventParams);
+      Alert.alert('成功', '新日程添加完成');
     }
+    onRefresh();
+    onClose();
   };
   
   // 删除事件逻辑
@@ -212,15 +198,10 @@ const EventModal = ({
         text: '删除',
         style: 'destructive',
         onPress: async () => {
-          try {
-            await deleteEventApi(parseInt(currentEvent.id));
-            Alert.alert('成功', '日程已删除');
-            onRefresh();
-            onClose();
-          } catch(error) {
-            console.error('删除事件失败:', error);
-            Alert.alert('错误', '删除日程失败，请稍后再试');
-          }
+          await eventApi.delete(parseInt(currentEvent.id));
+          Alert.alert('成功', '日程已删除');
+          onRefresh();
+          onClose();
         }
       }
     ]);
@@ -300,6 +281,7 @@ const EventModal = ({
           
           <ThemeCard margin={0} padding={0} style={[styles.countControl, { borderColor: theme.colors.interactive }]}>
             <ThemeTouchableOpacity
+              style={{minHeight: 0, padding: 0}}
               disabled={titleCount === 5}
               onPress={() => {
                 setTitleCount(prev => Math.max(prev - 5, 5));

@@ -1,6 +1,6 @@
 import { formatDate, formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
 import { getCategoryName } from "@/utils/categoryUtils";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 
 /**
  * 根据起始日期生成每日事件的格式化文本
@@ -25,7 +25,7 @@ export const getEventsText = async (startDate, endDate) => {
 
   const dailyTextsPromises = days.map(async (dayStr) => {
     // 获取当天的事件
-    const events = await getEventsByDateRange(dayStr);
+    const events = await eventApi.getByDateRangeAndCategory(dayStr);
 
     if(events.length === 0) {
       return `${dayStr} (0 个事件, 总时长 0分)\n暂无数据`;

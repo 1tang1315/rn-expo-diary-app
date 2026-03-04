@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import ThemeCard from "@/components/theme/ThemeCard";
-import { getEventStats } from "@/db/eventDB";
 import ThemeText from "@/components/theme/ThemeText";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
+import { eventApi } from "@/api";
 
 const StatsCard = ({ stats = [] }) => {
   const [realStats, setRealStats] = useState([]);
@@ -12,7 +12,7 @@ const StatsCard = ({ stats = [] }) => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { totalEvents, totalRecords, totalDuration, recordDays } = await getEventStats();
+        const { totalEvents, totalRecords, totalDuration, recordDays } = await eventApi.getTotalStats();
         setRealStats([
           { label: '事件总数', value: totalEvents },
           { label: '记录次数', value: totalRecords },

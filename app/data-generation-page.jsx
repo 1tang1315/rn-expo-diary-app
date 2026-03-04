@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { getEventsByDateRange } from '@/db/eventDB';
+import { eventApi } from '@/api/EventApi';
 import { useNavigation } from "expo-router";
 import { formatPreviewContent, getPlainTextContent } from "@/utils/previewFormatter";
 import DateSelector from "@/components/statistics/DateSelector";
@@ -36,7 +36,7 @@ const DataGenerationPage = () => {
       start: dayjs(startDate),
       end: dayjs(endDate)
     });
-    const events = (await getEventsByDateRange(startDate, endDate, "asc"));
+    const events = (await eventApi.getByDateRangeAndCategory({ startDate, endDate, sortOrder: "asc" }));
     
     setEvents(events);
     setIsLoading(false);

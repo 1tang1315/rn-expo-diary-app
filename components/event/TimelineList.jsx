@@ -2,7 +2,6 @@ import React, { useCallback, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { statusColors, statusTextMap, categories } from '@/constants/commonConstans';
-import { updateEventStatus } from "@/db/eventDB";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
 import { useTheme } from "@/context/ThemeContext";
 import EmptyContainer from "@/components/common/EmptyContainer";
@@ -11,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import ThemeText from "@/components/theme/ThemeText";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeCard from "@/components/theme/ThemeCard";
+import { eventApi } from "@/api";
 
 // 判断两个日期是否为同一天（只比较年/月/日）
 const isSameDate = (date1, date2) => {
@@ -95,11 +95,7 @@ const TimelineList = ({
   const handleStatusUpdate = useCallback(async (item) => {
     const newStatus = getFinalStatus(item);
     if(item.status !== newStatus) {
-      try {
-        await updateEventStatus(item.id, newStatus);
-      } catch(err) {
-        console.error('更新失败:', err);
-      }
+      await eventApi.updateStatus(item.id, newStatus);
     }
   }, []);
   
@@ -124,7 +120,7 @@ const TimelineList = ({
     categorizedData.forEach(item => {
       const newStatus = getFinalStatus(item);
       if(item.status !== newStatus) {
-        updateEventStatus(item.id, newStatus).then()
+        eventApi.updateStatus(item.id, newStatus).then();
       }
     });
   }, [categorizedData]);

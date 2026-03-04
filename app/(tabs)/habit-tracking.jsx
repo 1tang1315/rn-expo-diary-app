@@ -5,7 +5,7 @@ import CheckStat from "@/components/habit-tracking/CheckStat";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import StatsCard from "@/components/habit-tracking/StatsCard";
 import dayjs from "dayjs";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import { useFocusEffect } from "expo-router";
 import ThemeCard from "@/components/theme/ThemeCard";
 
@@ -28,7 +28,7 @@ const HabitTracking = () => {
     });
     setViewType(type);
     
-    const data = await getEventsByDateRange(startDate, endDate);
+    const data = await eventApi.getByDateRangeAndCategory({ startDate, endDate });
     setStatsData(data);
     setLoading(false);
   }, []);

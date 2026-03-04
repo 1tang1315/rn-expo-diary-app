@@ -11,7 +11,7 @@ import {
   checkDiaryExists, createNote, getFolderById, getFoldersWithNoteCount, createFolder
 } from "@/db/notesDB";
 import DateSelector from "@/components/statistics/DateSelector";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import { getPlainTextContent } from "@/utils/previewFormatter";
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { AsyncStorage } from "expo-sqlite/kv-store";
@@ -118,7 +118,7 @@ export default function AiDiaryGenerator() {
     setStartDate(selectedStart);
     setEndDate(selectedEnd);
     
-    const allEvents = await getEventsByDateRange(selectedStart, selectedEnd, "asc");
+    const allEvents = await eventApi.getByDateRangeAndCategory({ startDate: selectedStart, endDate: selectedEnd, sortOrder: "asc" });
     const eventText = getPlainTextContent("txt", allEvents);
     setEvents(allEvents);
     setEventText(eventText || "所选时间范围内无事件数据");
@@ -154,7 +154,7 @@ export default function AiDiaryGenerator() {
       }
       
       try {
-        const dailyEvents = await getEventsByDateRange(date, date, "asc");
+        const dailyEvents = await eventApi.getByDateRangeAndCategory({ startDate: date, endDate: date, sortOrder: "asc" });
         if (dailyEvents.length === 0) {
           setProcessMessages(prev => [...prev, { type: 'skip', msg: `日期 ${date} 无事件数据，跳过` }]);
           setProcessedCount(prev => prev + 1);
@@ -238,7 +238,7 @@ export default function AiDiaryGenerator() {
         return false;
       }
       
-      const allSummaryEvents = await getEventsByDateRange(startDate, endDate, "asc");
+      const allSummaryEvents = await eventApi.getByDateRangeAndCategory({ startDate, endDate, sortOrder: "asc" });
       if (allSummaryEvents.length === 0) {
         Alert.alert('提示', '该时间范围内无事件数据，无法生成阶段总结');
         return false;
@@ -252,7 +252,7 @@ export default function AiDiaryGenerator() {
       
       const dateGroupedEvents = {};
       for (const date of dateArray) {
-        const dailyEvents = await getEventsByDateRange(date, date, "asc");
+        const dailyEvents = await eventApi.getByDateRangeAndCategory({ startDate: date, endDate: date, sortOrder: "asc" });
         if (dailyEvents.length > 0) {
           dateGroupedEvents[date] = getPlainTextContent("txt", dailyEvents);
         }

@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateSelector from "@/components/statistics/DateSelector";
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { getPlainTextContent } from "@/utils/previewFormatter";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import Icon from "@/components/common/Icon";
 import { useTheme } from "@/context/ThemeContext";
@@ -24,7 +24,7 @@ const FunctionBar = ({
   
   // 根据选择日期获取事件数据
   const handleDateSelect = async (startDate, endDate) => {
-    const events = await getEventsByDateRange(startDate, endDate, "asc");
+    const events = await eventApi.getByDateRangeAndCategory({ startDate, endDate, sortOrder: "asc" });
     const eventsText = getPlainTextContent("txt", events);
     
     setEventsText(eventsText);

@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import AiDiaryService from "@/db/services/AiDiaryService";
 import { checkDiaryExists, createFolder, createNote, getFolderById, getFoldersWithNoteCount } from "@/db/notesDB";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import { getPlainTextContent } from "@/utils/previewFormatter";
 
 export const getOrCreateFolder = async (folderName) => {
@@ -51,7 +51,7 @@ export const autoGenerateYesterdayDiary = async () => {
     }
     
     // 检查是否有前一天的事件数据
-    const dailyEvents = await getEventsByDateRange(yesterday, yesterday, "asc");
+    const dailyEvents = await eventApi.getByDateRangeAndCategory({ startDate: yesterday, endDate: yesterday, sortOrder: "asc" });
     if (dailyEvents.length === 0) {
       console.log(`[${yesterday}] 无事件数据，跳过生成`);
       return;

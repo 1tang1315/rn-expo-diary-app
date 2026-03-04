@@ -2,7 +2,7 @@ import {
   ActivityIndicator, ScrollView, StyleSheet, Text, View, Button
 } from "react-native";
 import React, { useCallback, useState } from "react";
-import { getEventsByDateRange } from "@/db/eventDB";
+import { eventApi } from "@/api/EventApi";
 import DateSelector from "@/components/statistics/DateSelector";
 import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
@@ -109,7 +109,7 @@ export default function Statistics() {
   const handleDateChange = useCallback((startDate = dayjs().startOf('day'), endDate) => {
     setLoading(true);
     
-    getEventsByDateRange(startDate, endDate)
+    eventApi.getByDateRangeAndCategory({ startDate, endDate })
       .then(data => setStatsData(data))
       .catch(err => setError(err))
       .finally(() => setLoading(false));
