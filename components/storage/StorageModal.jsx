@@ -1,22 +1,28 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View, Text, ScrollView, Platform, Alert,
-  Image, StyleSheet
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import { createStorageItem, updateStorageItem, deleteStorageItem } from '@/db/storageDB';
-import { formatDate } from "@/utils/formatTimeUtils";
-import { storageCategoryIcons, storageCategories } from "@/constants/commonConstans";
+import { storageApi } from '@/api';
+import BaseModal from "@/components/common/BaseModal";
 import CategoryModal from "@/components/common/CategoryModal";
-import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
+import Icon from "@/components/common/Icon";
+import ThemeButton from "@/components/theme/ThemeButton";
+import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import ThemeTouchableOpacity from "@/components/theme/ThemeView";
-import ThemeButton from "@/components/theme/ThemeButton";
-import BaseModal from "@/components/common/BaseModal";
-import ThemeCard from "@/components/theme/ThemeCard";
-import Icon from "@/components/common/Icon";
+import { storageCategories, storageCategoryIcons } from "@/constants/commonConstans";
+import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
+import { formatDate } from "@/utils/formatTimeUtils";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native';
+import { parseInt } from "lodash/string";
 
 /**
  * 储物项添加/编辑弹窗（基于通用 BaseModal 封装）
@@ -225,10 +231,10 @@ const StorageItemModal = ({
     
     try {
       if(currentItem) {
-        const success = await updateStorageItem(parseInt(currentItem.id), itemParams);
-        Alert.alert('成功', success ? '物品信息已更新' : '更新物品失败');
+        const response = await storageApi.update(parseInt(currentItem.id), itemParams);
+        Alert.alert('成功', response.data?.success ? '物品信息已更新' : '更新物品失败');
       } else {
-        await createStorageItem(itemParams);
+        await storageApi.create(itemParams);
         Alert.alert('成功', '新物品已添加');
       }
       onRefresh();
@@ -251,17 +257,10 @@ const StorageItemModal = ({
         text: '删除',
         style: 'destructive',
         onPress: async () => {
-          try {
-            const success = await deleteStorageItem(parseInt(currentItem.id));
-            if(success) {
-              Alert.alert('成功', '物品已删除');
-              onRefresh();
-              onClose();
-            } else Alert.alert('失败', '删除物品失败');
-          } catch(error) {
-            console.error('删除失败:', error);
-            Alert.alert('错误', '删除物品失败，请稍后再试');
-          }
+          await storageApi.delete(parseInt(currentItem.id));
+          onRefresh();
+          onClose();
+          Alert.alert('成功', '物品已删除');
         }
       }
     ]);

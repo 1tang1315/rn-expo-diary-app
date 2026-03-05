@@ -10,7 +10,7 @@ import AddButton from "@/components/common/AddButton";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import StorageModal from "@/components/storage/StorageModal";
 import { storageCategories } from "@/constants/commonConstans";
-import { getAllStorageItems } from '@/db/storageDB';
+import { storageApi } from '@/api';
 import ExpandableCard from "@/components/common/ExpandableCard";
 import { useTheme } from "@/context/ThemeContext";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
@@ -69,16 +69,16 @@ export default function Storage() {
     return allItems.filter(item => item.category === activeCategory);
   }, [allItems, activeCategory]);
   
-  // 从数据库获取数据
+  // 从 API 获取数据
   const fetchItems = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      // 从数据库获取所有项目
-      const dbItems = await getAllStorageItems('desc', 'start_date');
+      // 使用新架构的 API 获取所有项目
+      const response = await storageApi.getAllWithSort({ sortField: 'start_date', sortOrder: 'desc' });
       
       // 处理数据并更新状态
-      const processedItems = processItems(dbItems);
+      const processedItems = processItems(response || []);
       setAllItems(processedItems);
     } catch(err) {
       console.error('获取储物数据失败:', err);
