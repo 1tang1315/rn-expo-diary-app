@@ -1,27 +1,28 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Dimensions, FlatList, Modal, StyleSheet, Text,
-  TextInput, TouchableOpacity, View, Alert, TouchableWithoutFeedback
-} from "react-native";
-import { useNavigation } from '@react-navigation/native';
-import {
-  deleteNote, deleteNotes, getAllNotes, getAllFolders,
-  createFolder, updateFolder, deleteFolder, getFolderById
-} from '@/db/notesDB';
-import dayjs from 'dayjs';
-import { Ionicons, AntDesign } from '@expo/vector-icons';
+import { folderApi, noteApi } from "@/api";
 import CategoryTab from "@/components/common/CategoryTab";
-import ThemeCard from "@/components/theme/ThemeCard";
-import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import Icon from "@/components/common/Icon";
 import ThemeButton from "@/components/theme/ThemeButton";
-import ThemeTitleText from "@/components/theme/ThemeTitleText";
-import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeText from "@/components/theme/ThemeText";
-import { useTheme } from "@/context/ThemeContext";
-import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import ThemeTextInput from "@/components/theme/ThemeTextInput";
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 import ThemeView from "@/components/theme/ThemeView";
+import { useTheme } from "@/context/ThemeContext";
+import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import dayjs from 'dayjs';
+import { parseInt } from "lodash/string";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Dimensions, FlatList, Modal, StyleSheet, Text,
+  TextInput, TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
+} from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -35,9 +36,22 @@ export default function Diary() {
   // 文件夹与笔记分类相关状态
   const [folders, setFolders] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState('all');
-  const [allNotes, setAllNotes] = useState([]);
-  const [unclassifiedNotes, setUnclassifiedNotes] = useState([]);
-  const [folderNotes, setFolderNotes] = useState({});
+  const [filteredNotes, setFilteredNotes] = useState([]);
+  
+  // 处理搜索文本变化
+  const handleSearchTextChange = (text) => {
+    setSearchText(text);
+  };
+  
+  // 处理分类切换
+  const handleFolderChange = (folderId) => {
+    setCurrentFolderId(folderId);
+  };
+  
+  // 监听搜索文本和分类变化，更新数据
+  useEffect(() => {
+    loadFilteredData().then();
+  }, [searchText, currentFolderId]);
   
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -55,153 +69,93 @@ export default function Diary() {
   const [toastText, setToastText] = useState('');
   const [showToast, setShowToast] = useState(false);
   
-  // 按月份分组数据
-  const groupByMonth = (notes) => {
-    if(!notes.length) return [];
-    
-    // 匹配标题中的YYYY-MM-DD格式
-    const dateTitleReg = /\b(\d{4}-\d{2}-\d{2})\b/;
-    
-    const groups = {};
-    notes.forEach(item => {
-      // 确定用于分组的日期（优先标题中的日期）
-      let targetDate = item.time;
-      const dateMatch = item.title.match(dateTitleReg);
-      if(dateMatch && dateMatch[1]) {
-        targetDate = dateMatch[1];
-      }
-      
-      // 生成用于排序的数字格式（如202510）和展示格式（2025年10月）
-      const monthNumber = parseInt(dayjs(targetDate).format('YYYYMM'), 10);
-      const monthDisplay = dayjs(targetDate).format('YYYY年MM月');
-      
-      if(!groups[monthNumber]) {
-        groups[monthNumber] = {
-          month: monthDisplay,
-          monthNumber: monthNumber,
-          data: []
-        };
-      }
-      groups[monthNumber].data.push(item);
-    });
-    
-    // 先按月份数字倒序排序（202510在202509之前）
-    const sortedGroups = Object.values(groups).sort((a, b) => {
-      return b.monthNumber - a.monthNumber; // 数字大的排在前（倒序）
-    });
-    
-    // 每个月份组内的笔记按标题字典倒序排序
-    sortedGroups.forEach(group => {
-      group.data.sort((a, b) => b.title.localeCompare(a.title));
-    });
-    
-    return sortedGroups;
-  };
-  
-  // 数据过滤（支持文件夹筛选+搜索筛选）
-  const filterData = () => {
-    let filtered = [];
-    
-    // 按文件夹筛选
-    if(currentFolderId === 'all') {
-      filtered = [...unclassifiedNotes];
-      Object.values(folderNotes).forEach(notes => filtered.push(...notes));
-    } else if(currentFolderId === 'unclassified') {
-      filtered = unclassifiedNotes;
-    } else {
-      filtered = folderNotes[currentFolderId] || [];
-    }
-    
-    // 定义两类标题的正则表达式
-    const diaryTitleReg = /\d{4}-\d{2}-\d{2}$/; // 2025-10-05
-    const stageTitleReg = /\d{4}-\d{2}-\d{2}~\d{4}-\d{2}-\d{2}$/; // 2025-10-05~2025-10-10
-    
-    // 获取当前选中的文件夹名称
-    let currentFolderName = '';
-    if(currentFolderId !== 'all' && currentFolderId !== 'unclassified') {
-      const targetFolder = folders.find(folder => folder.id.toString() === currentFolderId);
-      currentFolderName = targetFolder?.name || '';
-    }
-    
-    // 仅在「日记」或「阶段总结」分类下执行标题过滤
-    if(currentFolderName === '日记') {
-      filtered = filtered.filter(item => diaryTitleReg.test(item.title));
-    } else if(currentFolderName === '阶段总结') {
-      filtered = filtered.filter(item => stageTitleReg.test(item.title));
-    }
-    
-    // 搜索筛选
-    if(searchText.trim()) {
-      const lowerSearch = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(lowerSearch) ||
-        item.content.toLowerCase().includes(lowerSearch)
-      );
-    }
-    
-    return filtered;
-  };
-  
   // 加载文件夹和笔记数据
   const loadAllData = async () => {
     // 加载文件夹
-    const folderList = await getAllFolders();
+    const folderList = await folderApi.getAll();
     const formattedFolders = folderList.map(folder => ({
       ...folder,
       id: folder.id.toString()
     }));
     setFolders(formattedFolders);
     
-    // 加载并格式化笔记（folder_id 转为字符串）
-    const noteList = await getAllNotes();
-    const formattedData = noteList.map(note => ({
-      id: note.id.toString(), // 笔记 id 也转为字符串
-      folderId: note.folder_id ? note.folder_id.toString() : null, // 外键转为字符串
-      title: note.title,
-      content: note.content.substring(0, 100),
-      time: note.updated_at,
-    }));
-    setAllNotes(formattedData);
-    
-    // 分类未分类笔记
-    const unclassified = formattedData.filter(note =>
-      !note.folderId || !formattedFolders.some(f => f.id === note.folderId)
-    );
-    setUnclassifiedNotes(unclassified);
-    
-    // 按文件夹分组笔记
-    const groupedNotes = formattedFolders.reduce((acc, folder) => {
-      acc[folder.id] = formattedData.filter(note => note.folderId === folder.id);
-      return acc;
-    }, {});
-    setFolderNotes(groupedNotes);
+    // 加载笔记数据
+    await loadFilteredData();
+  };
+  
+  // 加载过滤后的笔记数据
+  const loadFilteredData = async () => {
+    try {
+      let notes = [];
+      
+      // 根据分类条件直接从 API 获取数据
+      if (searchText.trim()) {
+        // 有搜索关键词时使用搜索接口
+        let folderId = null;
+        if (currentFolderId !== 'all' && currentFolderId !== 'uncategorized') {
+          folderId = parseInt(currentFolderId);
+        }
+        notes = await noteApi.searchNotes(searchText, folderId);
+      } else {
+        // 无搜索关键词时根据分类获取
+        if (currentFolderId === 'all') {
+          // 获取所有笔记
+          notes = await noteApi.getAll();
+        } else if (currentFolderId === 'uncategorized') {
+          // 获取未分类笔记
+          const allNotes = await noteApi.getAll();
+          notes = allNotes.filter(note => !note.folderId);
+        } else {
+          // 获取指定文件夹的笔记
+          const folderId = parseInt(currentFolderId);
+          notes = await noteApi.getByFolderId(folderId);
+        }
+      }
+      
+      // 格式化笔记数据
+      const formattedNotes = notes.map(note => ({
+        id: note.id.toString(),
+        folderId: note.folderId ? note.folderId.toString() : null,
+        title: note.title,
+        content: note.content.substring(0, 100),
+        time: note.updatedAt,
+      }));
+      
+      // 按时间倒序排序
+      formattedNotes.sort((a, b) => new Date(b.time) - new Date(a.time));
+      setFilteredNotes(formattedNotes);
+    } catch (error) {
+      console.error('加载过滤数据失败:', error);
+      setFilteredNotes([]);
+    }
   };
   
   // 初始加载数据
   useEffect(() => {
     loadAllData().then();
-    return navigation.addListener('focus', loadAllData);
+
+    return navigation.addListener('focus', () => {
+      loadAllData().then();
+    });
   }, [navigation]);
   
   // 全选/取消全选逻辑
   const handleSelectAll = () => {
-    const filtered = filterData();
     if(isSelectAll) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filtered.map(item => item.id));
+      setSelectedIds(filteredNotes.map(item => item.id));
     }
     setIsSelectAll(!isSelectAll);
   };
   
   // 监听选中项变化，更新全选状态
   useEffect(() => {
-    const filtered = filterData();
     setIsSelectAll(
-      filtered.length > 0 &&
-      selectedIds.length === filtered.length
+      filteredNotes.length > 0 &&
+      selectedIds.length === filteredNotes.length
     );
-  }, [selectedIds, currentFolderId, searchText]);
+  }, [selectedIds, filteredNotes]);
   
   // 切换选中状态
   const toggleSelect = (id) => {
@@ -215,49 +169,44 @@ export default function Diary() {
   // 批量删除
   const deleteSelected = async () => {
     if(selectedIds.length === 0) return;
-    const isDeleted = await deleteNotes(selectedIds);
-    if(isDeleted) {
-      // 更新所有笔记相关状态
-      const updatedAllNotes = allNotes.filter(note => !selectedIds.includes(note.id));
-      setAllNotes(updatedAllNotes);
-      
-      const updatedUnclassified = unclassifiedNotes.filter(note => !selectedIds.includes(note.id));
-      setUnclassifiedNotes(updatedUnclassified);
-      
-      const updatedFolderNotes = {};
-      Object.entries(folderNotes).forEach(([folderId, notes]) => {
-        updatedFolderNotes[folderId] = notes.filter(note => !selectedIds.includes(note.id));
-      });
-      setFolderNotes(updatedFolderNotes);
-      
-      setSelectedIds([]);
-      setIsDeleting(false);
-      showToastMessage(`已删除 ${selectedIds.length} 篇日记`);
-    }
+    Alert.alert(
+      '确认删除',
+      `确定要删除这 ${selectedIds.length} 篇日记吗？此操作不可撤销。`,
+      [
+        {
+          text: '取消',
+          style: 'cancel'
+        },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            const deleteResponse = await noteApi.deleteBatch(selectedIds);
+            const isDeleted = deleteResponse.success;
+            if(isDeleted) {
+              // 重新加载过滤数据
+              await loadFilteredData();
+              setSelectedIds([]);
+              setIsDeleting(false);
+              showToastMessage(`已删除 ${selectedIds.length} 篇日记`);
+            }
+          }
+        }
+      ]
+    );
   };
   
   // 单个删除
   const deleteDiary = async (id) => {
     if(id) {
-      const isDeleted = await deleteNote(id);
+      const deleteResponse = await noteApi.delete(id);
+      const isDeleted = deleteResponse.success;
       if(isDeleted) {
-        // 更新所有笔记相关状态
-        const updatedAllNotes = allNotes.filter(note => note.id !== id);
-        setAllNotes(updatedAllNotes);
-        
-        const updatedUnclassified = unclassifiedNotes.filter(note => note.id !== id);
-        setUnclassifiedNotes(updatedUnclassified);
-        
-        const updatedFolderNotes = {};
-        Object.entries(folderNotes).forEach(([folderId, notes]) => {
-          updatedFolderNotes[folderId] = notes.filter(note => note.id !== id);
-        });
-        setFolderNotes(updatedFolderNotes);
-        
+        // 重新加载过滤数据
+        await loadFilteredData();
         if(selectedIds.includes(id)) {
           setSelectedIds(prev => prev.filter(itemId => itemId !== id));
         }
-        
         showToastMessage('已删除 1 篇日记');
       }
     }
@@ -308,7 +257,8 @@ export default function Diary() {
           style={styles.deleteButton}
           onPress={(e) => {
             e.stopPropagation();
-            deleteDiary(item.id).then();
+            setCurrentDiaryId(item.id);
+            setDeleteModalVisible(true);
           }}
         >
           <Ionicons name="trash" size={18} color="#ff3b30" />
@@ -340,7 +290,7 @@ export default function Diary() {
   
   // 打开编辑文件夹弹窗
   const handleOpenEditFolderModal = async (folderId) => {
-    const folder = await getFolderById(folderId);
+    const folder = await folderApi.getById(folderId);
     if(folder) {
       setFolderName(folder.name);
       setCurrentEditFolderId(folderId);
@@ -356,7 +306,7 @@ export default function Diary() {
       return;
     }
     
-    await createFolder({ name });
+    await folderApi.create({ name });
     showToastMessage('文件夹创建成功');
     setAddFolderModalVisible(false);
     await loadAllData();
@@ -370,7 +320,7 @@ export default function Diary() {
       return;
     }
     
-    const result = await updateFolder(currentEditFolderId, name);
+    const result = await folderApi.update(currentEditFolderId, { name });
     if(result.success) {
       showToastMessage('文件夹修改成功');
       setEditFolderModalVisible(false);
@@ -394,7 +344,7 @@ export default function Diary() {
           text: '删除',
           style: 'destructive',
           onPress: async () => {
-            await deleteFolder(folderId);
+            await folderApi.delete(folderId);
             showToastMessage('文件夹删除成功');
             // 如果当前选中的是被删除的文件夹，切换到全部
             if(currentFolderId === folderId.toString()) {
@@ -438,7 +388,7 @@ export default function Diary() {
           placeholder="搜索日记标题或内容..."
           placeholderTextColor="#999"
           value={searchText}
-          onChangeText={setSearchText}
+          onChangeText={handleSearchTextChange}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -454,21 +404,21 @@ export default function Diary() {
       {/* 文件夹横向选择栏 */}
       <CategoryTab
         categories={[
-          { id: 'all', name: '全部', isFixed: true },
-          { id: 'unclassified', name: '未分类' },
+          { id: 'all', name: '全部' },
           ...folders?.map(f => ({
             id: f.id.toString(),
             name: f.name
-          }))
+          })),
+          { id: 'uncategorized', name: '未分类' }
         ]}
         currentTab={currentFolderId}
-        setCurrentTab={setCurrentFolderId}
+        setCurrentTab={handleFolderChange}
       />
       
       {/* 批量删除栏 */}
       {isDeleting && (
         <ThemeCard style={styles.batchDeleteBar}>
-          <ThemeTouchableOpacity
+          <TouchableOpacity
             style={styles.exitDeleteButton}
             onPress={() => {
               setIsDeleting(false);
@@ -477,7 +427,7 @@ export default function Diary() {
             }}
           >
             <Icon lib="Ionicons" name="close" size={25} />
-          </ThemeTouchableOpacity>
+          </TouchableOpacity>
           
           <ThemeText style={styles.selectedCount}>
             {`已选择 ${selectedIds.length} 项`}
@@ -509,31 +459,23 @@ export default function Diary() {
       <FlatList
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.flatList}
-        data={groupByMonth(filterData())}
-        keyExtractor={(group) => group.month}
-        renderItem={({ item: group }) => (
-          <ThemeView padding={0} margin={0}>
-            <ThemeTitleText
-              style={styles.monthTitle}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >{group.month}</ThemeTitleText>
-            <FlatList
-              data={group.data}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              numColumns={2}
-              scrollEnabled={false}
-            />
-          </ThemeView>
-        )}
+        data={filteredNotes}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        numColumns={2}
         ListEmptyComponent={renderEmpty}
       />
       
       {/* 新增日记按钮 */}
       <TouchableOpacity
         style={[styles.floatingButton, { backgroundColor: theme.colors.interactive}]}
-        onPress={() => navigation.navigate('diary-edit')}
+        onPress={() => {
+          let folderId = null;
+          if (currentFolderId !== 'all' && currentFolderId !== 'uncategorized') {
+            folderId = parseInt(currentFolderId);
+          }
+          navigation.navigate('diary-edit', { folderId });
+        }}
       >
         <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>
@@ -556,15 +498,6 @@ export default function Diary() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContainer}>
-                <TouchableOpacity
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setSettingModalVisible(false);
-                    navigation.navigate('ai-diary-generator');
-                  }}
-                >
-                  <Text style={styles.modalItemText}>ai日记选择</Text>
-                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.modalItem}
                   onPress={() => {
@@ -599,15 +532,6 @@ export default function Diary() {
               </TouchableOpacity>
             </View>
             
-            {/* 新增文件夹按钮 */}
-            <TouchableOpacity
-              style={styles.addFolderButton}
-              onPress={handleOpenAddFolderModal}
-            >
-              <Ionicons name="add-circle" size={18} color="#007AFF" style={styles.addFolderIcon} />
-              <Text style={styles.addFolderText}>新增文件夹</Text>
-            </TouchableOpacity>
-            
             {/* 文件夹列表 */}
             <FlatList
               data={folders}
@@ -620,6 +544,15 @@ export default function Diary() {
                 </View>
               )}
             />
+            
+            {/* 新增文件夹按钮 */}
+            <TouchableOpacity
+              style={styles.addFolderButton}
+              onPress={handleOpenAddFolderModal}
+            >
+              <Ionicons name="add-circle" size={18} color="#007AFF" style={styles.addFolderIcon} />
+              <Text style={styles.addFolderText}>新增文件夹</Text>
+            </TouchableOpacity>
           </ThemeCard>
         </View>
       </Modal>
@@ -825,12 +758,10 @@ const styles = StyleSheet.create({
   // 批量删除栏
   batchDeleteBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10
+    alignItems: 'center'
   },
   exitDeleteButton: {
-    marginRight: 10,
-    width: 30,
+    width: 40,
     height: 30,
     justifyContent: 'center',
     alignItems: 'center'
@@ -1032,9 +963,10 @@ const styles = StyleSheet.create({
   addFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
+    padding: 10,
+    paddingHorizontal: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0'
   },
   addFolderIcon: {
     marginRight: 10

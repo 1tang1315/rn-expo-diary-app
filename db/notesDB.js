@@ -127,12 +127,6 @@ export async function createNote(noteData) {
     throw new Error("标题和内容不能为空");
   }
   
-  if (folder_id) {
-    const folderExists = await getFolderById(folder_id);
-    if (!folderExists) {
-      throw new Error(`指定的文件夹 (ID: ${folder_id}) 不存在`);
-    }
-  }
   
   const db = await getDB();
   const now = getLocalDateTimeByDayjs();

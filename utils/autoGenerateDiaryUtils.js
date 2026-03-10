@@ -1,16 +1,16 @@
 import dayjs from 'dayjs';
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import AiDiaryService from "@/db/services/AiDiaryService";
-import { checkDiaryExists, createFolder, createNote, getFolderById, getFoldersWithNoteCount } from "@/db/notesDB";
+import { noteApi, folderApi } from "@/api";
 import { eventApi } from "@/api/EventApi";
 import { getPlainTextContent } from "@/utils/previewFormatter";
 
 export const getOrCreateFolder = async (folderName) => {
-  const folders = await getFoldersWithNoteCount();
+  const folders = await folderApi.getAll();
   let targetFolder = folders.find(f => f.name === folderName);
   if (!targetFolder) {
-    const folderId = await createFolder({ name: folderName });
-    targetFolder = await getFolderById(folderId);
+    const folderId = await folderApi.create({ name: folderName });
+    targetFolder = await folderApi.getById(folderId);
   }
   return targetFolder;
 };
@@ -44,7 +44,8 @@ export const autoGenerateYesterdayDiary = async () => {
     
     // 检查日记是否已存在
     const diaryFolder = await getOrCreateFolder('日记');
-    const exists = await checkDiaryExists(yesterday, diaryFolder.id);
+    const existsResponse = await noteApi.checkDiaryExists(yesterday);
+    const exists = existsResponse.exists;
     if (exists) {
       console.log(`[${yesterday}] 日记已存在，跳过生成`);
       return;
@@ -85,11 +86,11 @@ export const autoGenerateYesterdayDiary = async () => {
     
     // 保存日记
     if (!output || output.trim() === '') {
-      throw new Error('AI生成的日记内容为空');
+      throw new Error('AI 生成的日记内容为空');
     }
     
-    await createNote({
-      folder_id: diaryFolder.id,
+    await noteApi.create({
+      folderId: diaryFolder.id,
       title: yesterday,
       content: output.trim()
     });

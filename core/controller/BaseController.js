@@ -4,6 +4,7 @@
 import { baseCreateSchema, baseUpdateSchema, idParamSchema } from '@/core/schemas';
 import { validateParams } from '@/core/utils';
 import { Response } from '@/core/response';
+import { parseInt } from "lodash/string";
 
 export class BaseController {
   constructor(service) {
@@ -12,17 +13,19 @@ export class BaseController {
 
   /**
    * 根据ID获取记录
-   * @param {number} id - 记录ID
+   * @param {number|string} id - 记录ID
    * @returns {Promise<Object>} 统一格式的响应
    */
   async getById(id) {
     try {
+      // 转换ID为数字类型
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
       // 验证参数
-      const validationResult = validateParams({ id }, idParamSchema);
+      const validationResult = validateParams({ id: numericId }, idParamSchema);
       if (!validationResult.isValid) {
         return Response.error(400, validationResult.errors.join('; '));
       }
-      const data = await this.service.getById(id);
+      const data = await this.service.getById(numericId);
       return Response.success(data, '获取成功');
     } catch (error) {
       console.error('获取记录失败:', error);
@@ -67,14 +70,16 @@ export class BaseController {
 
   /**
    * 更新记录
-   * @param {number} id - 记录ID
+   * @param {number|string} id - 记录ID
    * @param {Object} data - 记录数据
    * @returns {Promise<Object>} 统一格式的响应
    */
   async update(id, data) {
     try {
+      // 转换ID为数字类型
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
       // 验证ID参数
-      const idValidationResult = validateParams({ id }, idParamSchema);
+      const idValidationResult = validateParams({ id: numericId }, idParamSchema);
       if (!idValidationResult.isValid) {
         return Response.error(400, idValidationResult.errors.join('; '));
       }
@@ -83,7 +88,7 @@ export class BaseController {
       if (!dataValidationResult.isValid) {
         return Response.error(400, dataValidationResult.errors.join('; '));
       }
-      const success = await this.service.update(id, data);
+      const success = await this.service.update(numericId, data);
       return Response.success({ success }, success ? '更新成功' : '更新失败');
     } catch (error) {
       console.error('更新记录失败:', error);
@@ -93,17 +98,19 @@ export class BaseController {
 
   /**
    * 删除记录
-   * @param {number} id - 记录ID
+   * @param {number|string} id - 记录ID
    * @returns {Promise<Object>} 统一格式的响应
    */
   async delete(id) {
     try {
+      // 转换ID为数字类型
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
       // 验证参数
-      const validationResult = validateParams({ id }, idParamSchema);
+      const validationResult = validateParams({ id: numericId }, idParamSchema);
       if (!validationResult.isValid) {
         return Response.error(400, validationResult.errors.join('; '));
       }
-      const success = await this.service.delete(id);
+      const success = await this.service.delete(numericId);
       return Response.success({ success }, success ? '删除成功' : '删除失败');
     } catch (error) {
       console.error('删除记录失败:', error);

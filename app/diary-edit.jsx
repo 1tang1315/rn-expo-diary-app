@@ -1,7 +1,7 @@
 import Icon from "@/components/common/Icon";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import { useTheme } from "@/context/ThemeContext";
-import { createNote, getNoteById, updateNote } from '@/db/notesDB';
+import { noteApi } from "@/api";
 import { formatDatetime } from "@/utils/formatTimeUtils";
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useEffect, useState } from "react";
@@ -17,6 +17,7 @@ export default function DiaryEdit() {
   const route = useRoute();
   const navigation = useNavigation();
   const nodeId = route.params?.nodeId;
+  const folderId = route.params?.folderId;
   
   const [diary, setDiary] = useState(null);
   const [content, setContent] = useState('');
@@ -36,15 +37,13 @@ export default function DiaryEdit() {
     const initializePage = async () => {
       if(nodeId) {
         setIsLoading(true);
-        const data = await getNoteById(nodeId);
+        const data = await noteApi.getById(nodeId);
+        console.log(data, "data");
         setIsLoading(false);
         
         if(data) {
           setDiary({
-            title: data.title,
-            content: data.content,
-            createdAt: data.created_at,
-            updatedAt: data.updated_at
+            ...data
           });
           setContent(data.content);
           setTitle(data.title || '');
@@ -133,10 +132,11 @@ export default function DiaryEdit() {
     try {
       if(nodeId) {
         // 更新日记时，同时更新标题、内容和更新时间
-        success = await updateNote(nodeId, {
+        const updateResponse = await noteApi.update(nodeId, {
           title,
           content: trimmedContent
         });
+        success = updateResponse.success;
         // 更新本地状态以反映最新变化
         setDiary(prev => ({
           ...prev,
@@ -146,10 +146,12 @@ export default function DiaryEdit() {
         }));
       } else {
         const createdAt = new Date().toISOString();
-        const newDiaryId = await createNote({
+        const newDiaryResponse = await noteApi.create({
           title,
-          content: trimmedContent
+          content: trimmedContent,
+          folderId
         });
+        const newDiaryId = newDiaryResponse.id;
         success = !!newDiaryId;
         if(success) {
           setDiary(prev => ({

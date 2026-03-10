@@ -3,8 +3,8 @@ import {
   Modal, View, Text, Button,
   StyleSheet, ActivityIndicator, Alert
 } from 'react-native';
+import { noteApi } from '@/api';
 import dayjs from 'dayjs';
-import { insertDiary, updateDiary } from '@/db/notesDB';
 import AIStreamText from "@/components/common/AIStreamText";
 
 /**
@@ -27,25 +27,30 @@ const DiaryPreviewModal = ({
   onAfterConfirm,
   isContentFinalized={isContentFinalized}
 }) => {
-  // 处理“覆盖”操作
+  // 处理"覆盖"操作
   const handleOverwrite = async () => {
-    await updateDiary(targetDate, newDiaryContent);
+    const response = await noteApi.update(targetDate, {
+      title: targetDate,
+      content: newDiaryContent
+    });
     Alert.alert('成功', hasExistingDiary ? '日记已覆盖更新' : '日记已保存');
   };
   
-  // 处理“保存”操作（无旧日记时）
+  // 处理"保存"操作（无旧日记时）
   const handleSave = async () => {
     try {
-      // 直接调用原有的 insertDiary（如果是新生成且无旧日记）
-      const insertResult = await insertDiary(targetDate, newDiaryContent);
-      if (insertResult.success) {
+      const insertResult = await noteApi.create({
+        title: targetDate,
+        content: newDiaryContent
+      });
+      if (insertResult.id) {
         Alert.alert('成功', '日记已保存');
         onAfterConfirm?.();
       } else {
         Alert.alert('失败', insertResult.message || '保存日记时出错');
       }
     } catch (error) {
-      Alert.alert('失败', `操作异常: ${error.message}`);
+      Alert.alert('失败', `操作异常：${error.message}`);
     }
   };
   
@@ -92,12 +97,18 @@ const DiaryPreviewModal = ({
             <Button
               title={hasExistingDiary ? "确认覆盖" : "确认保存"}
               onPress={hasExistingDiary ? async () => {
-                await updateDiary(targetDate, newDiaryContent);
+                const response = await noteApi.update(targetDate, {
+                  title: targetDate,
+                  content: newDiaryContent
+                });
                 Alert.alert('成功', '日记已覆盖更新');
                 onAfterConfirm?.();
               } : async () => {
-                const insertResult = await insertDiary(targetDate, newDiaryContent);
-                if (insertResult.success) {
+                const insertResult = await noteApi.create({
+                  title: targetDate,
+                  content: newDiaryContent
+                });
+                if (insertResult.id) {
                   Alert.alert('成功', '日记已保存');
                   onAfterConfirm?.();
                 } else {

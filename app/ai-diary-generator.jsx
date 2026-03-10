@@ -1,22 +1,24 @@
-import React, { useState, useCallback, useEffect } from "react";
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, ScrollView
-} from "react-native";
-import { useNavigation } from '@react-navigation/native';
-import AiDiaryService from '@/db/services/AiDiaryService';
-import dayjs from 'dayjs';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  checkDiaryExists, createNote, getFolderById, getFoldersWithNoteCount, createFolder
-} from "@/db/notesDB";
-import DateSelector from "@/components/statistics/DateSelector";
+import { folderApi, noteApi } from "@/api";
 import { eventApi } from "@/api/EventApi";
-import { getPlainTextContent } from "@/utils/previewFormatter";
-import ExpandableCard from "@/components/common/ExpandableCard";
-import { AsyncStorage } from "expo-sqlite/kv-store";
 import AIStreamText from "@/components/common/AIStreamText";
+import ExpandableCard from "@/components/common/ExpandableCard";
+import DateSelector from "@/components/statistics/DateSelector";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import AiDiaryService from '@/db/services/AiDiaryService';
+import { getPlainTextContent } from "@/utils/previewFormatter";
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import dayjs from 'dayjs';
+import { AsyncStorage } from "expo-sqlite/kv-store";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
+} from "react-native";
 
 export default function AiDiaryGenerator() {
   const [aiDiaryService, setAiDiaryService] = useState(null);
@@ -82,11 +84,11 @@ export default function AiDiaryGenerator() {
   }, [completedDiaries, currentGeneratingDiary]);
   
   const getOrCreateFolder = async (folderName) => {
-    const folders = await getFoldersWithNoteCount();
+    const folders = await folderApi.getAll();
     let targetFolder = folders.find(f => f.name === folderName);
     if (!targetFolder) {
-      const folderId = await createFolder({ name: folderName });
-      targetFolder = await getFolderById(folderId);
+      const folderId = await folderApi.create({ name: folderName });
+      targetFolder = await folderApi.getById(folderId);
     }
     return targetFolder;
   };
@@ -146,7 +148,8 @@ export default function AiDiaryGenerator() {
     setProcessedCount(0);
     
     for (const date of dateArray) {
-      const exists = await checkDiaryExists(date, diaryFolder.id);
+      const existsResponse = await noteApi.checkDiaryExists(date);
+      const exists = existsResponse.exists;
       if (exists) {
         setProcessMessages(prev => [...prev, { type: 'skip', msg: `日期 ${date} 已存在日记，跳过` }]);
         setProcessedCount(prev => prev + 1);
@@ -197,8 +200,8 @@ export default function AiDiaryGenerator() {
           setCurrentGeneratingDiary(finalizedDiary);
           setCompletedDiaries(prev => [...prev, finalizedDiary]);
           
-          await createNote({
-            folder_id: diaryFolder.id,
+          await noteApi.create({
+            folderId: diaryFolder.id,
             title: date,
             content: output.trim()
           });
@@ -232,7 +235,8 @@ export default function AiDiaryGenerator() {
     try {
       const summaryTitle = `${startDate}~${endDate}`;
       const summaryFolder = await getOrCreateFolder('阶段总结');
-      const exists = await checkDiaryExists(summaryTitle, summaryFolder.id);
+      const existsResponse = await noteApi.checkDiaryExists(summaryTitle);
+      const exists = existsResponse.exists;
       if (exists) {
         Alert.alert('提示', '该时间范围的阶段总结已存在，跳过生成');
         return false;
@@ -276,8 +280,8 @@ export default function AiDiaryGenerator() {
           isContentFinalized: true
         }));
         
-        await createNote({
-          folder_id: summaryFolder.id,
+        await noteApi.create({
+          folderId: summaryFolder.id,
           title: summaryTitle,
           content: summaryContentText.trim()
         });
