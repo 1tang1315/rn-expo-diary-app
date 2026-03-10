@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { AsyncStorage } from "expo-sqlite/kv-store";
-import AiDiaryService from "@/db/services/AiDiaryService";
+import { AiService } from "@/core/service/AiService";
 import { noteApi, folderApi } from "@/api";
 import { eventApi } from "@/api/EventApi";
 import { getPlainTextContent } from "@/utils/previewFormatter";
@@ -33,7 +33,7 @@ export const autoGenerateYesterdayDiary = async () => {
     }
     
     // 初始化AI服务
-    const aiDiaryService = new AiDiaryService(
+    const aiDiaryService = new AiService(
       apiKey.trim(),
       model || 'Qwen/Qwen3-8B',
       apiBaseUrl || 'https://api.siliconflow.cn/v1'

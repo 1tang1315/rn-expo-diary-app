@@ -5,13 +5,7 @@ import {
 } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  createConversation,
-  createMessage,
-  deleteConversation,
-  getAllConversations,
-  getMessagesForConversation, updateConversation
-} from '@/db/aiDialogueDB';
+import { conversationApi, messageApi } from '@/api';
 import AIStreamText from "@/components/common/AIStreamText";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import { HistoryMessage } from "@/components/chat/HistoryMessage";
@@ -25,7 +19,7 @@ import { useTheme } from "@/context/ThemeContext";
 import ThemeTextInput from "@/components/theme/ThemeTextInput";
 import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useAIConfig } from "@/context/AIConfigContext";
-import AiDiaryService from "@/db/services/AiDiaryService";
+import { AiService } from "@/core/service/AiService";
 import ThemePartingLine from "@/components/theme/ThemePartingLine";
 
 const AiChatScreen = () => {
@@ -33,7 +27,7 @@ const AiChatScreen = () => {
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const { aiConfig } = useAIConfig();
-  const aiDiaryService = new AiDiaryService(
+  const aiDiaryService = new AiService(
     aiConfig.apiKey,
     aiConfig.model,
     aiConfig.apiBaseUrl
@@ -59,15 +53,15 @@ const AiChatScreen = () => {
     const title = getLocalDateTimeByDayjs();
     
     try {
-      const latestConversations = await getAllConversations();
+      const latestConversations = await fetchConversationList();
       
       // 判断最新对话是否为空消息, 空消息 -> 更新标题; 非空消息 -> 新建对话
       if(latestConversations.length > 0) {
         const latestConversation = latestConversations[0];
-        const latestMessages = await getMessagesForConversation(latestConversation.id);
+        const latestMessages = await messageApi.getByConversationId(latestConversation.id);
         
         if(latestMessages.length === 0) {
-          await updateConversation(latestConversation.id, {
+          await conversationApi.update(latestConversation.id, {
             title
           });
           setConversations(prev =>
@@ -87,8 +81,8 @@ const AiChatScreen = () => {
         }
       }
       
-      const newConversationId = await createConversation({ title });
-      setCurrentConversationId(newConversationId);
+      const newConversation = await conversationApi.create({ title });
+      setCurrentConversationId(newConversation.id);
       await fetchConversationList();
       setMessages([]);
       setSidebarVisible(false);
@@ -102,7 +96,7 @@ const AiChatScreen = () => {
   useEffect(() => {
     const initChat = async () => {
       try {
-        const fetchedConversations = await getAllConversations();
+        const fetchedConversations = await conversationApi.getAll();
         setConversations(fetchedConversations);
         
         // 若有历史对话，默认选择最新的；若无，创建默认对话
@@ -131,7 +125,7 @@ const AiChatScreen = () => {
   
   const fetchConversationList = async () => {
     // 1. 先获取最新数据
-    const latestConversations = await getAllConversations();
+    const latestConversations = await conversationApi.getAll();
     // 2. 更新状态
     setConversations(latestConversations);
     // 3. 直接使用这个返回值（它就是最新的）
@@ -141,7 +135,7 @@ const AiChatScreen = () => {
   // 加载指定对话的消息
   const loadConversationMessages = async (conversationId) => {
     try {
-      const fetchedMessages = await getMessagesForConversation(conversationId);
+      const fetchedMessages = await messageApi.getByConversationId(conversationId);
       setMessages(fetchedMessages);
       setIsAIGenerating(false);
       setCurrentAIContent({
@@ -182,7 +176,7 @@ const AiChatScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteConversation(conversationId);
+              await conversationApi.delete(conversationId);
               // 更新对话列表
               const latestConversations = await fetchConversationList();
               // 若删除的是当前对话，切换到最新对话
@@ -228,17 +222,19 @@ const AiChatScreen = () => {
       setIsContentFinalized(false);
       
       const userMessage = {
-        conversation_id: currentConversationId,
+        conversationId: currentConversationId,
         role: 'user',
         content: userInput
       };
-      const userMessageId = await createMessage(userMessage);
+      const userMessageId = await messageApi.create(userMessage);
       
       flushSync(() => {
         setMessages(prev => [
           ...prev, {
             id: userMessageId || Date.now(),
-            ...userMessage,
+            conversation_id: currentConversationId,
+            role: 'user',
+            content: userInput,
             created_at: new Date().toISOString()
           }
         ]);
@@ -260,16 +256,19 @@ const AiChatScreen = () => {
       });
       
       const aiMessage = {
-        conversation_id: currentConversationId,
+        conversationId: currentConversationId,
         role: 'assistant',
         thought: aiResult.thought,
         content: aiResult.output
       };
-      const aiMessageId = await createMessage(aiMessage);
+      const aiMessageId = await messageApi.create(aiMessage);
       setMessages(prev => [
         ...prev, {
           id: aiMessageId || Date.now(),
-          ...aiMessage,
+          conversation_id: currentConversationId,
+          role: 'assistant',
+          thought: aiResult.thought,
+          content: aiResult.output,
           created_at: new Date().toISOString()
         }
       ]);
@@ -283,7 +282,7 @@ const AiChatScreen = () => {
       const isFirstUserMessage = messages.length === 0;
       if(isFirstUserMessage) {
         const newTitle = await aiDiaryService.updateConversationTitle(userInput);
-        await updateConversation(currentConversationId, { title: newTitle });
+        await conversationApi.update(currentConversationId, { title: newTitle });
         setConversations(prev =>
           prev.map(convo =>
             convo.id === currentConversationId
@@ -318,19 +317,22 @@ const AiChatScreen = () => {
     if(currentConversationId) {
       try {
         const aiMessage = {
-          conversation_id: currentConversationId,
+          conversationId: currentConversationId,
           role: 'assistant',
           thought: updatedAIContent.thought,
           content: updatedAIContent.output
         };
         
-        const messageId = await createMessage(aiMessage);
+        const messageId = await messageApi.create(aiMessage);
         flushSync(() => {
           setMessages(prev => [
             ...prev,
             {
               id: messageId || Date.now(),
-              ...aiMessage,
+              conversation_id: currentConversationId,
+              role: 'assistant',
+              thought: updatedAIContent.thought,
+              content: updatedAIContent.output,
               created_at: new Date().toISOString()
             }
           ]);

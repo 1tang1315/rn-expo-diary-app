@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import EventSource from "react-native-sse";
 
-export default class AiDiaryService {
+export class AiService {
   constructor(apiKey, model, apiBaseUrl) {
     this.API_KEY = apiKey;
     this.MODEL = model;

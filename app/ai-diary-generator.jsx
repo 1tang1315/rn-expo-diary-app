@@ -4,7 +4,7 @@ import AIStreamText from "@/components/common/AIStreamText";
 import ExpandableCard from "@/components/common/ExpandableCard";
 import DateSelector from "@/components/statistics/DateSelector";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
-import AiDiaryService from '@/db/services/AiDiaryService';
+import { AiService } from '@/core/service/AiService';
 import { getPlainTextContent } from "@/utils/previewFormatter";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -68,10 +68,10 @@ export default function AiDiaryGenerator() {
           model: savedModel || 'Qwen/Qwen3-8B',
           apiBaseUrl: savedApiBaseUrl || 'https://api.siliconflow.cn/v1'
         };
-        setAiDiaryService(new AiDiaryService(newConfig));
+        setAiDiaryService(new AiService(newConfig));
       } catch(err) {
         console.error('加载配置失败：', err);
-        setAiDiaryService(new AiDiaryService());
+        setAiDiaryService(new AiService());
       }
     };
     loadConfig().then();
