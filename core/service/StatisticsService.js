@@ -4,9 +4,10 @@
 import { EventMapper } from '@/core/mapper';
 import { BaseService } from '@/core/service';
 import { snakeToCamelObject } from '@/core/utils';
-import { getTotalMinutes } from '@/utils/formatTimeUtils';
+import { getTotalMinutes, formatDurationByMinutes } from '@/utils/formatTimeUtils';
 import { getCategoryName } from '@/utils/categoryUtils';
 import { statisticsColors as colors } from '@/constants/commonConstans';
+import dayjs from 'dayjs';
 
 export class StatisticsService extends BaseService {
   constructor() {
@@ -75,5 +76,152 @@ export class StatisticsService extends BaseService {
     }, 0);
     
     return { chartData, totalMinutes, completedEvents };
+  }
+
+  /**
+   * 获取统计数据，按视图类型处理
+   * @param {Array} events - 事件数据
+   * @param {string} viewType - 视图类型：day, week, month, year
+   * @param {Object} dateRange - 日期范围
+   * @returns {Array} 处理后的统计数据
+   */
+  processStatsData(events, viewType, dateRange) {
+    const eventMap = new Map();
+
+    // 过滤有效数据
+    const validData = events.filter(item => item.title || getCategoryName(item.category) && item.startDatetime);
+
+    // 颜色缓存映射表
+    const colorCache = new Map();
+
+    // 高对比度随机颜色
+    const getRandomColor = (eventKey) => {
+      if (colorCache.has(eventKey)) {
+        return colorCache.get(eventKey);
+      }
+      
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      
+      // 确保颜色对比度足够（偏暗，文字显示清晰）
+      const finalColor = brightness < 128
+        ? color
+        : `#${(0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0')}`;
+      
+      // 将生成的颜色存入缓存
+      colorCache.set(eventKey, finalColor);
+      
+      return finalColor;
+    };
+
+    // 初始化不同视图类型的基础数据
+    const initEventBaseData = (eventKey, viewType, event) => {
+      const baseData = {
+        title: eventKey,
+        color: event.color || getRandomColor(eventKey),
+        count: 0,
+        totalMinutes: 0,
+        totalDurationStr: ''
+      };
+      
+      switch (viewType) {
+        case 'day':
+          return { ...baseData, timeRanges: [], date: '' };
+        case 'week':
+          return { ...baseData, weeklyCounts: new Array(7).fill(0) };
+        case 'month':
+          return { ...baseData, dailyCounts: {} };
+        case 'year':
+          return { ...baseData, dailyCounts: {}, monthlyCounts: {} };
+        default:
+          return { ...baseData, weeklyCounts: new Array(7).fill(0) };
+      }
+    };
+
+    // 处理单条事件数据的聚合逻辑
+    const processSingleEvent = (event, eventMap, viewType, dateRange) => {
+      const eventKey = event.title || getCategoryName(event.category);
+      if (!eventKey) return;
+      
+      // 初始化数据（不存在则创建）
+      if (!eventMap.has(eventKey)) {
+        eventMap.set(eventKey, initEventBaseData(eventKey, viewType, event));
+      }
+      
+      const eventData = eventMap.get(eventKey);
+      eventData.count++;
+      
+      const startDatetime = dayjs(event.startDatetime);
+      const endDatetime = dayjs(event.endDatetime || event.startDatetime);
+      const totalMinutes = getTotalMinutes(event.startDatetime, event.endDatetime || event.startDatetime);
+      eventData.totalMinutes += totalMinutes;
+      
+      // 按视图类型补充数据
+      switch (viewType) {
+        case 'day':
+          eventData.timeRanges.push({
+            startTime: startDatetime.format('HH:mm'),
+            endTime: endDatetime.format('HH:mm'),
+            durationStr: formatDurationByMinutes(totalMinutes),
+            startDatetime: event.startDatetime,
+            endDatetime: event.endDatetime || event.startDatetime
+          });
+          eventData.date = eventData.date || startDatetime.format('YYYY-MM-DD');
+          break;
+        case 'week':
+          const weekStart = dateRange?.startDate
+            ? dayjs(dateRange.startDate).startOf('week')
+            : dayjs().startOf('week');
+          const dayDiff = startDatetime.diff(weekStart, 'day');
+          const weekIndex = dayDiff >= 0 && dayDiff < 7 ? dayDiff : -1;
+          if (weekIndex >= 0 && weekIndex < 7) {
+            eventData.weeklyCounts[weekIndex]++;
+          }
+          break;
+        case 'month':
+          const dateStr = startDatetime.format('YYYY-MM-DD');
+          eventData.dailyCounts[dateStr] = (eventData.dailyCounts[dateStr] || 0) + 1;
+          break;
+        case 'year':
+          const yearDateStr = startDatetime.format('YYYY-MM-DD');
+          const monthStr = startDatetime.format('YYYY-MM');
+          eventData.dailyCounts[yearDateStr] = (eventData.dailyCounts[yearDateStr] || 0) + 1;
+          eventData.monthlyCounts[monthStr] = (eventData.monthlyCounts[monthStr] || 0) + 1;
+          break;
+      }
+    };
+
+    // 格式化聚合后的数据
+    const formatEventData = (eventMap, viewType) => {
+      return Array.from(eventMap.values()).map(item => {
+        item.totalDurationStr = formatDurationByMinutes(item.totalMinutes);
+        
+        if (viewType === 'day' && item.timeRanges) {
+          item.timeRanges.sort((a, b) =>
+            dayjs(a.startDatetime).isBefore(dayjs(b.startDatetime)) ? -1 : 1
+          );
+          item.date = item.date || dayjs().format('YYYY-MM-DD');
+        }
+        
+        return item;
+      });
+    };
+
+    // 聚合每条事件数据
+    validData.forEach(event => {
+      processSingleEvent(event, eventMap, viewType, dateRange);
+    });
+    
+    // 格式化数据
+    return formatEventData(eventMap, viewType);
   }
 }
