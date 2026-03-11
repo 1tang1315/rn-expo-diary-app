@@ -2,9 +2,8 @@ import {
   ActivityIndicator, ScrollView, StyleSheet, Text, View, Button
 } from "react-native";
 import React, { useCallback, useState } from "react";
-import { eventApi } from "@/api/EventApi";
+import { statisticsApi } from "@/api/StatisticsApi";
 import DateSelector from "@/components/statistics/DateSelector";
-import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
@@ -102,18 +101,23 @@ function precisionMultiply(num1, num2, decimalPlaces) {
 }
 
 export default function Statistics() {
-  const [statsData, setStatsData] = useState([]);
+  const [statsData, setStatsData] = useState({
+    chartData: [],
+    totalMinutes: 0,
+    completedEvents: []
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentTab, setCurrentTab] = useState('all');
   
   const handleDateChange = useCallback((startDate = dayjs().startOf('day'), endDate) => {
     setLoading(true);
     
-    eventApi.getByDateRangeAndCategory({ startDate, endDate })
+    statisticsApi.getStatistics({ startDate, endDate, category: currentTab })
       .then(data => setStatsData(data))
       .catch(err => setError(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [currentTab]);
   
   useFocusEffect(
     useCallback(() => {
@@ -121,17 +125,11 @@ export default function Statistics() {
     }, [handleDateChange])
   );
   
-  const [currentTab, setCurrentTab] = useState('all');
-  // 根据当前选中的分类筛选数据
-  const filteredStatsData = currentTab === 'all'
-    ? statsData
-    : statsData.filter(item => item.category === currentTab);
-  
   const {
     chartData,
     totalMinutes,
     completedEvents
-  } = processStatistics(filteredStatsData, currentTab === 'all');
+  } = statsData;
   
   const [chartType, setChartType] = useState('pie'); // 'bar' 或 'pie'
   const [chartTypeName, setChartTypeName] = useState('饼'); // 'bar' 或 'pie'
@@ -159,7 +157,10 @@ export default function Statistics() {
         <CategoryTab
           categories={categories}
           currentTab={currentTab}
-          setCurrentTab={setCurrentTab}
+          setCurrentTab={(tab) => {
+            setCurrentTab(tab);
+            handleDateChange();
+          }}
         />
         
         <ScrollView

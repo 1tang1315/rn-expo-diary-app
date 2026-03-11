@@ -46,7 +46,7 @@ const DateSelector = ({ onDataChange }) => {
   }, [dateType, startDate, endDate, onDataChange]);
   
   return (
-    <ThemeCard>
+    <ThemeCard paddingTop={0}>
       <ThemeTitleText style={styles.sectionTitle}>选择日期范围</ThemeTitleText>
       
       <View style={styles.dateTypeSwitcher}>

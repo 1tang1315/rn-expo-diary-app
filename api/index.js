@@ -6,5 +6,6 @@ export { folderApi } from './FolderApi';
 export { conversationApi } from './ConversationApi';
 export { messageApi } from './MessageApi';
 export { aiDiaryApi } from './AiApi';
+export { statisticsApi } from './StatisticsApi';
 export { default as cloudSyncApi } from './CloudSyncApi';
 
