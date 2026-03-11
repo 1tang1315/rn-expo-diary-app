@@ -1,45 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
 import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
-import { getAllCloudDriveConfigs, deleteCloudDriveConfig } from '@/db/cloudSyncDb';
-import { getCurrentUserId } from '@/db/userDB';
-import { CloudSyncService, DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
+import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import { useCloudDrive } from '@/context/CloudDriveContext';
+import { DRIVE_CONFIGS } from '@/core/service/CloudSyncService';
+import CloudSyncApi from '@/api/CloudSyncApi';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const CloudDriveSettings = () => {
-  const [drives, setDrives] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cloudDriveConfig, isLoading, deleteDriveConfig } = useCloudDrive();
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [selectedDriveType, setSelectedDriveType] = useState(null);
-  const [userId, setUserId] = useState(null);
   const [syncingDriveId, setSyncingDriveId] = useState(null);
-  
-  // 获取用户ID和云盘配置
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const uid = await getCurrentUserId();
-        setUserId(uid);
-        await fetchDrives(uid);
-      } catch (error) {
-        console.error('初始化云盘设置失败:', error);
-        Alert.alert('错误', '无法加载云盘配置，请重试');
-      } finally {
-        setLoading(false);
-      }
-    };
-    init();
-  }, []);
-  
-  // 刷新云盘列表
-  const fetchDrives = async (uid) => {
-    if (!uid) return;
-    const driveConfigs = await getAllCloudDriveConfigs(uid);
-    setDrives(driveConfigs);
-  };
+  const [loading, setLoading] = useState(false);
   
   // 选择云盘类型后显示配置表单
   const handleSelectDriveType = (type) => {
@@ -49,9 +24,8 @@ const CloudDriveSettings = () => {
   };
   
   // 配置成功后刷新列表
-  const handleConfigSuccess = async () => {
+  const handleConfigSuccess = () => {
     setShowConfigForm(false);
-    if (userId) await fetchDrives(userId);
   };
   
   // 删除云盘配置
@@ -67,8 +41,7 @@ const CloudDriveSettings = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteCloudDriveConfig(id);
-              await fetchDrives(userId);
+              await deleteDriveConfig(id);
             } catch (error) {
               console.error('删除云盘配置失败:', error);
               Alert.alert('错误', '删除配置失败，请重试');
@@ -83,8 +56,7 @@ const CloudDriveSettings = () => {
   const testDriveConnection = async (drive) => {
     try {
       setLoading(true);
-      const cloudSyncService = new CloudSyncService();
-      const result = await cloudSyncService.testConnection(drive);
+      const result = await CloudSyncApi.testConnection(drive);
       
       if (result.success) {
         Alert.alert('测试成功', result.message, [{ text: '确定' }]);
@@ -103,8 +75,7 @@ const CloudDriveSettings = () => {
   const syncDrive = async (drive) => {
     try {
       setSyncingDriveId(drive.id);
-      const cloudSyncService = new CloudSyncService();
-      await cloudSyncService.syncAllAuto(drive);
+      await CloudSyncApi.syncAllAuto([drive]);
       Alert.alert('同步成功', `${DRIVE_CONFIGS[drive.drive_type]?.displayName || drive.drive_type}同步完成`);
     } catch (error) {
       console.error('同步失败:', error);
@@ -192,13 +163,15 @@ const CloudDriveSettings = () => {
     );
   };
   
-  if (loading && drives.length === 0) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3498db" />
       </View>
     );
   }
+  
+  const { driveConfigs } = cloudDriveConfig;
   
   return (
     <ThemeSafeAreaView style={styles.container}>
@@ -212,7 +185,7 @@ const CloudDriveSettings = () => {
         <Text style={styles.addText}>添加云盘</Text>
       </TouchableOpacity>
       
-      {drives.length === 0 ? (
+      {driveConfigs.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="cloud-offline-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>尚未配置云盘</Text>
@@ -220,7 +193,7 @@ const CloudDriveSettings = () => {
         </View>
       ) : (
         <FlatList
-          data={drives}
+          data={driveConfigs}
           renderItem={renderDriveItem}
           keyExtractor={item => item.id.toString()}
           style={styles.driveList}
@@ -239,7 +212,6 @@ const CloudDriveSettings = () => {
         visible={showConfigForm}
         onClose={() => setShowConfigForm(false)}
         driveType={selectedDriveType}
-        userId={userId}
         onConfigSuccess={handleConfigSuccess}
       />
     </ThemeSafeAreaView>

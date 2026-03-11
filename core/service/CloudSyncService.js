@@ -1,9 +1,8 @@
-import { Buffer } from 'buffer';
-import { getAllTables, getDB } from '@/db';
-import { getAllCloudDriveConfigs, getSyncCheckpoint, upsertSyncCheckpoint } from '@/db/cloudSyncDb';
-import { getCurrentUserId } from "@/db/userDB";
-import * as FileSystem from "expo-file-system";
 import { BASE_IMAGE_DIR } from "@/constants/commonConstans";
+import { getAllTables, getDB } from '@/db';
+import { Buffer } from 'buffer';
+import * as FileSystem from "expo-file-system";
+import SyncStatusService from './SyncStatusService';
 
 // 云盘类型
 export const DriveType = {
@@ -21,13 +20,13 @@ export const DRIVE_CONFIGS = {
     getRequestUrl: (_method, path) => `${DRIVE_CONFIGS[DriveType.NUTSTORE].webdavEndpoint}${path}`,
     getRequestHeaders: (method) => {
       const headers = {};
-      if(method === 'PROPFIND') {
+      if (method === 'PROPFIND') {
         headers['Depth'] = '0';
       }
       return headers;
     },
     mapHttpError: (status) => {
-      switch(status) {
+      switch (status) {
         case 401:
           return '账号或密码错误（需在坚果云官网单独设置WebDAV密码）';
         case 403:
@@ -48,7 +47,7 @@ export const DRIVE_CONFIGS = {
     downloadEndpoint: 'https://api.dropboxapi.com/2/files/download',
     note: '需使用Dropbox开发者API令牌（需开启 files.content.write 和 files.content.read 权限）',
     getRequestUrl: (method) => {
-      if(method === 'POST') {
+      if (method === 'POST') {
         return DRIVE_CONFIGS[DriveType.DROPBOX].downloadEndpoint;
       }
       return DRIVE_CONFIGS[DriveType.DROPBOX].uploadEndpoint;
@@ -56,14 +55,14 @@ export const DRIVE_CONFIGS = {
     getRequestHeaders: (method, path) => {
       const dropboxArg = JSON.stringify({ path: `/${path}` });
       const headers = { 'Dropbox-API-Arg': dropboxArg };
-      
-      if(method === 'PUT') {
+
+      if (method === 'PUT') {
         headers['Content-Type'] = 'application/octet-stream';
       }
       return headers;
     },
     mapHttpError: (status) => {
-      switch(status) {
+      switch (status) {
         case 401:
           return 'API令牌无效或已过期';
         case 403:
@@ -83,13 +82,13 @@ export const DRIVE_CONFIGS = {
     webdavEndpoint: 'https://graph.microsoft.com/v1.0/me/drive/root:',
     getRequestUrl: (_, path) => `${DRIVE_CONFIGS[DriveType.ONEDRIVE].webdavEndpoint}/${path}:/content`,
     getRequestHeaders: (method) => {
-      if(method === 'PUT') {
+      if (method === 'PUT') {
         return { 'Content-Type': 'application/json' };
       }
       return {};
     },
     mapHttpError: (status) => {
-      switch(status) {
+      switch (status) {
         case 401:
           return '令牌过期（需重新获取Graph API授权）';
         case 403:
@@ -107,13 +106,13 @@ export const DRIVE_CONFIGS = {
     webdavEndpoint: 'https://dav.baidu.com/',
     getRequestUrl: (_, path) => `${DRIVE_CONFIGS[DriveType.BAIDU].webdavEndpoint}${path}`,
     getRequestHeaders: (method) => {
-      if(method === 'PROPFIND') {
+      if (method === 'PROPFIND') {
         return { 'Depth': '0' };
       }
       return { 'Content-Type': 'application/json' };
     },
     mapHttpError: (status) => {
-      switch(status) {
+      switch (status) {
         case 401:
           return '账号或密码错误（需开启百度网盘WebDAV服务）';
         case 503:
@@ -132,12 +131,12 @@ export class CloudSyncService {
   #normalizePath(path = '') {
     return path.trim().replace(/^\/+|\/+$/g, '');
   }
-  
+
   // 统一生成请求头（支持上传/下载，适配不同网盘）
   #getRequestHeaders(driveConfig, method, path, contentType = 'application/json') {
     const baseHeaders = {};
     // 上传类请求（PUT/POST）需加Content-Type
-    if(['PUT', 'POST'].includes(method) && !baseHeaders['Content-Type']) {
+    if (['PUT', 'POST'].includes(method) && !baseHeaders['Content-Type']) {
       baseHeaders['Content-Type'] = contentType;
     }
     // 调用网盘专属的Header配置
@@ -146,18 +145,7 @@ export class CloudSyncService {
       ...(driveConfig.getRequestHeaders?.(method, path) || {})
     };
   }
-  
-  async #getAllConfigs() {
-    const userId = await getCurrentUserId();
-    const configs = await getAllCloudDriveConfigs(userId);
-    if(!configs?.length) {
-      const err = new Error('未找到云盘配置');
-      err.code = 'NO_CONFIG';
-      throw err;
-    }
-    return configs;
-  }
-  
+
   async #webdavRequest(driveType, url, options) {
     try {
       const {
@@ -173,12 +161,12 @@ export class CloudSyncService {
         headers: { Authorization: authHeader, ...headers },
         body
       });
-      
+
       // 读取响应内容
       const data = await response.text().catch(() => '');
       const driveConfig = DRIVE_CONFIGS[driveType];
-      
-      if(response.ok) {
+
+      if (response.ok) {
         return {
           ok: true,
           status: response.status,
@@ -186,21 +174,21 @@ export class CloudSyncService {
           headers: response.headers
         };
       }
-      
+
       const defaultError = `${response.status} ${response.statusText}: ${data.substring(0, 150)}`;
       return {
         ok: false,
         status: response.status,
         error: driveConfig.mapHttpError(response.status) || defaultError
       };
-    } catch(err) {
+    } catch (err) {
       return {
         ok: false,
         error: err.message || '网络连接失败'
       };
     }
   }
-  
+
   async #checkDirExists(driveType, dirPath, account, credential) {
     const driveConfig = DRIVE_CONFIGS[driveType];
     const dirUrl = driveConfig.getRequestUrl('PROPFIND', dirPath);
@@ -210,25 +198,23 @@ export class CloudSyncService {
       credential,
       headers: this.#getRequestHeaders(driveConfig, 'PROPFIND', dirPath)
     });
-    if(res.ok) return { exists: true };
-    if(res.status === 404) return { exists: false };
+    if (res.ok) return { exists: true };
+    if (res.status === 404) return { exists: false };
     return {
       exists: false,
       error: res.error
     };
   }
-  
+
   async #updateCheckpoint(driveId, path, data) {
-    const userId = await getCurrentUserId();
-    await upsertSyncCheckpoint({
-      user_id: userId,
+    await SyncStatusService.upsertSyncCheckpoint({
       drive_id: driveId,
       path,
       last_sync_time: new Date().toISOString(),
       ...data
     });
   }
-  
+
   // 拉取远程数据
   async #fetchRemoteData(config, syncPath) {
     try {
@@ -243,12 +229,12 @@ export class CloudSyncService {
       throw new Error(`远程拉取失败: ${e.message}`);
     }
   }
-  
+
   // 获取本地数据
   async #fetchLocalData(db, tableName) {
     return await db.getAllAsync(`SELECT * FROM ${tableName}`);
   }
-  
+
   // 合并双方数据
   #mergeData(local, remote, updatedAtKey) {
     const map = new Map(local.map(r => [r.id, r]));
@@ -260,7 +246,7 @@ export class CloudSyncService {
     }
     return [...map.values()];
   }
-  
+
   // 数据写入本地
   async #writeLocalIfChanged(db, tableName, local, merged, updatedAtKey) {
     const [before, after] = await Promise.all([this.#calcDataHash(local), this.#calcDataHash(merged)]);
@@ -283,7 +269,7 @@ export class CloudSyncService {
     });
     return true;
   }
-  
+
   async #uploadIfChanged(config, syncPath, data, checkpoint) {
     const dbHash = await this.#calcDataHash(data);
     if (dbHash === checkpoint?.last_sync_token) {
@@ -309,11 +295,11 @@ export class CloudSyncService {
       error_message: null
     });
   }
-  
+
   #buildResult(tableName, rows) {
     return { success: true, tableName, rows: rows.length };
   }
-  
+
   async #updateCheckpointError(configId, path, err) {
     await this.#updateCheckpoint(configId, path, {
       sync_status: 'error',
@@ -321,39 +307,39 @@ export class CloudSyncService {
       last_sync_time: new Date().toISOString()
     });
   }
-  
+
   async #calcDataHash(data) {
     const jsonStr = JSON.stringify(data);
     const Crypto = require('expo-crypto');
     return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.MD5, jsonStr);
   }
-  
+
   // 递归获取目录下所有文件和子目录
   async #getAllFilesInDir(dirPath, relativePath = '') {
     // 强制规范化路径：确保末尾1个斜杠，避免路径解析异常
     const normalizedDir = dirPath.replace(/\/+$/, '') + '/';
-    
+
     try {
       // 步骤1：读取目录
       let entryPaths = await FileSystem.readDirectoryAsync(normalizedDir);
       const files = [];
-      
+
       for (const entryName of entryPaths) {
         // 跳过空名称条目
         if (!entryName || entryName.trim() === '') {
           continue;
         }
-        
+
         // 拼接完整路径
         const fullPath = `${normalizedDir}${entryName}`;
         const relPath = relativePath ? `${relativePath}/${entryName}` : entryName;
-        
+
         // 步骤2：手动判断是否为目录
         const fileInfo = await FileSystem.getInfoAsync(fullPath, { size: false });
         if (!fileInfo.exists) {
           continue;
         }
-        
+
         if (fileInfo.isDirectory) {
           // 递归遍历子目录
           const subFiles = await this.#getAllFilesInDir(fullPath, relPath);
@@ -368,39 +354,39 @@ export class CloudSyncService {
       throw err;
     }
   }
-  
+
   // 获取所有私有目录文件（包括子目录）
   async #getAllPrivateFiles() {
     return this.#getAllFilesInDir(BASE_IMAGE_DIR);
   }
-  
+
   async #syncSingleFile(config, file) {
     const { localPath, cloudPath } = file;
     if (!localPath || !cloudPath) {
       throw new Error(`无效文件路径: local=${localPath}, cloud=${cloudPath}`);
     }
-    
+
     const driveConfig = DRIVE_CONFIGS[config.drive_type];
     const rootPath = this.#normalizePath(config.root_path);
-    
+
     // 云盘完整路径（根路径 + 相对路径）
     const cloudFilePath = rootPath ? `${rootPath}/${cloudPath}` : cloudPath;
     // 提取父目录路径（用于创建目录）
     const lastSlashIndex = cloudPath.lastIndexOf('/');
     const parentDirPath = lastSlashIndex > -1 ? cloudPath.substring(0, lastSlashIndex) : '';
-    
+
     try {
       // 确保父目录存在
       if (parentDirPath) {
         await this.#ensureCloudDirExists(config, parentDirPath);
       }
-      
+
       // 读取文件内容并上传（原有逻辑）
       const fileContent = await FileSystem.readAsStringAsync(localPath, {
         encoding: FileSystem.EncodingType.Base64
       });
       const binaryData = Buffer.from(fileContent, 'base64');
-      
+
       // 自动识别MIME类型（原有逻辑）
       const ext = cloudPath.split('.').pop()?.toLowerCase();
       const mimeType = {
@@ -410,7 +396,7 @@ export class CloudSyncService {
         gif: 'image/gif',
         webp: 'image/webp'
       }[ext] || 'application/octet-stream';
-      
+
       // 执行上传
       const uploadUrl = driveConfig.getRequestUrl(driveConfig.uploadMethod, cloudFilePath);
       const res = await this.#webdavRequest(config.drive_type, uploadUrl, {
@@ -420,7 +406,7 @@ export class CloudSyncService {
         headers: this.#getRequestHeaders(driveConfig, driveConfig.uploadMethod, cloudFilePath, mimeType),
         body: binaryData
       });
-      
+
       if (!res.ok) {
         throw new Error(`上传失败 ${cloudFilePath}: ${res.error}`);
       }
@@ -431,18 +417,18 @@ export class CloudSyncService {
       throw err;
     }
   }
-  
+
   async #ensureCloudDirExists(config, dirPath) {
     const driveType = config.drive_type;
     const driveConfig = DRIVE_CONFIGS[driveType];
     if (!driveConfig.needsDirCheck) {
       return true;
     }
-    
+
     // 规范化云盘根路径和目标目录
     const rootPath = this.#normalizePath(config.root_path);
     const fullDirPath = rootPath ? `${rootPath}/${dirPath}` : dirPath;
-    
+
     // 检查目录是否已存在
     const { exists, error } = await this.#checkDirExists(driveType, fullDirPath, config.account, config.credential);
     if (error) {
@@ -451,23 +437,23 @@ export class CloudSyncService {
     if (exists) {
       return true;
     }
-    
+
     // 目录不存在，尝试创建（支持多级目录）
     const dirSegments = fullDirPath.split('/').filter(seg => seg); // 拆分路径段
     let currentDir = '';
-    
+
     // 递归创建每一级目录
     for (const segment of dirSegments) {
       currentDir = currentDir ? `${currentDir}/${segment}` : segment;
       const dirUrl = driveConfig.getRequestUrl('MKCOL', currentDir);
-      
+
       const res = await this.#webdavRequest(driveType, dirUrl, {
         method: 'MKCOL', // WebDAV创建目录的标准方法
         account: config.account,
         credential: config.credential,
         headers: this.#getRequestHeaders(driveConfig, 'MKCOL', currentDir)
       });
-      
+
       if (!res.ok && res.status !== 405) { // 405表示目录已存在，忽略
         throw new Error(`创建目录 ${currentDir} 失败: ${res.error || res.statusText}`);
       }
@@ -475,7 +461,7 @@ export class CloudSyncService {
 
     return true;
   }
-  
+
   async testConnection(config) {
     const {
       drive_type,
@@ -484,34 +470,34 @@ export class CloudSyncService {
       root_path
     } = config;
     const driveConfig = DRIVE_CONFIGS[drive_type];
-    if(!driveConfig) return {
+    if (!driveConfig) return {
       success: false,
       message: `不支持的网盘类型：${drive_type}`
     };
-    
+
     const normalizedPath = this.#normalizePath(root_path);
     const testFileName = `test_conn_${Date.now()}.txt`;
     const testPath = normalizedPath ? `${normalizedPath}/${testFileName}` : testFileName;
-    
+
     // 测试文件上传URL
     const testUrl = driveConfig.getRequestUrl(driveConfig.uploadMethod, testPath);
-    
+
     // 检查目录是否存在（如需要）
-    if(normalizedPath && driveConfig.needsDirCheck) {
+    if (normalizedPath && driveConfig.needsDirCheck) {
       const {
         exists,
         error
       } = await this.#checkDirExists(drive_type, normalizedPath, account, credential);
-      if(error) return {
+      if (error) return {
         success: false,
         message: error
       };
-      if(!exists) return {
+      if (!exists) return {
         success: false,
         message: `未找到目录【${normalizedPath}】，请先创建`
       };
     }
-    
+
     // 上传测试文件
     const uploadRes = await this.#webdavRequest(drive_type, testUrl, {
       method: driveConfig.uploadMethod,
@@ -520,11 +506,11 @@ export class CloudSyncService {
       headers: this.#getRequestHeaders(driveConfig, driveConfig.uploadMethod, testPath, 'text/plain'),
       body: `Test from RNExpoDiaryApp: ${new Date().toISOString()}`
     });
-    if(!uploadRes.ok) return {
+    if (!uploadRes.ok) return {
       success: false,
       message: `上传失败：${uploadRes.error}`
     };
-    
+
     // 删除测试文件
     const deleteUrl = driveConfig.getRequestUrl('DELETE', testPath);
     const deleteRes = await this.#webdavRequest(drive_type, deleteUrl, {
@@ -532,47 +518,47 @@ export class CloudSyncService {
       account,
       credential
     });
-    
+
     return {
       success: true,
       message: `成功连接${driveConfig.displayName}`,
       ...(deleteRes.ok ? {} : { warning: `测试文件【${testFileName}】删除失败，请手动清理` })
     };
   }
-  
+
   // 全量/增量双向同步方法
   async syncSingleTableSafe(tableName, config, updatedAtKey = "updated_at") {
-    if(["cloud_drive_config", "sync_checkpoint"].includes(tableName)) return;
-    
+    if (["cloud_drive_config", "sync_checkpoint"].includes(tableName)) return;
+
     const db = await getDB();
     const syncPath = this.#normalizePath(`${config.root_path}/${tableName}.json`);
-    const checkpoint = await getSyncCheckpoint(config.id, syncPath);
-    
+    const checkpoint = await SyncStatusService.getSyncCheckpoint(config.id, syncPath);
+
     try {
       const remoteData = await this.#fetchRemoteData(config, syncPath);
       const localData = await this.#fetchLocalData(db, tableName);
-      
+
       const mergedData = this.#mergeData(localData, remoteData, updatedAtKey);
       await this.#writeLocalIfChanged(db, tableName, localData, mergedData, updatedAtKey);
-      
+
       await this.#uploadIfChanged(config, syncPath, mergedData, checkpoint);
-      
+
       return this.#buildResult(tableName, mergedData);
     } catch (err) {
       await this.#updateCheckpointError(config.id, syncPath, err);
       throw err;
     }
   }
-  
-  async syncAllAuto() {
+
+  async syncAllAuto(driveConfigs = []) {
     const result = {
       success: false,
       driveResults: [],
       total: 0
     };
-    
+
     try {
-      const allConfigs = await this.#getAllConfigs();
+      const allConfigs = driveConfigs;
       result.total = allConfigs.length;
       if (!result.total) return {
         ...result,
@@ -594,7 +580,7 @@ export class CloudSyncService {
             details: []
           }
         };
-        
+
         try {
           // 同步数据库表
           const tables = await getAllTables();
@@ -606,7 +592,7 @@ export class CloudSyncService {
               driveResult.failedTables.push({ tableName, error: err.message });
             }
           }
-          
+
           // 同步文件系统
           const privateFiles = await this.#getAllPrivateFiles();
           if (privateFiles.length === 0) {
@@ -631,7 +617,7 @@ export class CloudSyncService {
             }
             driveResult.fileSync.message = `${driveResult.fileSync.success} 个文件成功，${driveResult.fileSync.failed} 个失败`;
           }
-          
+
           // 综合判断同步状态
           driveResult.success =
             !driveResult.failedTables.length &&
@@ -642,7 +628,7 @@ export class CloudSyncService {
           result.driveResults.push(driveResult);
         }
       }
-      
+
       result.success = result.driveResults.some(d => d.success);
       return result;
     } catch (err) {
@@ -654,3 +640,5 @@ export class CloudSyncService {
     }
   }
 }
+
+export default CloudSyncService;

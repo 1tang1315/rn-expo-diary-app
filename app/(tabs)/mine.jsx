@@ -4,9 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import Icon from "@/components/common/Icon";
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { getAllCloudDriveConfigs } from '@/db/cloudSyncDb';
-import { getCurrentUserId } from '@/db/userDB';
-import { DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
+import { DRIVE_CONFIGS } from '@/core/service/CloudSyncService';
 import ThemeCard from "@/components/theme/ThemeCard";
 import AISettingsModal from "@/components/chat/AISettingsModal";
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +14,7 @@ import ThemePartingLine from "@/components/theme/ThemePartingLine";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import { Link, useFocusEffect } from "expo-router";
 import { useAIConfig } from "@/context/AIConfigContext";
+import { useCloudDrive } from "@/context/CloudDriveContext";
 
 const MODE_LIST = [
   {
@@ -56,8 +55,7 @@ export default function Mine() {
   } = useTheme();
   
   // 云盘相关状态
-  const [drives, setDrives] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cloudDriveConfig, isLoading } = useCloudDrive();
   
   // AI配置相关状态
   const [showAISettings, setShowAISettings] = useState(false);
@@ -65,34 +63,6 @@ export default function Mine() {
   
   // 导航钩子
   const navigation = useNavigation();
-  
-  // 初始化云盘数据
-  const initCloudDrives = useCallback(async () => {
-    try {
-      const uid = await getCurrentUserId();
-      await fetchDrives(uid);
-    } catch(error) {
-      console.error('初始化云盘设置失败:', error);
-      Alert.alert('云盘错误', '无法加载云盘配置，请重试');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  useFocusEffect(
-    useCallback(() => {
-      initCloudDrives().then();
-    }, [initCloudDrives])
-  );
-  
-  
-  
-  // 刷新云盘列表
-  const fetchDrives = async (uid) => {
-    if(!uid) return;
-    const driveConfigs = await getAllCloudDriveConfigs(uid);
-    setDrives(driveConfigs);
-  };
   
   // 跳转到云盘编辑页面
   const navigateToAddCloudDrive = () => {
@@ -197,11 +167,11 @@ export default function Mine() {
           <ThemePartingLine></ThemePartingLine>
           
           {/* 云盘列表显示 */}
-          {loading ? (
+          {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={theme.colors.interactive} />
             </View>
-          ) : drives.length === 0 ? (
+          ) : cloudDriveConfig.driveConfigs.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={[styles.emptyText, { color: theme.colors.text }]}>尚未配置云盘</Text>
               <Text
@@ -209,7 +179,7 @@ export default function Mine() {
             </View>
           ) : (
             <View style={styles.driveList}>
-              {drives.map((item) => (
+              {cloudDriveConfig.driveConfigs.map((item) => (
                 <View key={item.id.toString()} style={[styles.driveItemSummary, {borderColor: theme.colors.interactive}]}>
                   <View style={styles.driveIconContainer}>
                     {getDriveIcon(item)}

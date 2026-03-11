@@ -1,25 +1,26 @@
+import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
+import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
+import Icon from "@/components/common/Icon";
+import SettingsMenu from '@/components/common/SettingsMenu';
+import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import { useTheme } from '@/context/ThemeContext';
+import CloudSyncApi from '@/api/CloudSyncApi';
+import dayjs from "dayjs";
+import { useNavigation } from "expo-router";
 import React, { useState } from 'react';
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
-  Alert
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import dayjs from "dayjs";
-import { CloudSyncService } from '@/db/services/CloudSyncService';
-import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
-import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
-import { getAllCloudDriveConfigs } from "@/db/cloudSyncDb";
-import SettingsMenu from '@/components/common/SettingsMenu';
-import { useNavigation } from "expo-router";
-import { useTheme } from '@/context/ThemeContext';
-import Icon from "@/components/common/Icon";
-import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import { useCloudDrive } from "@/context/CloudDriveContext";
 
 const Header = ({ selectedDate, onToday, userId = 1 }) => {
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const { cloudDriveConfig } = useCloudDrive();
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDriveSelector, setShowDriveSelector] = useState(false);
@@ -33,15 +34,15 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
     return `${date.format('YYYY年MM月DD日')} ${date.format('ddd')}`;
   };
   
-  const checkConfig = async () => {
-    const configs = await getAllCloudDriveConfigs(userId);
-    return configs && configs.length > 0;
+  const checkConfig = () => {
+    const { driveConfigs } = cloudDriveConfig;
+    return driveConfigs && driveConfigs.length > 0;
   };
   
   const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const hasConfig = await checkConfig();
+      const hasConfig = checkConfig();
       
       if (!hasConfig) {
         setShowDriveSelector(true);
@@ -49,8 +50,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
         return;
       }
       
-      const cloudSyncService = new CloudSyncService();
-      await cloudSyncService.syncAllAuto();
+      await CloudSyncApi.syncAllAuto(cloudDriveConfig.driveConfigs);
       Alert.alert("同步成功");
     } catch (err) {
       console.error("同步失败", err);
@@ -135,7 +135,6 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
         onClose={() => setShowConfigForm(false)}
         driveType={selectedDriveType}
         onConfigSuccess={handleConfigSuccess}
-        userId={userId}
       />
       
       <SettingsMenu

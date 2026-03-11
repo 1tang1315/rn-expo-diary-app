@@ -1,20 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Alert, ActivityIndicator } from 'react-native';
+import { useCloudDrive } from '@/context/CloudDriveContext';
+import { CloudSyncService, DRIVE_CONFIGS } from '@/core/service/CloudSyncService';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  addCloudDriveConfig,
-  getCloudDriveConfigsByType,
-  updateCloudDriveConfig
-} from '@/db/cloudSyncDb';
-import { CloudSyncService, DRIVE_CONFIGS } from '@/db/services/CloudSyncService';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const CloudDriveConfigForm = ({
   visible,
   onClose,
   driveType,
-  onConfigSuccess,
-  userId
+  onConfigSuccess
 }) => {
+  const { cloudDriveConfig, addCloudDriveConfig, updateDriveConfig } = useCloudDrive();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [rootPath, setRootPath] = useState('RNExpoDiaryApp');
@@ -23,30 +19,21 @@ const CloudDriveConfigForm = ({
   
   // 初始化：加载已有配置
   useEffect(() => {
-    const loadExistingConfig = async () => {
-      if(!driveType || !userId) return;
-      
-      try {
-        const configs = await getCloudDriveConfigsByType(userId, driveType);
-        
-        if(configs.length > 0) {
-          // 显示第一个配置（可根据需求调整为列表选择）
-          const config = configs[0];
-          setAccount(config.account || '');
-          setPassword(config.credential || '');
-          setRootPath(config.root_path || 'RNExpoDiaryApp');
-        } else {
-          setAccount('');
-          setPassword('');
-          setRootPath('RNExpoDiaryApp');
-        }
-      } catch(error) {
-        console.error('加载配置失败:', error);
-        Alert.alert('初始化失败', '无法加载已有配置，请重试');
-      }
-    };
-    loadExistingConfig();
-  }, [driveType, userId]);
+    if(!driveType) return;
+    
+    const { driveConfigs } = cloudDriveConfig;
+    const existingConfig = driveConfigs.find(config => config.drive_type === driveType);
+    
+    if(existingConfig) {
+      setAccount(existingConfig.account || '');
+      setPassword(existingConfig.credential || '');
+      setRootPath(existingConfig.root_path || 'RNExpoDiaryApp');
+    } else {
+      setAccount('');
+      setPassword('');
+      setRootPath('RNExpoDiaryApp');
+    }
+  }, [driveType, cloudDriveConfig]);
   
   // 验证路径格式
   const validateRootPath = (path) => {
@@ -85,31 +72,35 @@ const CloudDriveConfigForm = ({
       
       // 保存配置
       let configId;
-      const existingConfigs = await getCloudDriveConfigsByType(userId, driveType);
+      const { driveConfigs } = cloudDriveConfig;
+      const existingConfig = driveConfigs.find(config => config.drive_type === driveType);
       
-      if(existingConfigs.length > 0) {
-        // 更新第一个同类型配置
-        await updateCloudDriveConfig(existingConfigs[0].id, {
+      if(existingConfig) {
+        // 更新已有配置
+        await updateDriveConfig(existingConfig.id, {
           account,
           credential: password,
           root_path: normalizedRootPath
         });
-        configId = existingConfigs[0].id;
+        configId = existingConfig.id;
       } else {
-        configId = await addCloudDriveConfig({
-          user_id: userId,
+        // 添加新配置
+        await addCloudDriveConfig({
           drive_type: driveType,
           account,
           credential: password,
           root_path: normalizedRootPath
         });
+        // 获取新添加的配置ID
+        const updatedConfigs = cloudDriveConfig.driveConfigs;
+        const newConfig = updatedConfigs.find(config => config.drive_type === driveType);
+        configId = newConfig?.id;
       }
       
       // 测试连接
       const cloudSyncService = new CloudSyncService();
       const testResult = await cloudSyncService.testConnection({
         id: configId,
-        user_id: userId,
         drive_type: driveType,
         account,
         credential: password,
@@ -125,7 +116,13 @@ const CloudDriveConfigForm = ({
         
         // 调用同步服务
         setTimeout(() => {
-          cloudSyncService.syncAllAuto()
+          cloudSyncService.syncAllAuto([{
+            id: configId,
+            drive_type: driveType,
+            account,
+            credential: password,
+            root_path: normalizedRootPath
+          }])
             .then(() => console.log('首次同步成功'))
             .catch(err => console.warn('首次同步失败:', err));
         }, 1000);
@@ -145,12 +142,7 @@ const CloudDriveConfigForm = ({
       }
     } catch(error) {
       console.error('保存配置失败:', error);
-      // 数据库错误特殊处理
-      if(error.message.includes('finalizing statement')) {
-        Alert.alert('保存失败', '配置保存失败，请检查数据库连接或重试');
-      } else {
-        Alert.alert('错误', error.message || '保存配置时发生错误');
-      }
+      Alert.alert('错误', error.message || '保存配置时发生错误');
     } finally {
       setLoading(false);
     }

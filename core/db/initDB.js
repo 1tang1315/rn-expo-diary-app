@@ -3,47 +3,24 @@ import * as SQLite from "expo-sqlite";
 let dbPromise = null;
 
 export async function getDB() {
-  if(dbPromise) {
-    return dbPromise;
-  }
-  
-  dbPromise = (async () => {
-    const db = await SQLite.openDatabaseAsync('RNExpoDiaryApp');
-    
-    await db.execAsync(`PRAGMA journal_mode = WAL;`);
-    
-    // await db.execAsync(`DROP TABLE IF EXISTS user;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS event;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS folders;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS notes;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS conversations;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS messages;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS storage;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS cloud_drive_config;`);
-    // await db.execAsync(`DROP TABLE IF EXISTS sync_checkpoint;`);
-    
-    // 用户表
-    await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS user
-        (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            username   TEXT DEFAULT 'default_user',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            deleted_at TEXT DEFAULT NULL /* 软删除字段，NULL表示未删除 */
-        );
-    `);
-    
-    // 初始化默认用户（如果不存在）
-    const userCount = await db.getFirstAsync(`SELECT COUNT(*) as count
-                                              FROM user`);
-    if(userCount.count === 0) {
-      await db.runAsync(`INSERT INTO user (username)
-                         VALUES ('default_user')`);
+    if (dbPromise) {
+        return dbPromise;
     }
-    
-    // 事件表(一天 多条事件)
-    await db.execAsync(`
+
+    dbPromise = (async () => {
+        const db = await SQLite.openDatabaseAsync('RNExpoDiaryApp');
+
+        await db.execAsync(`PRAGMA journal_mode = WAL;`);
+
+        // await db.execAsync(`DROP TABLE IF EXISTS event;`);
+        // await db.execAsync(`DROP TABLE IF EXISTS folders;`);
+        // await db.execAsync(`DROP TABLE IF EXISTS notes;`);
+        // await db.execAsync(`DROP TABLE IF EXISTS conversations;`);
+        // await db.execAsync(`DROP TABLE IF EXISTS messages;`);
+        // await db.execAsync(`DROP TABLE IF EXISTS storage;`);
+
+        // 事件表(一天 多条事件)
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS event
         (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,9 +36,9 @@ export async function getDB() {
             deleted_at     TEXT DEFAULT NULL /* 软删除字段，NULL表示未删除 */
         );
     `);
-    
-    // 文件夹/笔记本表
-    await db.execAsync(`
+
+        // 文件夹/笔记本表
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS folders
         (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,9 +49,9 @@ export async function getDB() {
             deleted_at TEXT    DEFAULT NULL /* 软删除字段 */
         );
     `);
-    
-    // 笔记表
-    await db.execAsync(`
+
+        // 笔记表
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS notes
         (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,20 +64,20 @@ export async function getDB() {
             FOREIGN KEY (folder_id) REFERENCES folders (id) ON DELETE SET NULL
         );
     `);
-    
-    // 初始化默认文件夹 "日记"（如果不存在）
-    const diaryFolder = await db.getFirstAsync(`SELECT id
+
+        // 初始化默认文件夹 "日记"（如果不存在）
+        const diaryFolder = await db.getFirstAsync(`SELECT id
                                                 FROM folders
                                                 WHERE name = '日记'
                                                 LIMIT 1`);
-    if(!diaryFolder) {
-      await db.runAsync(`INSERT INTO folders (name)
+        if (!diaryFolder) {
+            await db.runAsync(`INSERT INTO folders (name)
                          VALUES ('日记')`);
-    }
-    
-    // AI 对话相关
-    // 对话历史表
-    await db.execAsync(`
+        }
+
+        // AI 对话相关
+        // 对话历史表
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS conversations
         (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,9 +87,9 @@ export async function getDB() {
             deleted_at TEXT DEFAULT NULL
         );
     `);
-    
-    // 消息表
-    await db.execAsync(`
+
+        // 消息表
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS messages
         (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,9 +103,9 @@ export async function getDB() {
             FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE
         );
     `);
-    
-    // 储物表
-    await db.execAsync(`
+
+        // 储物表
+        await db.execAsync(`
         CREATE TABLE IF NOT EXISTS storage
         (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,47 +122,9 @@ export async function getDB() {
             deleted_at TEXT DEFAULT NULL
         );
     `);
-    
-    // 网盘配置表
-    await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS cloud_drive_config
-        (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    INTEGER NOT NULL,
-            drive_type TEXT    NOT NULL DEFAULT 'nutstore', /* 默认 nutstore(坚果云盘) */
-            account    TEXT    NOT NULL, /* 账号 */
-            credential TEXT    NOT NULL, /* 密码或Token */
-            root_path  TEXT    NOT NULL DEFAULT 'RNExpoDiaryApp', /* 云盘存储路径 */
-            created_at TEXT             DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT             DEFAULT CURRENT_TIMESTAMP,
-            deleted_at TEXT             DEFAULT NULL,
-            FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
-        );
-    `);
-    
-    // 同步状态表
-    await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS sync_checkpoint
-        (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id         INTEGER NOT NULL,
-            drive_id        INTEGER NOT NULL,
-            path            TEXT    NOT NULL, /* 云端目录，例如 RNExpoDiaryApp */
-            last_sync_time  TEXT DEFAULT '1970-01-01T00:00:00Z',
-            last_sync_token TEXT, /* WebDAV的etag，或远端清单版本号 */
-            sync_status     TEXT DEFAULT 'idle', /* idle / syncing / failed */
-            error_message   TEXT, /* 最近一次错误 */
-            create_at      TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at      TEXT DEFAULT CURRENT_TIMESTAMP,
-            deleted_at      TEXT DEFAULT NULL, /* 软删除字段，NULL表示未删除 */
-            FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
-            FOREIGN KEY (drive_id) REFERENCES cloud_drive_config (id) ON DELETE CASCADE,
-            UNIQUE (drive_id, path)
-        );
-    `);
-    
-    return db;
-  })();
-  
-  return dbPromise;
+
+        return db;
+    })();
+
+    return dbPromise;
 }
