@@ -1,9 +1,9 @@
 /**
  * 统计服务类，处理统计相关的业务逻辑
  */
-import { EventMapper } from '@/core/mapper';
+import { EventMapper, StatisticsMapper } from '@/core/mapper';
 import { BaseService } from '@/core/service';
-import { snakeToCamelObject } from '@/core/utils';
+import { formatDate, getMonthRange, getWeekRange, snakeToCamelObject } from '@/core/utils';
 import { getTotalMinutes, formatDurationByMinutes } from '@/utils/formatTimeUtils';
 import { getCategoryName } from '@/utils/categoryUtils';
 import { statisticsColors as colors } from '@/constants/commonConstans';
@@ -12,6 +12,46 @@ import dayjs from 'dayjs';
 export class StatisticsService extends BaseService {
   constructor() {
     super(new EventMapper());
+    this.statisticsMapper = new StatisticsMapper();
+  }
+
+  normalizeStatistics(raw = {}) {
+    return {
+      sleepDuration: Number(raw.sleepDuration ?? raw.sleep_duration ?? 0),
+      sportDuration: Number(raw.sportDuration ?? raw.sport_duration ?? 0),
+      entertainmentDuration: Number(raw.entertainmentDuration ?? raw.entertainment_duration ?? 0),
+      studyDuration: Number(raw.studyDuration ?? raw.study_duration ?? 0),
+      mealCount: Number(raw.mealCount ?? raw.meal_count ?? 0)
+    };
+  }
+
+  async getRangeStatistics(startDate, endDate) {
+    const start = formatDate(startDate);
+    const end = formatDate(endDate ?? startDate);
+    const raw = await this.statisticsMapper.getStatisticsByDateRange(start, end);
+    return this.normalizeStatistics(raw);
+  }
+
+  async getDayStatistics(date) {
+    const target = formatDate(date);
+    return this.getRangeStatistics(target, target);
+  }
+
+  async getWeekStatistics(date) {
+    const range = getWeekRange(date);
+    return this.getRangeStatistics(range.start, range.end);
+  }
+
+  async getMonthStatistics(date) {
+    const range = getMonthRange(date);
+    return this.getRangeStatistics(range.start, range.end);
+  }
+
+  async getEventsByDateRange(startDate, endDate) {
+    const start = formatDate(startDate);
+    const end = formatDate(endDate ?? startDate);
+    const rows = await this.statisticsMapper.getEventsByDateRange(start, end);
+    return rows.map((row) => snakeToCamelObject(row));
   }
 
   /**

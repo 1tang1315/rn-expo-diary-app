@@ -123,6 +123,24 @@ export async function getDB() {
         );
     `);
 
+        // 每日评分缓存表
+        await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS daily_score
+        (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            date               TEXT NOT NULL UNIQUE, /* YYYY-MM-DD */
+            sleep_score        INTEGER DEFAULT 0,
+            diet_score         INTEGER DEFAULT 0,
+            sport_score        INTEGER DEFAULT 0,
+            productivity_score INTEGER DEFAULT 0,
+            emotion_score      INTEGER DEFAULT 0,
+            balance_score      INTEGER DEFAULT 0,
+            total_score        INTEGER DEFAULT 0,
+            created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
         return db;
     })();
 

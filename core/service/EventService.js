@@ -11,6 +11,20 @@ export class EventService extends BaseService {
   }
 
   /**
+   * 根据日期范围获取事件
+   * @param {Date} startDate - 开始日期
+   * @param {Date} endDate - 结束日期
+   * @returns {Promise<Array>} 转换后的对象数组
+   */
+  async getByDateRange(startDate, endDate) {
+    // 转换日期对象为YYYY-MM-DD格式字符串
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    const results = await this.mapper.getByDateRangeAndCategory(start, end, 'all', 'desc');
+    return results.map(result => snakeToCamelObject(result));
+  }
+
+  /**
    * 根据日期范围和分类获取事件
    * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
    * @param {string} endDate - 结束日期，格式：YYYY-MM-DD

@@ -1,0 +1,1 @@
+export { ScoreController } from '@/core/controller/ScoreController';

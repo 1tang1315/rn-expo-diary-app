@@ -88,3 +88,4 @@ export class AiApi extends BaseApi {
 
 // 默认导出（可根据需要传入配置）
 export const aiDiaryApi = new AiApi();
+export const aiApi = new AiApi();

@@ -5,4 +5,7 @@ export { NoteController } from "./NoteController";
 export { FolderController } from "./FolderController";
 export { AiController } from "./AiController";
 export { StatisticsController } from "./StatisticsController";
+export { ScoreController } from "./ScoreController";
+export { DashboardController } from "./DashboardController";
+export { AnalysisController } from "./AnalysisController";
 export { default as CloudSyncController } from "./CloudSyncController";
