@@ -1,0 +1,145 @@
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import CircularProgressRing from "@/components/chart/CircularProgressRing";
+import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeText from "@/components/theme/ThemeText";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+
+const ScoreRowCard = ({ 
+  label, 
+  icon,
+  score = 0, 
+  ratio = 0, // 占比
+  change = 0, 
+  onPress
+}) => {
+    const ringSize = 50;
+    const strokeWidth = 5;
+
+    const getEvaluation = (score) => {
+        if (score >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
+        if (score >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
+        if (score >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
+        return { text: '差', desc: '及时整改', color: '#F44336' };
+    };
+
+    const evaluation = getEvaluation(score);
+
+    return (
+    <ThemeTouchableOpacity style={styles.gridContainer} onPress={onPress}>
+      <ThemeCard padding={0}>
+        <View style={styles.gridHeader}>
+          <View style={styles.gridHeaderLeft}>
+            <Text style={styles.gridIcon}>{icon}</Text>
+            <Text style={styles.gridTitle}>{label}</Text>
+          </View>
+          <Text style={styles.gridLink}>查看详情 &gt;</Text>
+        </View>
+        
+        <View style={styles.gridContent}>
+          <View style={styles.gridLeft}>
+            <CircularProgressRing
+              value={score}
+              maxValue={100}
+              size={ringSize}
+              strokeWidth={strokeWidth}
+              title=""
+              description=""
+              centerContent={
+                <ThemeText style={styles.gridRingScore}>
+                  {score}
+                </ThemeText>
+              }
+              containerStyle={styles.ringContainer}
+              cardStyle={styles.ringCard}
+            />
+          </View>
+          <View style={styles.gridRight}>
+            <View style={styles.evaluationContainer}>
+              <View style={[styles.evaluationTag, { backgroundColor: evaluation.color }]}>
+                <Text style={styles.evaluationText}>{evaluation.text}</Text>
+              </View>
+              <Text style={[styles.evaluationDescription, { color: evaluation.color }]}>{evaluation.desc}</Text>
+            </View>
+            <Text style={styles.gridDetailText}>占比 {ratio}%</Text>
+            <Text style={[
+              styles.gridDetailText,
+              change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
+            ]}>
+               较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '- ')} {Math.abs(change)}分
+            </Text>
+          </View>
+        </View>
+      </ThemeCard>
+    </ThemeTouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  // Common
+  ringContainer: {},
+  ringCard: {
+    marginTop: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  positive: { color: '#4CAF50' },
+  negative: { color: '#F44336' },
+  neutral: { color: '#999' },
+
+  // Grid Layout Styles
+  gridContainer: { width: '49%', height: 100, marginBottom: 8 },
+  gridHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  gridHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gridIcon: { fontSize: 14, marginRight: 4 },
+  gridTitle: { fontSize: 14, fontWeight: '600' },
+  gridLink: { fontSize: 12, color: '#999' },
+  gridContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: "space-between"
+  },
+  gridLeft: {
+    flex: 1,
+  },
+  gridRight: {
+    flex: 1,
+    paddingLeft: 10,
+    justifyContent: 'flex-end',
+  },
+  evaluationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  evaluationTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  evaluationText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  evaluationDescription: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  gridRingScore: { fontSize: 14, fontWeight: '700' },
+  gridDetailText: { fontSize: 11, color: '#999', marginBottom: 2, lineHeight: 16 },
+});
+
+export default ScoreRowCard;
