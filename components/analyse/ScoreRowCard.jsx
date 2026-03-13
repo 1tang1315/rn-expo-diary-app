@@ -11,15 +11,19 @@ const ScoreRowCard = ({
   score = 0, 
   ratio = 0, // 占比
   change = 0, 
+  maxValue = 100,
   onPress
 }) => {
     const ringSize = 50;
     const strokeWidth = 5;
 
     const getEvaluation = (score) => {
-        if (score >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
-        if (score >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
-        if (score >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
+        // Adjust evaluation logic if maxValue is not 100?
+        // Usually evaluation (Great/Good) depends on percentage.
+        const percentage = (score / maxValue) * 100;
+        if (percentage >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
+        if (percentage >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
+        if (percentage >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
         return { text: '差', desc: '及时整改', color: '#F44336' };
     };
 
@@ -40,7 +44,7 @@ const ScoreRowCard = ({
           <View style={styles.gridLeft}>
             <CircularProgressRing
               value={score}
-              maxValue={100}
+              maxValue={maxValue}
               size={ringSize}
               strokeWidth={strokeWidth}
               title=""

@@ -19,6 +19,20 @@ export default function AiAnalysisCard({ analysis }) {
       <ThemeText style={[styles.summary]}>
         {analysis.summary || "暂无分析数据"}
       </ThemeText>
+
+      {analysis.problems && analysis.problems.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <ThemeText style={styles.subtitle}>存在的问题：</ThemeText>
+          {analysis.problems.map((problem, index) => (
+            <View key={index} style={styles.suggestionItem}>
+              <Text style={[styles.bullet, { color: theme.colors.error }]}>!</Text>
+              <ThemeText style={[styles.suggestionText, { color: theme.colors.text }]}>
+                {problem}
+              </ThemeText>
+            </View>
+          ))}
+        </View>
+      )}
       
       {analysis.suggestions && analysis.suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>

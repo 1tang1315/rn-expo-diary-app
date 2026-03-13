@@ -1,4 +1,7 @@
 import { scoreApi } from "@/api/ScoreApi";
+import AiAnalysisCard from "@/components/analyse/AiAnalysisCard";
+import ScoreRowCard from "@/components/analyse/ScoreRowCard";
+import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import Icon from "@/components/common/Icon";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import TimeRangePicker from "@/components/common/TimeRangePicker";
@@ -59,6 +62,28 @@ export default function AnalyseDetail() {
       setLoading(false);
     }
   }, [type]);
+
+  const analysisData = useMemo(() => {
+    if (!detailData?.breakdown?.length) {
+      return {
+        best: { label: '-', value: 0 },
+        worst: { label: '-', value: 0 },
+        fastest: { label: '-', value: 0 },
+        focus: { label: '-', value: 0 }
+      };
+    }
+    
+    const sorted = [...detailData.breakdown].sort((a, b) => b.value - a.value);
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+    
+    return {
+      best: { label: best.label, value: best.value },
+      worst: { label: worst.label, value: worst.value },
+      fastest: { label: '-', value: 0 },
+      focus: { label: worst.label, value: worst.value }
+    };
+  }, [detailData]);
   
   useEffect(() => {
     if (startDate && endDate) {
@@ -76,6 +101,30 @@ export default function AnalyseDetail() {
     }
   }, [handleDateChange, startDate, endDate]);
   
+  const getIconForLabel = (label) => {
+    if (label.includes('时长')) return '⏰';
+    if (label.includes('入睡')) return '🛌';
+    if (label.includes('连续')) return '🔄';
+    if (label.includes('稳定')) return '📊';
+    if (label.includes('能量') || label.includes('消耗')) return '🔥';
+    return '📝';
+  };
+
+  const getMaxScoreForLabel = (label) => {
+      // Sleep rules
+      if (label.includes('睡眠时长') || label === '时长得分') return 40;
+      if (label.includes('入睡') || label === '入睡时间得分') return 25;
+      if (label.includes('睡眠连续') || label === '连续性得分') return 20;
+      if (label.includes('作息稳定') || label === '稳定性得分') return 15;
+      
+      // Exercise rules
+      if (label.includes('能量') || label === '能量消耗得分') return 60;
+      if (label.includes('运动时长') || label === '运动时长得分') return 25;
+      if (label.includes('运动连续') || label === '运动连续性得分') return 15;
+      
+      return 100; 
+  };
+  
   return (
     <ThemeSafeAreaView>
       {/* 顶部导航栏 */}
@@ -86,36 +135,27 @@ export default function AnalyseDetail() {
         <ThemeSubTitleText style={styles.headerTitle}>{typeMap[type] || type}详情</ThemeSubTitleText>
       </View>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
-        <TimeRangePicker onRangeChange={handleDateChange} />
-        
-        <ThemeCard style={styles.headerCard}>
-          <ThemeText style={styles.description}>
-            这里显示{typeMap[type] || type}的详细信息，包括分数构成、建议等
-          </ThemeText>
-          {canShowRules && (
-            <TouchableOpacity 
-              style={styles.rulesButton}
-              onPress={() => setShowRules(true)}
-            >
-              <ThemeText style={styles.rulesButtonText}>查看计算规则</ThemeText>
-            </TouchableOpacity>
-          )}
-        </ThemeCard>
-        
+      <TimeRangePicker onRangeChange={handleDateChange} />
+      
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {loading ? (
           <ThemeCard style={styles.loadingCard}>
             <ThemeText>加载中...</ThemeText>
           </ThemeCard>
         ) : detailData ? (
           <>
-            <ThemeCard style={styles.scoreCard}>
-              <ThemeSubTitleText style={styles.scoreLabel}>总分</ThemeSubTitleText>
-              <ThemeText style={styles.scoreValue}>{detailData.totalScore}分</ThemeText>
-            </ThemeCard>
+            <OverallScoreCard
+              title="总评分"
+              score={detailData.totalScore}
+              summary={detailData.aiAdvice?.summary || '暂无总结'}
+              analysis={analysisData}
+            />
             
             {detailData.breakdown && detailData.breakdown.length > 0 && (
-              <ThemeCard style={styles.breakdownCard}>
+              <View style={styles.breakdownSection}>
                 <View style={styles.sectionHeader}>
                   <ThemeSubTitleText style={styles.sectionTitle}>分数构成</ThemeSubTitleText>
                   {canShowRules && (
@@ -127,27 +167,24 @@ export default function AnalyseDetail() {
                     </TouchableOpacity>
                   )}
                 </View>
-                {detailData.breakdown.map((item, index) => (
-                  <View key={index} style={styles.breakdownItem}>
-                    <ThemeText style={styles.breakdownLabel}>{item.label}</ThemeText>
-                    <ThemeText style={styles.breakdownValue}>{item.value}分</ThemeText>
-                  </View>
-                ))}
-              </ThemeCard>
+                <View style={styles.gridContainer}>
+                  {detailData.breakdown.map((item, index) => (
+                    <ScoreRowCard
+                      key={index}
+                      label={item.label}
+                      icon={getIconForLabel(item.label)}
+                      score={item.value}
+                      maxValue={getMaxScoreForLabel(item.label)}
+                      ratio={0}
+                      change={0}
+                      onPress={() => {}}
+                    />
+                  ))}
+                </View>
+              </View>
             )}
             
-            <ThemeCard style={styles.suggestionsCard}>
-              <ThemeSubTitleText style={styles.sectionTitle}>AI分析</ThemeSubTitleText>
-              <ThemeText style={styles.suggestionItem}>
-                {detailData.aiAdvice?.summary || '暂无总结'}
-              </ThemeText>
-              {(detailData.aiAdvice?.problems || []).map((item, index) => (
-                <ThemeText key={`problem-${index}`} style={styles.suggestionItem}>- 问题：{item}</ThemeText>
-              ))}
-              {(detailData.aiAdvice?.suggestions || []).map((item, index) => (
-                <ThemeText key={`suggestion-${index}`} style={styles.suggestionItem}>- 建议：{item}</ThemeText>
-              ))}
-            </ThemeCard>
+            <AiAnalysisCard analysis={detailData.aiAdvice} />
             
             {/* 计算规则和过程通过模态框展示 */}
           </>
@@ -290,6 +327,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   rulesButton: {
+    height: 30,
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -323,17 +361,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  scoreCard: {
+  breakdownSection: {
     marginTop: 10,
-    alignItems: 'center',
-    paddingVertical: 20
+    paddingHorizontal: 4
   },
-  scoreLabel: {
-    marginBottom: 10
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: '700'
+  gridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between"
   },
   breakdownCard: {
     marginTop: 10

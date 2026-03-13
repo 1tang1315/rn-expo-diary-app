@@ -101,6 +101,7 @@ export default function Analyse() {
     }, [handleDateChange])
   );
   
+  // 跳转到详情页
   const handleStatPress = useCallback((item) => {
     // 映射标签到类型
     const typeMap = {
@@ -113,7 +114,7 @@ export default function Analyse() {
       '平衡评分': 'balance'
     };
     
-    const type = typeMap[item.detailLabel || item.label];
+    const type = typeMap[item.label];
     if (type) {
       router.push({
         pathname: 'analyse-detail',

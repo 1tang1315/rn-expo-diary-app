@@ -5,7 +5,8 @@ import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeText from "@/components/theme/ThemeText";
 
 const OverallScoreCard = ({ 
-  score = 0, 
+  score = 0,
+  title="综合评分",
   summary = "整体健康状态良好，请继续保持。",
   analysis = {
     best: { label: '-', value: 0 },
@@ -23,7 +24,7 @@ const OverallScoreCard = ({
             maxValue={100}
             size={110}
             strokeWidth={10}
-            title="综合评分"
+            title={title}
             cardStyle={styles.ringCard}
           />
         </View>
