@@ -10,7 +10,7 @@ export default function AiAnalysisCard({ analysis }) {
   if (!analysis) return null;
 
   return (
-    <ThemeCard style={styles.container}>
+    <ThemeCard>
       <View style={styles.header}>
         <Text style={styles.icon}>🤖</Text>
         <ThemeText style={styles.title}>AI 智能分析</ThemeText>
@@ -52,10 +52,6 @@ export default function AiAnalysisCard({ analysis }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    marginVertical: 10,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
