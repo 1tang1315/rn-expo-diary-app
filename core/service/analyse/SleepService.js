@@ -1,6 +1,8 @@
 import { EventService } from '@/core/service/EventService';
 import { calculateSleepScoreFromEvents } from '@/core/utils';
 import dayjs from 'dayjs';
+import { AsyncStorage } from 'expo-sqlite/kv-store';
+import { AiService } from '@/core/service/AiService';
 
 export class SleepService {
   constructor() {
@@ -412,6 +414,181 @@ export class SleepService {
   async getSleepAdvice(params = {}) {
     const analysis = await this.buildSleepAnalysis(params);
     return analysis.aiAdvice;
+  }
+
+  /**
+   * 使用大模型生成睡眠 AI 建议（流式），会结合评分与具体事件数据
+   * @param {Object} params
+   * @param {string} params.startDate - 目标日期，格式：YYYY-MM-DD
+   * @param {Object} callbacks - 流式回调
+   * @param {Function} callbacks.onThought - 推理过程增量回调
+   * @param {Function} callbacks.onOutput - 最终输出增量回调
+   */
+  async generateAiAdvice(params = {}, callbacks = {}) {
+    const { startDate } = params;
+    const { onThought = () => {}, onOutput = () => {} } = callbacks;
+
+    if (!startDate) {
+      const fallback = this.buildSleepAdvice(null);
+      const summaryText = [
+        '## 总结',
+        fallback.summary,
+        '',
+        '## 建议',
+        ...(fallback.suggestions || []).map((s, idx) => `${idx + 1}. ${s}`)
+      ].join('\n');
+      onOutput(summaryText);
+      return { thought: '', output: summaryText };
+    }
+
+    const analysis = await this.buildSleepAnalysis({ startDate });
+    const { totalScore, breakdown, events } = analysis;
+
+    const [apiKey, model, apiBaseUrl] = await Promise.all([
+      AsyncStorage.getItem('AI_DIARY_API_KEY'),
+      AsyncStorage.getItem('AI_DIARY_MODEL'),
+      AsyncStorage.getItem('AI_DIARY_API_BASE_URL')
+    ]);
+
+    if (!apiKey || apiKey.trim() === '') {
+      const fallback = this.buildSleepAdvice(analysis.sleepDetails);
+      const summaryText = [
+        '## 总结',
+        fallback.summary,
+        '',
+        '## 建议',
+        ...(fallback.suggestions || []).map((s, idx) => `${idx + 1}. ${s}`)
+      ].join('\n');
+      onOutput(summaryText);
+      return { thought: '', output: summaryText };
+    }
+
+    const aiDiaryService = new AiService(
+      apiKey.trim(),
+      model || 'Qwen/Qwen3-8B',
+      apiBaseUrl || 'https://api.siliconflow.cn/v1'
+    );
+
+    const dateLabel = startDate;
+    const totalScoreVal = totalScore ?? 0;
+
+    const breakdownText = (breakdown || [])
+      .map(item => {
+        const label = item.label || '';
+        const score = typeof item.percentScore === 'number'
+          ? item.percentScore
+          : (item.value ?? 0);
+        return `${label}：${score}分`;
+      })
+      .join('；');
+
+    const eventsText = (events || [])
+      .flatMap(group => {
+        const cat = group.category || '';
+        const total = group.totalDuration || '';
+        const list = group.events || [];
+        const header = `【${cat}，合计${total}】`;
+        const items = list.map(e => `${e.timeRange} ${e.title || ''}：${e.description || ''}`.trim());
+        return [header, ...items];
+      })
+      .join('\n');
+
+    const prompt = `你是一名专业的睡眠健康顾问，请根据以下数据用中文给出针对性的睡眠分析和建议，输出使用 Markdown：
+
+* 日期：\`${dateLabel}\`
+* 总分：\`${totalScoreVal}分\`
+* 各维度得分：\`${breakdownText}\`
+* 当日睡眠事件：\n\`\`\`\n${eventsText}\n\`\`\`
+
+请按照如下结构输出：
+
+1. 用 2-3 句话先整体点评今天的睡眠情况（以“总结”小节形式，使用二级标题“## AI总结”）。
+2. 根据各维度得分和具体事件给出 3-6 条可执行的建议（使用二级标题“## 建议”，每条用有序列表或无序列表）。
+3. 语气温和、鼓励，避免医疗诊断用语，仅作为生活建议。`;
+
+    return aiDiaryService.generateContent(prompt, {
+      onThought: (partialThought) => {
+        onThought(partialThought);
+      },
+      onOutput: (partialOutput) => {
+        onOutput(partialOutput);
+      }
+    });
+  }
+
+  /**
+   * 使用大模型生成总分一句话总结（非流式），同样结合评分与事件数据
+   * @param {Object} params
+   * @param {string} params.startDate - 目标日期，格式：YYYY-MM-DD
+   * @returns {Promise<string>} 总结文案
+   */
+  async generateOverviewSummary(params = {}) {
+    const { startDate } = params;
+
+    if (!startDate) {
+      const fallback = this.buildSleepAdvice(null);
+      return fallback.summary;
+    }
+
+    const analysis = await this.buildSleepAnalysis({ startDate });
+    const { totalScore, breakdown, events, sleepDetails } = analysis;
+
+    const [apiKey, model, apiBaseUrl] = await Promise.all([
+      AsyncStorage.getItem('AI_DIARY_API_KEY'),
+      AsyncStorage.getItem('AI_DIARY_MODEL'),
+      AsyncStorage.getItem('AI_DIARY_API_BASE_URL')
+    ]);
+
+    // 无密钥时退回规则总结
+    if (!apiKey || apiKey.trim() === '') {
+      const fallback = this.buildSleepAdvice(sleepDetails);
+      return fallback.summary;
+    }
+
+    const aiDiaryService = new AiService(
+      apiKey.trim(),
+      model || 'Qwen/Qwen3-8B',
+      apiBaseUrl || 'https://api.siliconflow.cn/v1'
+    );
+
+    const dateLabel = startDate;
+    const totalScoreVal = totalScore ?? 0;
+
+    const breakdownText = (breakdown || [])
+      .map(item => {
+        const label = item.label || '';
+        const score = typeof item.percentScore === 'number'
+          ? item.percentScore
+          : (item.value ?? 0);
+        return `${label}：${score}分`;
+      })
+      .join('；');
+
+    const eventsText = (events || [])
+      .flatMap(group => {
+        const cat = group.category || '';
+        const total = group.totalDuration || '';
+        const list = group.events || [];
+        const header = `【${cat}，合计${total}】`;
+        const items = list.map(e => `${e.timeRange} ${e.title || ''}：${e.description || ''}`.trim());
+        return [header, ...items];
+      })
+      .join('\n');
+
+    const prompt = `你是一名专业的睡眠健康顾问，请根据以下数据，用 1 句话用中文给出整体睡眠表现总结，直接输出总结内容本身，无需分段、无须 Markdown 标题；整句话请控制在 30 个汉字以内：
+
+* 日期：\`${dateLabel}\`
+* 总分：\`${totalScoreVal}分\`
+* 各维度得分：\`${breakdownText}\`
+* 当日睡眠事件：\n\`\`\`\n${eventsText}\n\`\`\`
+
+要求：
+1. 先判断整体偏好/一般/较差，并简单说明主要原因。
+2. 使用 1 句话描述，控制在 30 个汉字以内。
+3. 语气温和、鼓励，避免医疗诊断用语，仅作为生活建议。`;
+
+    const result = await aiDiaryService.generateContent(prompt);
+    return (result && result.output) || '';
   }
 
   buildSleepAdvice(details) {

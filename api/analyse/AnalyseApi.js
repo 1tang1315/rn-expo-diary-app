@@ -1,5 +1,6 @@
 import { BaseApi } from "@/api/BaseApi";
 import { AnalyseController, SleepController } from '@/core/controller';
+import { SleepService } from '@/core/service/analyse/SleepService';
 import { formatDate } from "@/core/utils";
 import { handleResponse } from '@/utils/requestUtils';
 
@@ -10,6 +11,7 @@ class AnalyseApi extends BaseApi {
   constructor() {
     super(new AnalyseController());
     this.sleepController = new SleepController();
+    this.sleepService = new SleepService();
   }
 
   /**
@@ -282,8 +284,16 @@ class AnalyseApi extends BaseApi {
 
     try {
       if (type === 'sleep') {
-        const res = await this.sleepController.getSleepAdvice({ startDate });
-        return await handleResponse(res);
+        // 睡眠类型统一走 SleepService，封装在 core/service 层
+        try {
+          return await this.sleepService.getSleepAdvice({ startDate });
+        } catch (e) {
+          console.error('Error getting sleep advice from SleepService:', e);
+          return {
+            summary: '暂无数据',
+            suggestions: []
+          };
+        }
       }
 
       // 其它类型：从综合明细中取 aiAdvice
@@ -334,6 +344,49 @@ class AnalyseApi extends BaseApi {
    */
   async getSleepAdvice(params = {}) {
     return this.getAdvice({ ...params, type: 'sleep' });
+  }
+
+  /**
+   * 统一：生成 AI 建议（流式或一次性）
+   * 睡眠走 SleepService 流式大模型；其它类型从 getAdvice 取数据后一次性 onOutput
+   * @param {Object} params - { type, startDate, endDate }
+   * @param {Object} callbacks - { onThought, onOutput }
+   */
+  async generateAiAdvice(params = {}, callbacks = {}) {
+    const type = params.type || 'sleep';
+    const startDate = params.startDate ? (typeof params.startDate === 'string' ? params.startDate : formatDate(params.startDate)) : null;
+    const endDate = params.endDate ? formatDate(params.endDate) : null;
+    const { onOutput = () => {} } = callbacks;
+
+    if (type === 'sleep' && startDate) {
+      return this.sleepService.generateAiAdvice({ startDate }, callbacks);
+    }
+
+    // 非睡眠：用 getAdvice 结果拼成 Markdown 一次性输出
+    const advice = await this.getAdvice({ type, startDate, endDate });
+    const lines = ['## AI总结', advice?.summary || '暂无数据', '', '## 建议', ...(advice?.suggestions || []).map((s, i) => `${i + 1}. ${s}`)];
+    onOutput(lines.join('\n'));
+    return { thought: '', output: lines.join('\n') };
+  }
+
+  /**
+   * 统一：生成总分一句话总结
+   * 睡眠走 SleepService 大模型一句话；其它类型从 getAdvice.summary 返回
+   * @param {Object} params - { type, startDate, endDate }
+   * @returns {Promise<{ summary: string }>}
+   */
+  async generateOverviewSummary(params = {}) {
+    const type = params.type || 'sleep';
+    const startDate = params.startDate ? (typeof params.startDate === 'string' ? params.startDate : formatDate(params.startDate)) : null;
+    const endDate = params.endDate ? formatDate(params.endDate) : null;
+
+    if (type === 'sleep' && startDate) {
+      const summaryText = await this.sleepService.generateOverviewSummary({ startDate });
+      return { summary: summaryText || '' };
+    }
+
+    const advice = await this.getAdvice({ type, startDate, endDate });
+    return { summary: advice?.summary || '暂无总结' };
   }
 
   /**

@@ -1,11 +1,11 @@
 import { analyseApi } from "@/api/analyse";
-import AiAnalysisCard from "@/components/analyse/AiAnalysisCard";
 import CategoryEventList from "@/components/analyse/CategoryEventList";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import ScoreRowCard from "@/components/analyse/ScoreRowCard";
 import RingChart from "@/components/chart/RingChart";
 import Icon from "@/components/common/Icon";
 import LoadingContainer from "@/components/common/LoadingContainer";
+import AIStreamText from "@/components/common/AIStreamText";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
@@ -32,6 +32,9 @@ export default function AnalyseDetail() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentRange, setCurrentRange] = useState({ startDate: null, endDate: null });
   const [detailMarkdown, setDetailMarkdown] = useState('');
+  const [aiStreamContent, setAiStreamContent] = useState({ thought: '', output: '' });
+  const [aiStreaming, setAiStreaming] = useState(false);
+  const [aiOverviewSummary, setAiOverviewSummary] = useState('');
   
   // 映射类型到中文标签（使用 useMemo 缓存，避免每次渲染都创建新对象）
   const typeMap = useMemo(() => ({
@@ -49,25 +52,52 @@ export default function AnalyseDetail() {
     setCurrentRange({ startDate, endDate });
     
     try {
-      // 通用：分别获取总分、各维度、事件与 AI 建议，由前端组合
-      const [summary, breakdownRes, eventsRes, advice] = await Promise.all([
+      // 通用：分别获取总分、各维度、事件，由前端组合；AI 建议通过 SleepService 调用大模型生成
+      const [summary, breakdownRes, eventsRes] = await Promise.all([
         analyseApi.getScoreSummary({ type, startDate, endDate }),
         analyseApi.getBreakdown({ type, startDate, endDate }),
-        analyseApi.getEvents({ type, startDate, endDate }),
-        analyseApi.getAdvice({ type, startDate, endDate })
+        analyseApi.getEvents({ type, startDate, endDate })
       ]);
 
       const combined = {
         totalScore: summary?.totalScore ?? 0,
         breakdown: breakdownRes?.items ?? breakdownRes?.breakdown ?? [],
         events: eventsRes?.events ?? [],
-        aiAdvice: advice || {
-          summary: '暂无数据',
-          suggestions: []
-        }
+        aiAdvice: null
       };
 
       setDetailData(combined);
+      setAiOverviewSummary('');
+
+      // 统一通过 analyseApi 生成 AI 建议（流式）与一句话总结
+      const startDateStr = dayjs(startDate).format('YYYY-MM-DD');
+      const endDateStr = endDate ? dayjs(endDate).format('YYYY-MM-DD') : startDateStr;
+      try {
+        setAiStreaming(true);
+        setAiStreamContent({ thought: '', output: '' });
+
+        analyseApi
+          .generateAiAdvice(
+            { type, startDate: startDateStr, endDate: endDateStr },
+            {
+              onThought: (partialThought) => {
+                setAiStreamContent(prev => ({ ...prev, thought: partialThought }));
+              },
+              onOutput: (partialOutput) => {
+                setAiStreamContent(prev => ({ ...prev, output: partialOutput }));
+              }
+            }
+          )
+          .finally(() => setAiStreaming(false));
+
+        analyseApi
+          .generateOverviewSummary({ type, startDate: startDateStr, endDate: endDateStr })
+          .then((res) => setAiOverviewSummary(res?.summary || ''))
+          .catch((err) => console.error('生成总评一句话总结失败:', err));
+      } catch (e) {
+        console.error('生成 AI 建议失败:', e);
+        setAiStreaming(false);
+      }
     } catch (error) {
       console.error('Error getting detail data:', error);
     } finally {
@@ -238,7 +268,7 @@ export default function AnalyseDetail() {
               <OverallScoreCard
                 title="总评分"
                 score={detailData.totalScore}
-                summary={detailData.aiAdvice?.summary || '暂无总结'}
+                summary={aiOverviewSummary || (aiStreaming ? '正在生成总结...' : '暂无总结')}
                 analysis={analysisData}
               />
               
@@ -303,8 +333,14 @@ export default function AnalyseDetail() {
               />
               
               <CategoryEventList category={type} events={detailData.events} />
-              
-              <AiAnalysisCard analysis={detailData.aiAdvice} />
+
+              <View style={{ minHeight: 120 }}>
+                <AIStreamText
+                  content={aiStreamContent}
+                  speed={30}
+                  isContentFinalized={!aiStreaming}
+                />
+              </View>
             </>
           ) : (
             <ThemeCard style={styles.errorCard}>
@@ -420,8 +456,7 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   breakdownSection: {
-    marginTop: 10,
-    paddingHorizontal: 4
+    marginTop: 8
   },
   gridContainer: {
     flexDirection: "row",
