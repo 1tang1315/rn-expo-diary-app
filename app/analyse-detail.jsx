@@ -1,15 +1,18 @@
-import { scoreApi } from "@/api/ScoreApi";
+import { analyseApi } from "@/api/analyse";
 import AiAnalysisCard from "@/components/analyse/AiAnalysisCard";
-import ScoreRowCard from "@/components/analyse/ScoreRowCard";
+import CategoryEventList from "@/components/analyse/CategoryEventList";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
+import ScoreRowCard from "@/components/analyse/ScoreRowCard";
+import RingChart from "@/components/chart/RingChart";
 import Icon from "@/components/common/Icon";
+import LoadingContainer from "@/components/common/LoadingContainer";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeText from "@/components/theme/ThemeText";
-import { exerciseScoringRules, sleepScoringRules } from "@/constants/scoringRules";
+
 import { useTheme } from "@/context/ThemeContext";
 import dayjs from "dayjs";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -22,13 +25,13 @@ export default function AnalyseDetail() {
   const { theme } = useTheme();
   
   const { type = 'sleep', startDate, endDate } = params;
-  const canShowRules = type === 'sleep' || type === 'exercise';
-  const rulesContent = type === 'exercise' ? exerciseScoringRules : sleepScoringRules;
   
   const [detailData, setDetailData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showRules, setShowRules] = useState(false);
-  const [showProcess, setShowProcess] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [currentRange, setCurrentRange] = useState({ startDate: null, endDate: null });
+  const [detailMarkdown, setDetailMarkdown] = useState('');
   
   // 映射类型到中文标签（使用 useMemo 缓存，避免每次渲染都创建新对象）
   const typeMap = useMemo(() => ({
@@ -43,19 +46,28 @@ export default function AnalyseDetail() {
   
   const handleDateChange = useCallback(async ({ startDate, endDate }) => {
     setLoading(true);
+    setCurrentRange({ startDate, endDate });
     
     try {
-      const result = await scoreApi.getScoreDetailData({ 
-        type, 
-        startDate, 
-        endDate 
-      });
-      
-      if (result) {
-        setDetailData(result);
-      } else {
-        console.error('Failed to get detail data: No data returned');
-      }
+      // 通用：分别获取总分、各维度、事件与 AI 建议，由前端组合
+      const [summary, breakdownRes, eventsRes, advice] = await Promise.all([
+        analyseApi.getScoreSummary({ type, startDate, endDate }),
+        analyseApi.getBreakdown({ type, startDate, endDate }),
+        analyseApi.getEvents({ type, startDate, endDate }),
+        analyseApi.getAdvice({ type, startDate, endDate })
+      ]);
+
+      const combined = {
+        totalScore: summary?.totalScore ?? 0,
+        breakdown: breakdownRes?.items ?? breakdownRes?.breakdown ?? [],
+        events: eventsRes?.events ?? [],
+        aiAdvice: advice || {
+          summary: '暂无数据',
+          suggestions: []
+        }
+      };
+
+      setDetailData(combined);
     } catch (error) {
       console.error('Error getting detail data:', error);
     } finally {
@@ -72,16 +84,67 @@ export default function AnalyseDetail() {
         focus: { label: '-', value: 0 }
       };
     }
-    
-    const sorted = [...detailData.breakdown].sort((a, b) => b.value - a.value);
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
-    
+
+    const items = detailData.breakdown;
+
+    // 维度对比：按当前得分（百分制优先，其次 value）排序，取最佳/最差维度
+    const sortedByScore = [...items].sort((a, b) => {
+      const aScore = typeof a.percentScore === 'number' ? a.percentScore : (a.value ?? 0);
+      const bScore = typeof b.percentScore === 'number' ? b.percentScore : (b.value ?? 0);
+      return bScore - aScore;
+    });
+
+    const best = sortedByScore[0];
+    const worst = sortedByScore[sortedByScore.length - 1];
+
+    // 与昨日对比：按 changePercent 排序，找出提升最快和需要关注的维度
+    const itemsWithChange = items.filter(
+      (item) => typeof item.changePercent === 'number'
+    );
+
+    let fastest = { label: '-', value: 0 };
+    let focus = { label: '-', value: 0 };
+
+    if (itemsWithChange.length > 0) {
+      const sortedByChange = [...itemsWithChange].sort(
+        (a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)
+      );
+
+      const fastestItem = sortedByChange[0];
+      const focusItem = sortedByChange[sortedByChange.length - 1];
+
+      fastest = {
+        label: fastestItem.label,
+        value: fastestItem.changePercent ?? 0
+      };
+
+      focus = {
+        label: focusItem.label,
+        value: focusItem.changePercent ?? 0
+      };
+    } else {
+      // 没有昨日对比数据时，回退为按当前分数的最佳/最差
+      fastest = { label: best.label, value: 0 };
+      focus = { label: worst.label, value: 0 };
+    }
+
     return {
-      best: { label: best.label, value: best.value },
-      worst: { label: worst.label, value: worst.value },
-      fastest: { label: '-', value: 0 },
-      focus: { label: worst.label, value: worst.value }
+      best: {
+        label: best.label,
+        value:
+          typeof best.percentScore === 'number'
+            ? best.percentScore
+            : best.value ?? 0
+      },
+      worst: {
+        label: worst.label,
+        value:
+          typeof worst.percentScore === 'number'
+            ? worst.percentScore
+            : worst.value ?? 0
+      },
+      fastest,
+      focus
     };
   }, [detailData]);
   
@@ -125,6 +188,30 @@ export default function AnalyseDetail() {
       return 100; 
   };
   
+  // 准备圆形图数据
+  const ringChartProps = useMemo(() => {
+    if (!detailData?.breakdown?.length) {
+      return {
+        data: [],
+        centerLabel: 0,
+        centerSubLabel: '总分'
+      };
+    }
+    
+    const palette = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    const data = detailData.breakdown.map((item, index) => ({
+      value: item.value,
+      label: item.label,
+      color: palette[index % palette.length]
+    }));
+    
+    return {
+      data,
+      centerLabel: detailData.totalScore,
+      centerSubLabel: '总分'
+    };
+  }, [detailData]);
+  
   return (
     <ThemeSafeAreaView>
       {/* 顶部导航栏 */}
@@ -137,159 +224,136 @@ export default function AnalyseDetail() {
       
       <TimeRangePicker onRangeChange={handleDateChange} />
       
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {loading ? (
-          <ThemeCard style={styles.loadingCard}>
-            <ThemeText>加载中...</ThemeText>
-          </ThemeCard>
-        ) : detailData ? (
-          <>
-            <OverallScoreCard
-              title="总评分"
-              score={detailData.totalScore}
-              summary={detailData.aiAdvice?.summary || '暂无总结'}
-              analysis={analysisData}
-            />
-            
-            {detailData.breakdown && detailData.breakdown.length > 0 && (
-              <View style={styles.breakdownSection}>
-                <View style={styles.sectionHeader}>
-                  <ThemeSubTitleText style={styles.sectionTitle}>分数构成</ThemeSubTitleText>
-                  {canShowRules && (
-                    <TouchableOpacity 
-                      style={styles.processButton}
-                      onPress={() => setShowProcess(true)}
-                    >
-                      <Icon lib="Ionicons" name="information-circle-outline" color={theme.colors.subText} size={20} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={styles.gridContainer}>
-                  {detailData.breakdown.map((item, index) => (
-                    <ScoreRowCard
-                      key={index}
-                      label={item.label}
-                      icon={getIconForLabel(item.label)}
-                      score={item.value}
-                      maxValue={getMaxScoreForLabel(item.label)}
-                      ratio={0}
-                      change={0}
-                      onPress={() => {}}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-            
-            <AiAnalysisCard analysis={detailData.aiAdvice} />
-            
-            {/* 计算规则和过程通过模态框展示 */}
-          </>
-        ) : (
-          <ThemeCard style={styles.errorCard}>
-            <ThemeText>暂无数据</ThemeText>
-          </ThemeCard>
-        )}
-        
-        {/* 底部空白，确保内容完全可见 */}
-        <View style={styles.bottomSpace} />
-      </ScrollView>
-      
-      {/* 计算规则模态框 */}
-      <Modal
-        visible={showRules}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowRules(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <ThemeSubTitleText style={styles.modalTitle}>{typeMap[type] || type}计算规则</ThemeSubTitleText>
-              <TouchableOpacity onPress={() => setShowRules(false)}>
-                <Icon lib="Ionicons" name="close" color={theme.colors.subText} size={24} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalScrollView}>
-              <MarkdownRenderer content={rulesContent} />
-            </ScrollView>
-          </View>
+      {loading ? (
+        <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+          <LoadingContainer />
         </View>
-      </Modal>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          {detailData ? (
+            <>
+              <OverallScoreCard
+                title="总评分"
+                score={detailData.totalScore}
+                summary={detailData.aiAdvice?.summary || '暂无总结'}
+                analysis={analysisData}
+              />
+              
+              {detailData.breakdown && detailData.breakdown.length > 0 && (
+                <View style={styles.breakdownSection}>
+                  <View style={styles.gridContainer}>
+                    {detailData.breakdown.map((item, index) => {
+                      // 睡眠：使用百分制得分（0-100），环形进度条更直观
+                      const isSleep = type === 'sleep';
+                      const score = isSleep
+                        ? (item.percentScore ?? item.originScore ?? item.value ?? 0)
+                        : (item.value ?? 0);
+                      const maxValue = isSleep
+                        ? 100
+                        : (item.maxScore ?? getMaxScoreForLabel(item.label));
+                      const ratio = item.ratio ?? 0; // 占比百分数
+
+                      return (
+                        <ScoreRowCard
+                          key={index}
+                          label={item.label}
+                          icon={getIconForLabel(item.label)}
+                          score={score}
+                          maxValue={maxValue}
+                          ratio={ratio}
+                          change={item.changePercent ?? 0}
+                          onPress={async () => {
+                            setSelectedItem(item);
+                            // 统一通过后端按维度获取 Markdown 详情
+                            if (currentRange.startDate) {
+                              try {
+                                const detail = await analyseApi.getBreakdownDetail({
+                                  type,
+                                  startDate: currentRange.startDate,
+                                  endDate: currentRange.endDate,
+                                  key: item.key || item.label
+                                });
+                                setDetailMarkdown(detail?.detailText || item.detailText || '');
+                              } catch (e) {
+                                console.error('Error getting breakdown detail:', e);
+                                setDetailMarkdown(item.detailText || '');
+                              }
+                            } else {
+                              setDetailMarkdown(item.detailText || '');
+                            }
+                            setShowDetail(true);
+                          }}
+                        />
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+              
+              <RingChart
+                data={ringChartProps.data}
+                centerLabel={ringChartProps.centerLabel}
+                centerSubLabel={ringChartProps.centerSubLabel}
+                title={`${typeMap[type] || type}评分构成`}
+                hideLegend={false}
+                loading={loading}
+              />
+              
+              <CategoryEventList category={type} events={detailData.events} />
+              
+              <AiAnalysisCard analysis={detailData.aiAdvice} />
+            </>
+          ) : (
+            <ThemeCard style={styles.errorCard}>
+              <ThemeText>暂无数据</ThemeText>
+            </ThemeCard>
+          )}
+        </ScrollView>
+      )}
       
-      {/* 计算过程模态框 */}
+      {/* 详情模态框 */}
       <Modal
-        visible={showProcess}
+        visible={showDetail}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowProcess(false)}
+        onRequestClose={() => {
+          setShowDetail(false);
+          setSelectedItem(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <ThemeSubTitleText style={styles.modalTitle}>计算过程</ThemeSubTitleText>
-              <TouchableOpacity onPress={() => setShowProcess(false)}>
+              <ThemeSubTitleText style={styles.modalTitle}>
+                {selectedItem ? `${selectedItem.label}详情` : '详情'}
+              </ThemeSubTitleText>
+              <TouchableOpacity onPress={() => {
+                setShowDetail(false);
+                setSelectedItem(null);
+              }}>
                 <Icon lib="Ionicons" name="close" color={theme.colors.subText} size={24} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalScrollView}>
-              {detailData && detailData.calculationProcess ? (
-                <MarkdownRenderer content={detailData.calculationProcess} />
-              ) : (
+            <ScrollView
+              style={styles.modalScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              {selectedItem ? (
                 <MarkdownRenderer content={
-                  type === 'exercise'
-                    ? `# ${dayjs().format('YYYY-MM-DD')}日运动评分计算
+                  detailMarkdown || selectedItem.detailText || `## 得分情况
+- 得分：${selectedItem.value ?? 0}分
+- 满分：${selectedItem.maxScore ?? 100}分
 
-## 第一步：识别有效运动行为（MET≥3）
-暂无运动数据
-
-## 第二步：逐维度计算得分
-
-### 1. 能量消耗得分（60分）
-active_kcal=0kcal → 能量消耗得分=0分
-
-### 2. 运动时长得分（25分）
-exercise_time=0分钟 → 运动时长得分=0分
-
-### 3. 运动连续性得分（15分）
-longest_session=0分钟 → 连续性得分=0分
-
-## 第三步：总得分计算
-总得分=能量消耗得分+运动时长得分+连续性得分
-总得分=0+0+0=**0分**`
-                    : `# ${dayjs().format('YYYY-MM-DD')}日睡眠评分计算
-
-## 第一步：确定${dayjs().format('YYYY-MM-DD')}日有效睡眠事件
-暂无睡眠数据
-
-## 第二步：逐维度计算得分
-
-### 1. 睡眠时长得分（40分）
-无睡眠数据 → 时长得分=0分
-
-### 2. 入睡时间得分（25分）
-无睡眠数据 → 入睡时间得分=0分
-
-### 3. 睡眠连续性得分（20分）
-无睡眠数据 → 连续性得分=0分
-
-### 4. 作息稳定性得分（15分）
-无睡眠数据 → 稳定性得分=0分
-
-## 第三步：总得分计算
-总得分=时长得分+入睡时间得分+连续性得分+稳定性得分
-总得分=0+0+0+0=**0分**
-
-## 最终评分汇总
-- 时长得分：0
-- 入睡时间得分：0
-- 连续性得分：0
-- 稳定性得分：0
-- 总得分：0`
+## 说明
+根据相关指标计算得分。`
                 } />
+              ) : (
+                <MarkdownRenderer content={`# 详情
+
+暂无详细信息`} />
               )}
             </ScrollView>
           </View>
@@ -355,12 +419,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  loadingCard: {
-    marginTop: 10,
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
   breakdownSection: {
     marginTop: 10,
     paddingHorizontal: 4
@@ -407,9 +465,6 @@ const styles = StyleSheet.create({
   processCard: {
     marginTop: 10
   },
-  bottomSpace: {
-    height: 40
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -436,6 +491,7 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   modalScrollView: {
-    padding: 16
+    padding: 10,
+    marginBottom: 10
   }
 });

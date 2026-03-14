@@ -37,6 +37,12 @@ const parseBedtimeMinute = (dateTime) => {
   return time.hour() < 12 ? base + 24 * 60 : base;
 };
 
+/** 晚寝判定：入睡时间在 当日18:00~次日06:00 内（parseBedtimeMinute 下 18:00=1080, 次日06:00=1800） */
+const isNightSleepByMinute = (minute) => {
+  if (!Number.isFinite(minute)) return false;
+  return minute >= 18 * 60 && minute < 24 * 60 + 6 * 60;
+};
+
 const formatMinuteToClock = (value) => {
   if (!Number.isFinite(value)) return null;
   const normalized = value % (24 * 60);
@@ -186,12 +192,12 @@ export const calculateSleepScoreFromEvents = (events = [], previousDayEvents = [
 
   const bedtimeMinutes = currentSleepEvents
     .map((event) => parseBedtimeMinute(eventTime(event, 'startDatetime', 'start_datetime')))
-    .filter((value) => Number.isFinite(value));
+    .filter((value) => Number.isFinite(value) && isNightSleepByMinute(value));
   const latestBedtimeMinute = bedtimeMinutes.length ? Math.max(...bedtimeMinutes) : null;
 
   const previousBedtimeMinutes = previousSleepEvents
     .map((event) => parseBedtimeMinute(eventTime(event, 'startDatetime', 'start_datetime')))
-    .filter((value) => Number.isFinite(value));
+    .filter((value) => Number.isFinite(value) && isNightSleepByMinute(value));
   const previousLatestBedtimeMinute = previousBedtimeMinutes.length ? Math.max(...previousBedtimeMinutes) : null;
 
   let timeDiff = 0;

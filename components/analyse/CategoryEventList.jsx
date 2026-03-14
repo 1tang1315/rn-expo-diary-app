@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
 import ThemeCard from '@/components/theme/ThemeCard';
 import { useTheme } from '@/context/ThemeContext';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 const MOCK_EVENT_DATA = {
   sleep: [
@@ -94,30 +94,44 @@ const MOCK_EVENT_DATA = {
 MOCK_EVENT_DATA.emotion = MOCK_EVENT_DATA.mood;
 MOCK_EVENT_DATA.sport = MOCK_EVENT_DATA.exercise;
 
-export default function CategoryEventList({ category }) {
+const isGroupedFormat = (list) =>
+  list?.length > 0 && Array.isArray(list[0]?.events);
+
+const CATEGORY_LABELS = { sleep: '睡眠', mood: '情绪', emotion: '情绪', exercise: '运动', sport: '运动', productivity: '效率', diet: '饮食', balance: '平衡' };
+
+export default function CategoryEventList({ category, events }) {
   const { theme } = useTheme();
   
   const data = useMemo(() => {
+    if (events && events.length > 0) return events;
     return MOCK_EVENT_DATA[category] || [];
-  }, [category]);
+  }, [category, events]);
   
-  if(!data || data.length === 0) return null;
+  const groups = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    if (isGroupedFormat(data)) return data;
+    return [{ category: CATEGORY_LABELS[category] || category || '事件', events: data, totalDuration: '', contribution: '' }];
+  }, [data, category]);
+  
+  if (groups.length === 0) return null;
   
   return (
     <>
-      {data.map((group, groupIndex) => (
+      {groups.map((group, groupIndex) => (
         <ThemeCard key={`${group.category}-${groupIndex}`}>
           <View style={styles.groupHeader}>
             <Text style={[styles.groupTitle, { color: theme.colors.text }]}>
               {group.category}
             </Text>
-            <Text style={[styles.groupDuration, { color: theme.colors.subText || '#666' }]}>
-              （时长：{group.totalDuration}）
-            </Text>
+            {group.totalDuration ? (
+              <Text style={[styles.groupDuration, { color: theme.colors.subText || '#666' }]}>
+                （时长：{group.totalDuration}）
+              </Text>
+            ) : null}
           </View>
           
           <>
-            {group.events.map((event, index) => (
+            {(group.events || []).map((event, index) => (
               <View key={index} style={styles.eventItem}>
                 <View style={styles.eventHeaderLine}>
                   <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
@@ -139,12 +153,14 @@ export default function CategoryEventList({ category }) {
             ))}
           </>
           
-          <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
-            <Text style={[styles.contributionLabel, { color: theme.colors.text }]}>维度贡献：</Text>
-            <Text style={[styles.contributionValue, { color: theme.colors.primary }]}>
-              {group.category}: {group.contribution}
-            </Text>
-          </View>
+          {group.contribution ? (
+            <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
+              <Text style={[styles.contributionLabel, { color: theme.colors.text }]}>维度贡献：</Text>
+              <Text style={[styles.contributionValue, { color: theme.colors.primary }]}>
+                {group.category}: {group.contribution}
+              </Text>
+            </View>
+          ) : null}
         </ThemeCard>
       ))}
     </>

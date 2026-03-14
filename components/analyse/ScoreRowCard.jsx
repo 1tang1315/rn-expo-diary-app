@@ -70,7 +70,7 @@ const ScoreRowCard = ({
               styles.gridDetailText,
               change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
             ]}>
-               较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '- ')} {Math.abs(change)}分
+               较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '- ')} {Math.abs(change)}
             </Text>
           </View>
         </View>

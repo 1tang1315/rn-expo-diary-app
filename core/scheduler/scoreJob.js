@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { AsyncStorage } from 'expo-sqlite/kv-store';
-import { ScoreService } from '@/core/service/ScoreService';
+import { ScoreService } from '@/core/service';
 
 const SCORE_JOB_LAST_RUN_KEY = 'score_job_last_run';
 const RUN_HOUR = 0;

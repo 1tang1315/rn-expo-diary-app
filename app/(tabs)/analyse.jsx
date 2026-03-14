@@ -1,4 +1,4 @@
-import { scoreApi } from "@/api/ScoreApi";
+import { analyseApi as scoreApi } from "@/api/analyse";
 import AiAnalysisCard from "@/components/analyse/AiAnalysisCard";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import ScoreRowCard from "@/components/analyse/ScoreRowCard";
