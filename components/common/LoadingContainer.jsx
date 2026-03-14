@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import ThemeText from "@/components/theme/ThemeText";
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { useTheme } from "@/context/ThemeContext";
 
 const LoadingContainer = ({
@@ -20,7 +19,7 @@ const LoadingContainer = ({
       height && { height }
     ]}>
       <ActivityIndicator size="small" color={theme.colors.primary} style={styles.spinner} />
-      <ThemeText style={styles.text}>{text}</ThemeText>
+      <Text style={[styles.text, { color: theme.colors.text }]}>{text}</Text>
     </View>
   );
 };
