@@ -141,6 +141,19 @@ export async function getDB() {
         );
     `);
 
+        // 每日 AI 行为分析缓存表（结构化 JSON）
+        await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS daily_analysis
+        (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            date          TEXT NOT NULL UNIQUE, /* YYYY-MM-DD */
+            analysis_json TEXT NOT NULL,       /* AI 返回的结构化分析 JSON 字符串 */
+            event_hash    TEXT,                /* 事件数据版本，如：22_23:57 */
+            created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at    TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
         return db;
     })();
 

@@ -1,13 +1,232 @@
+import { getDB } from '@/core/db/initDB';
+import { AiService } from '@/core/service/AiService';
 import { StatisticsService } from '@/core/service/StatisticsService';
 import dayjs from 'dayjs';
+import { AsyncStorage } from 'expo-sqlite/kv-store';
+import { AnalysisService } from './AnalysisService';
+import { DataService } from './DataService';
 import { SleepService } from './SleepService';
 
 export class AnalyseService {
   constructor() {
     this.statisticsService = new StatisticsService();
+    this.dataService = new DataService();
+    this.analysisService = new AnalysisService();
     this.sleepService = new SleepService();
   }
-  
+
+  /**
+   * 获取综合看板数据（总分 + 各维度分数完全由 AI 评分）
+   * @param {Object} params
+   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
+   * @returns {Promise<Object>} 看板数据
+   */
+  async getDashboard(params = {}) {
+    const { startDate, endDate } = params;
+
+    const target = dayjs(startDate, 'YYYY-MM-DD', true);
+    if (!target.isValid()) {
+      throw new Error('无效的日期格式');
+    }
+
+    const currentDateStr = target.format('YYYY-MM-DD');
+
+    // 获取当天所有事件 + 统计数据 → 交给 DataService 生成 AI 输入
+    const eventsToday = await this.statisticsService.getEventsByDateRange(
+      dayjs(currentDateStr).toDate(),
+      endDate ? dayjs(endDate).toDate() : dayjs(currentDateStr).toDate()
+    );
+    const statsToday = await this.statisticsService.getDayStatistics(
+      dayjs(currentDateStr).toDate()
+    );
+
+    const dailyInput = this.dataService.buildDailyAnalysisInput({
+      date: currentDateStr,
+      events: eventsToday,
+      stats: statsToday
+    });
+
+    // 读取 AI 配置
+    const [apiKey, model, apiBaseUrl] = await Promise.all([
+      AsyncStorage.getItem('AI_DIARY_API_KEY'),
+      AsyncStorage.getItem('AI_DIARY_MODEL'),
+      AsyncStorage.getItem('AI_DIARY_API_BASE_URL')
+    ]);
+
+    // 未配置 AI 时返回一个安全的默认结构
+    if (!apiKey || apiKey.trim() === '') {
+      return {
+        totalScore: 0,
+        scores: {
+          sleepScore: 0,
+          dietScore: 0,
+          sportScore: 0,
+          productivityScore: 0,
+          emotionScore: 0,
+          balanceScore: 0
+        },
+        scoreChanges: {
+          sleepChange: 0,
+          dietChange: 0,
+          sportChange: 0,
+          productivityChange: 0,
+          emotionChange: 0,
+          balanceChange: 0
+        },
+        dimensions: {},
+        aiAdvice: {
+          summary: '暂无分析数据（未配置 AI 密钥）',
+          suggestions: []
+        }
+      };
+    }
+
+    const aiService = new AiService(
+      apiKey.trim(),
+      model || 'Qwen/Qwen3-8B',
+      apiBaseUrl || 'https://api.siliconflow.cn/v1'
+    );
+
+    const systemPrompt = `你是一名"个人行为数据分析助手"，需要根据用户一天的行为记录，输出固定结构的 Markdown 分析报告。
+
+【输出要求】
+1. 只输出 Markdown 文本，不要输出 JSON、不要多余解释
+2. 必须包含以下章节，顺序如下：
+   # 综合评估
+   # 睡眠分析
+   # 饮食分析
+   # 运动分析
+   # 效率分析
+   # 生活平衡
+   # 情绪状态
+   # 今日改进重点
+3. 每个分析章节必须包含：评分：xx、概述：、得分原因：、建议：、总结：
+4. 评分为 0-100 的整数，必须能从报告中找到清晰的行为依据
+5. 今日改进重点用有序列表，如 1. xxx  2. xxx
+
+评分维度：睡眠、饮食、运动、效率、生活平衡、情绪状态`;
+
+    const statsText = JSON.stringify(dailyInput.stats, null, 2);
+    const eventsText = dailyInput.keyEvents.length > 0
+      ? dailyInput.keyEvents.map((e) => e.line || `${e.timeRange} ${e.title} ${e.duration} ${e.description || ''}`.trim()).join('\n')
+      : dailyInput.events.map((e) => `${e.time} ${e.title} ${e.duration} ${e.description || ''}`.trim()).join('\n');
+
+    const userPrompt = `请根据以下用户一天的行为数据进行分析，输出固定结构的 Markdown 报告。
+
+事件分类：sleep=睡眠 diet=饮食 sports=运动 study=学习 work=工作 entertainment=娱乐 daily=日常 shopping=购物 travel=出行
+
+输出格式示例：
+
+# 综合评估
+评分：82
+
+概述：
+今天整体效率较高，学习时间占比较大，娱乐时间适中。
+
+得分原因：
+- 学习时间约8小时44分钟
+- 娱乐时间约1小时49分钟
+- 睡眠时间较充足
+
+建议：
+- 继续保持当前学习节奏
+- 注意适当增加运动
+
+总结：
+整体属于效率较高的一天。
+
+# 睡眠分析
+评分：78
+概述：...
+得分原因：...
+建议：...
+总结：...
+
+# 饮食分析
+评分：88
+...
+
+# 运动分析
+评分：65
+...
+
+# 效率分析
+评分：92
+...
+
+# 生活平衡
+评分：85
+...
+
+# 情绪状态
+评分：80
+...
+
+# 今日改进重点
+1. 尽量提前入睡
+2. 增加每日运动时间
+3. 减少连续刷短视频
+
+下面是用户一天的行为统计数据：
+${statsText}
+
+下面是用户行为事件列表：
+${eventsText}
+`;
+
+    // --- 缓存：daily_analysis（按日期 + event_hash） ---
+    const db = await getDB();
+    const existing = await db.getFirstAsync(
+      `SELECT analysis_json, event_hash FROM daily_analysis WHERE date = ?`,
+      [currentDateStr]
+    );
+
+    if (existing && existing.event_hash === dailyInput.eventHash) {
+      try {
+        const cached = JSON.parse(existing.analysis_json);
+        const reportText = cached.reportText || '';
+        if (reportText) {
+          const { analysis } = this.analysisService.parseMarkdownToAnalysis(reportText, {
+            dateRange: currentDateStr
+          });
+          return this.analysisService.toDashboard(analysis);
+        }
+        if (cached.overview && cached.scores) {
+          return this.analysisService.toDashboard(cached);
+        }
+      } catch (e) {
+        console.warn('解析 daily_analysis 缓存失败，回退到重新请求 AI：', e);
+      }
+    }
+
+    // --- 调用 AI，生成结构化 Markdown 报告 ---
+    const mdReport = await aiService.generateMarkdown({
+      prompt: userPrompt,
+      systemPrompt
+    });
+
+    const { analysis } = this.analysisService.parseMarkdownToAnalysis(mdReport, {
+      dateRange: currentDateStr
+    });
+
+    // 写入 / 更新缓存（保存 analysis，含 reportText）
+    const analysisStr = JSON.stringify(analysis);
+    await db.runAsync(
+      `
+      INSERT INTO daily_analysis (date, analysis_json, event_hash, created_at, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(date) DO UPDATE SET
+        analysis_json = excluded.analysis_json,
+        event_hash    = excluded.event_hash,
+        updated_at    = CURRENT_TIMESTAMP
+    `,
+      [currentDateStr, analysisStr, dailyInput.eventHash]
+    );
+
+    return this.analysisService.toDashboard(analysis);
+  }
+
   /**
    * 获取指定分类的事件数据
    * @param {Object} params

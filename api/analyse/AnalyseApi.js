@@ -35,48 +35,64 @@ class AnalyseApi extends BaseApi {
   async getDashboard(params = {}) {
     const startDate = params.startDate ? formatDate(params.startDate) : null;
     const endDate = params.endDate ? formatDate(params.endDate) : null;
-
-    // 这里直接返回前端构造的假数据，不再调用 core 后端逻辑
-    const dashboard = {
-      totalScore: 86,
-      scores: {
-        sleepScore: 90,
-        dietScore: 82,
-        sportScore: 78,
-        productivityScore: 88,
-        emotionScore: 80,
-        balanceScore: 84
-      },
-      scoreChanges: {
-        sleepChange: 5,
-        dietChange: 2,
-        sportChange: -3,
-        productivityChange: 4,
-        emotionChange: 1,
-        balanceChange: 0
-      },
-      eventSummary: {
-        totalEvents: 18,
-        completedEvents: 14,
-        categoryCount: 6
-      },
-      aiAdvice: {
-        summary: "根据近期记录，您的整体状态保持在良好水平，睡眠和效率表现突出，运动略有不足。",
-        suggestions: [
-          "继续保持稳定的作息时间，尽量在固定时间入睡和起床。",
-          "每周安排 3-4 次中等强度运动，例如快走或慢跑 30 分钟。",
-          "在高效工作后安排短暂休息，避免持续久坐带来的疲劳。",
-          "饮食上多选择清淡和高纤维食物，减少高糖高油食物摄入。"
-        ]
-      },
-      // 方便后续需要时查看当前时间范围
-      _meta: {
-        startDate,
-        endDate
-      }
-    };
-
-    return Promise.resolve(dashboard);
+    
+    if (!startDate) {
+      return {
+        totalScore: 0,
+        scores: {
+          sleepScore: 0,
+          dietScore: 0,
+          sportScore: 0,
+          productivityScore: 0,
+          emotionScore: 0,
+          balanceScore: 0
+        },
+        scoreChanges: {
+          sleepChange: 0,
+          dietChange: 0,
+          sportChange: 0,
+          productivityChange: 0,
+          emotionChange: 0,
+          balanceChange: 0
+        },
+        dimensions: {},
+        aiAdvice: {
+          summary: '暂无分析数据',
+          suggestions: []
+        }
+      };
+    }
+    
+    try {
+      const res = await this.controller.getDashboard({ startDate, endDate });
+      return await handleResponse(res);
+    } catch (error) {
+      console.error('Error getting dashboard:', error);
+      return {
+        totalScore: 0,
+        scores: {
+          sleepScore: 0,
+          dietScore: 0,
+          sportScore: 0,
+          productivityScore: 0,
+          emotionScore: 0,
+          balanceScore: 0
+        },
+        scoreChanges: {
+          sleepChange: 0,
+          dietChange: 0,
+          sportChange: 0,
+          productivityChange: 0,
+          emotionChange: 0,
+          balanceChange: 0
+        },
+        dimensions: {},
+        aiAdvice: {
+          summary: '暂无分析数据',
+          suggestions: []
+        }
+      };
+    }
   }
 
   /**

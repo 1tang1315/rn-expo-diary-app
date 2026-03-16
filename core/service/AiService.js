@@ -154,6 +154,58 @@ export class AiService {
   }
   
   /**
+   * 生成纯 Markdown 文本（非 JSON，供分析报告流式展示或解析）
+   * @param {Object} params
+   * @param {string} params.prompt - 用户提示词
+   * @param {string} params.systemPrompt - 系统角色提示词
+   * @returns {Promise<string>} Markdown 全文
+   */
+  async generateMarkdown({ prompt, systemPrompt }) {
+    try {
+      const resp = await this.openai.chat.completions.create({
+        model: this.MODEL,
+        messages: [
+          systemPrompt ? { role: 'system', content: systemPrompt } : null,
+          { role: 'user', content: prompt }
+        ].filter(Boolean),
+        temperature: 0.3,
+        stream: false
+      });
+      return resp.choices?.[0]?.message?.content || '';
+    } catch (error) {
+      console.error('生成 Markdown 分析失败：', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 生成结构化评分结果
+   * @param {Object} params
+   * @param {string} params.prompt - 用户提示词（包含具体数据）
+   * @param {string} params.systemPrompt - 系统角色提示词（约束结构）
+   * @returns {Promise<Object>} 解析后的 JSON 对象
+   */
+  async generateStructuredScores({ prompt, systemPrompt }) {
+    try {
+      const resp = await this.openai.chat.completions.create({
+        model: this.MODEL,
+        messages: [
+          systemPrompt ? { role: 'system', content: systemPrompt } : null,
+          { role: 'user', content: prompt }
+        ].filter(Boolean),
+        temperature: 0.2,
+        response_format: { type: 'json_object' }
+      });
+      
+      const content = resp.choices?.[0]?.message?.content || '{}';
+      return JSON.parse(content);
+    } catch (error) {
+      console.error('生成结构化 JSON 评分失败：', error);
+      throw error;
+    }
+  }
+  
+  /**
    * 根据用户首条消息和AI首条回复生成对话标题
    * @param {string} userFirstMsg - 用户第一条消息
    * @param {string} aiFirstReply - AI第一条回复

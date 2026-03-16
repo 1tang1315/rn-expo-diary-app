@@ -30,6 +30,28 @@ export class AnalyseController extends BaseController {
   constructor() {
     super(new AnalyseService());
   }
+  
+  /**
+   * 获取综合看板数据（AI 评分）
+   * @param {Object} params
+   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
+   * @returns {Promise<Object>} 统一响应
+   */
+  async getDashboard(params = {}) {
+    try {
+      const { startDate, endDate } = params;
+      if (!startDate) {
+        return Response.error(400, '开始日期为必填参数');
+      }
+      
+      const data = await this.service.getDashboard({ startDate, endDate });
+      return Response.success(data, '获取看板数据成功');
+    } catch (error) {
+      console.error('获取看板数据失败:', error);
+      return Response.error(500, '获取看板数据失败');
+    }
+  }
 
   /**
    * 获取睡眠评分详情
