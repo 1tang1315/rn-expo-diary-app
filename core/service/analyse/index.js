@@ -11,8 +11,8 @@ export class AnalyseService {
     this.statisticsService = new StatisticsService();
     this.eventService = new EventService();
     this.dataService = new DataService();
-    this.analysisService = new AnalysisService();
     this.analyseMapper = new AnalyseMapper();
+    this.analysisService = new AnalysisService();
   }
 
   /**
@@ -36,9 +36,7 @@ export class AnalyseService {
       'all'
     );
 
-    const statsToday = await this.statisticsService.getDayStatistics(
-      dayjs(currentDateStr).toDate()
-    );
+    const statsToday = await this.statisticsService.getDayStatistics(currentDateStr);
 
     return this.dataService.buildDailyAnalysisInput({
       date: currentDateStr,
@@ -59,14 +57,13 @@ export class AnalyseService {
   async _callAiService(params = {}) {
     const { startDate, endDate, callbacks = {}, forceRefresh = false } = params;
     const {
-      onThought = () => {
-      }, onOutput = () => {
-      }
+      onThought = () => { },
+      onOutput = () => { }
     } = callbacks;
 
     // 获取每日输入数据
     const dailyInput = await this._getDailyInput(startDate, endDate);
-    const { dateRange: date, eventHash } = dailyInput;
+    const { dateRange: date, keyEvents, eventHash } = dailyInput;
 
     // 检查缓存（除非强制刷新）
     if (!forceRefresh) {
@@ -226,9 +223,19 @@ export class AnalyseService {
 评分维度：睡眠、饮食、运动、效率、生活平衡、情绪状态`;
 
     const statsText = JSON.stringify(dailyInput.stats, null, 2);
-    const eventsText = dailyInput.keyEvents.length > 0
-      ? dailyInput.keyEvents.map((e) => e.line || `${e.timeRange} ${e.title} ${e.duration} ${e.description || ''}`.trim()).join('\n')
-      : dailyInput.events.map((e) => `${e.time} ${e.title} ${e.duration} ${e.description || ''}`.trim()).join('\n');
+
+    const keyEventsText = keyEvents.length > 0
+      ? keyEvents.map((e) => e.line || `${e.timeRange} ${e.title} ${e.duration} ${e.description || ''}`.trim()).join('\n')
+      : '';
+
+    // 按分类分组的事件数据
+    const eventsByCategoryText = Object.entries(dailyInput.eventsByCategory)
+      .map(([category, events]) => {
+        const categoryName = category || '未分类';
+        const categoryEvents = events.map((e) => e.line || '').join('\n');
+        return `【${categoryName}】\n${categoryEvents}`;
+      })
+      .join('\n\n');
 
     const userPrompt = `请根据以下用户一天的行为数据进行分析，输出固定结构的 Markdown 报告。
 
@@ -299,8 +306,11 @@ export class AnalyseService {
 下面是用户一天的行为统计数据：
 ${statsText}
 
-下面是用户行为事件列表：
-${eventsText}
+下面是用户行为关键事件（按时长排序）：
+${keyEventsText}
+
+下面是用户行为按分类分组：
+${eventsByCategoryText}
 `;
 
     // 调用 AI 生成内容
@@ -308,6 +318,11 @@ ${eventsText}
       { userPrompt, systemPrompt },
       { onThought, onOutput }
     );
+
+    // 保存 AI 生成的结果到数据库
+    if (result.output) {
+      await this.analysisService.parseAITextToStructured(result.output, date, eventHash);
+    }
 
     return result;
   }

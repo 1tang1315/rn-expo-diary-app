@@ -1,12 +1,12 @@
 /**
  * 统计服务类，处理统计相关的业务逻辑
  */
+import { statisticsColors as colors } from '@/constants/commonConstans';
 import { EventMapper, StatisticsMapper } from '@/core/mapper';
 import { BaseService } from '@/core/service';
-import { formatDate, getMonthRange, getWeekRange, snakeToCamelObject } from '@/core/utils';
-import { getTotalMinutes, formatDurationByMinutes } from '@/utils/formatTimeUtils';
+import { formatDate, snakeToCamelObject } from '@/core/utils';
 import { getCategoryName } from '@/utils/categoryUtils';
-import { statisticsColors as colors } from '@/constants/commonConstans';
+import { formatDurationByMinutes, getTotalMinutes } from '@/utils/formatTimeUtils';
 import dayjs from 'dayjs';
 
 export class StatisticsService extends BaseService {
@@ -15,36 +15,16 @@ export class StatisticsService extends BaseService {
     this.statisticsMapper = new StatisticsMapper();
   }
 
-  normalizeStatistics(raw = {}) {
-    return {
-      sleepDuration: Number(raw.sleepDuration ?? raw.sleep_duration ?? 0),
-      sportDuration: Number(raw.sportDuration ?? raw.sport_duration ?? 0),
-      entertainmentDuration: Number(raw.entertainmentDuration ?? raw.entertainment_duration ?? 0),
-      studyDuration: Number(raw.studyDuration ?? raw.study_duration ?? 0),
-      mealCount: Number(raw.mealCount ?? raw.meal_count ?? 0)
-    };
-  }
-
   async getRangeStatistics(startDate, endDate) {
     const start = formatDate(startDate);
     const end = formatDate(endDate ?? startDate);
     const raw = await this.statisticsMapper.getStatisticsByDateRange(start, end);
-    return this.normalizeStatistics(raw);
+    return raw.map(item => snakeToCamelObject(item));
   }
 
   async getDayStatistics(date) {
     const target = formatDate(date);
     return this.getRangeStatistics(target, target);
-  }
-
-  async getWeekStatistics(date) {
-    const range = getWeekRange(date);
-    return this.getRangeStatistics(range.start, range.end);
-  }
-
-  async getMonthStatistics(date) {
-    const range = getMonthRange(date);
-    return this.getRangeStatistics(range.start, range.end);
   }
 
   /**
@@ -58,7 +38,7 @@ export class StatisticsService extends BaseService {
     // 获取事件数据
     const events = await this.mapper.getByDateRangeAndCategory(startDate, endDate ?? startDate, category);
     const camelEvents = events.map(event => snakeToCamelObject(event));
-    
+
     // 处理统计数据
     return this.processStatistics(camelEvents, category === 'all');
   }
@@ -72,18 +52,18 @@ export class StatisticsService extends BaseService {
   processStatistics(data, groupByCategory = false) {
     // 确保data是数组
     const safeData = Array.isArray(data) ? data : [];
-    
+
     const completedEvents = safeData.filter(item => item.status === 'completed');
-    
+
     const groupedData = {};
     completedEvents.forEach(item => {
       const key = groupByCategory
         ? getCategoryName(item.category) // all时用分类名称作为key
         : (item.title && item.title.trim() !== '' ? item.title : getCategoryName(item.category));
-      
+
       // 计算时长（分钟）
       const durationMinutes = getTotalMinutes(item.startDatetime, item.endDatetime);
-      
+
       // 第一次groupedData[key]没有, 进行初始化
       if (!groupedData[key]) {
         groupedData[key] = {
@@ -95,19 +75,19 @@ export class StatisticsService extends BaseService {
       groupedData[key].durationMinutes += durationMinutes > 0 ? durationMinutes : 0;
       groupedData[key].useCount += 1;
     });
-    
+
     const chartData = Object.keys(groupedData).map((key, index) => ({
       label: key,
       value: groupedData[key].durationMinutes,
       color: colors[index % colors.length],
       useCount: groupedData[key].useCount
     }));
-    
+
     const totalMinutes = completedEvents.reduce((sum, e) => {
       const duration = getTotalMinutes(e.startDatetime, e.endDatetime);
       return sum + (duration > 0 ? duration : 0);
     }, 0);
-    
+
     return { chartData, totalMinutes, completedEvents };
   }
 
@@ -132,27 +112,27 @@ export class StatisticsService extends BaseService {
       if (colorCache.has(eventKey)) {
         return colorCache.get(eventKey);
       }
-      
+
       const letters = '0123456789ABCDEF';
       let color = '#';
-      
+
       for (let i = 0; i < 6; i++) {
         color += letters[Math.floor(Math.random() * 16)];
       }
-      
+
       const r = parseInt(color.slice(1, 3), 16);
       const g = parseInt(color.slice(3, 5), 16);
       const b = parseInt(color.slice(5, 7), 16);
       const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-      
+
       // 确保颜色对比度足够（偏暗，文字显示清晰）
       const finalColor = brightness < 128
         ? color
         : `#${(0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0')}`;
-      
+
       // 将生成的颜色存入缓存
       colorCache.set(eventKey, finalColor);
-      
+
       return finalColor;
     };
 
@@ -165,7 +145,7 @@ export class StatisticsService extends BaseService {
         totalMinutes: 0,
         totalDurationStr: ''
       };
-      
+
       switch (viewType) {
         case 'day':
           return { ...baseData, timeRanges: [], date: '' };
@@ -184,20 +164,20 @@ export class StatisticsService extends BaseService {
     const processSingleEvent = (event, eventMap, viewType, dateRange) => {
       const eventKey = event.title || getCategoryName(event.category);
       if (!eventKey) return;
-      
+
       // 初始化数据（不存在则创建）
       if (!eventMap.has(eventKey)) {
         eventMap.set(eventKey, initEventBaseData(eventKey, viewType, event));
       }
-      
+
       const eventData = eventMap.get(eventKey);
       eventData.count++;
-      
+
       const startDatetime = dayjs(event.startDatetime);
       const endDatetime = dayjs(event.endDatetime || event.startDatetime);
       const totalMinutes = getTotalMinutes(event.startDatetime, event.endDatetime || event.startDatetime);
       eventData.totalMinutes += totalMinutes;
-      
+
       // 按视图类型补充数据
       switch (viewType) {
         case 'day':
@@ -237,14 +217,14 @@ export class StatisticsService extends BaseService {
     const formatEventData = (eventMap, viewType) => {
       return Array.from(eventMap.values()).map(item => {
         item.totalDurationStr = formatDurationByMinutes(item.totalMinutes);
-        
+
         if (viewType === 'day' && item.timeRanges) {
           item.timeRanges.sort((a, b) =>
             dayjs(a.startDatetime).isBefore(dayjs(b.startDatetime)) ? -1 : 1
           );
           item.date = item.date || dayjs().format('YYYY-MM-DD');
         }
-        
+
         return item;
       });
     };
@@ -253,7 +233,7 @@ export class StatisticsService extends BaseService {
     validData.forEach(event => {
       processSingleEvent(event, eventMap, viewType, dateRange);
     });
-    
+
     // 格式化数据
     return formatEventData(eventMap, viewType);
   }

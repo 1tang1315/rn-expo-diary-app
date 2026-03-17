@@ -36,7 +36,7 @@ export class AnalyseController extends BaseController {
    * @param {string} params.endDate - 结束日期
    * @param {boolean} params.forceRefresh - 是否强制刷新（忽略缓存）
    * @param {Object} callbacks - { onThought, onOutput }
-   * @returns {Promise<{ thought: string, output: string }>}
+   * @returns {Promise<{code: number, success: boolean, message: string, data: *}>}
    */
   async generateAiReport(params = {}, callbacks = {}) {
     try {
@@ -51,6 +51,4 @@ export class AnalyseController extends BaseController {
     }
   }
 }
-
-export { SleepController } from './SleepController';
 

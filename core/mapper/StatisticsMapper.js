@@ -64,7 +64,28 @@ export class StatisticsMapper extends BaseMapper {
         CASE WHEN e.category = 'diet' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
-      ), 0)) AS diet_duration
+      ), 0)) AS diet_duration,
+      
+      -- 日常：自然日拆分时长
+      ROUND(IFNULL(SUM(
+        CASE WHEN e.category = 'daily' THEN
+          (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
+        ELSE 0 END
+      ), 0)) AS daily_duration,
+      
+      -- 购物：自然日拆分时长
+      ROUND(IFNULL(SUM(
+        CASE WHEN e.category = 'shopping' THEN
+          (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
+        ELSE 0 END
+      ), 0)) AS shopping_duration,
+      
+      -- 出行：自然日拆分时长
+      ROUND(IFNULL(SUM(
+        CASE WHEN e.category = 'travel' THEN
+          (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
+        ELSE 0 END
+      ), 0)) AS travel_duration
 
     FROM date_series d
     -- 左连接事件表，确保查询范围内的每一天都有数据（无事件则为0）
@@ -83,6 +104,7 @@ export class StatisticsMapper extends BaseMapper {
       // SQL参数：严格对应3个? → startDate, startDate, endDate
       [startDate, startDate, endDate]
     );
+    
     // 无数据时返回空数组，避免后续取值报错
     return result || [];
   }

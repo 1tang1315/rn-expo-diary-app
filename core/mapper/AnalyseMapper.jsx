@@ -246,5 +246,25 @@ export class AnalyseMapper extends BaseMapper {
 
     return await this.getScoresByDate(yesterdayStr);
   }
+
+  /**
+   * 更新分析数据
+   * @param {string} date - 日期
+   * @param {Object} data - 要更新的数据对象
+   * @returns {Promise<boolean>} 是否更新成功
+   */
+  async update(date, data) {
+    const db = await this.getDB();
+    const fields = Object.keys(data);
+    const setClause = fields.map(field => `${field} = ?`).join(',');
+    const values = fields.map(key => data[key]);
+    values.push(date);
+
+    const result = await db.runAsync(
+      `UPDATE ${this.tableName} SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE date = ?`,
+      values
+    );
+    return result.changes > 0;
+  }
 }
 

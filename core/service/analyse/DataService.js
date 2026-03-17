@@ -1,17 +1,9 @@
-import dayjs from 'dayjs';
 import { formatDurationByMinutes, getTotalMinutes } from '@/utils/formatTimeUtils';
+import dayjs from 'dayjs';
 
 /**
  * DataService：把原始事件变成 AI 友好的统计数据
  *
- * 只关心「一天」的数据结构：
- * {
- *   date: 'YYYY-MM-DD',
- *   stats: {...},
- *   keyEvents: [...],
- *   events: [...],
- *   eventHash: '22_23:57'
- * }
  */
 export class DataService {
   /**
@@ -21,87 +13,96 @@ export class DataService {
    * @param {Array} params.events - 当天事件（camelCase）
    * @param {Object} params.stats - 统计数据（来自 StatisticsService.getDayStatistics）
    */
-  buildDailyAnalysisInput({ date, events = [], stats = {} }) {
+  buildDailyAnalysisInput({ date, events = [], stats = [] }) {
     const safeEvents = Array.isArray(events) ? events : [];
+    const safeStats = Array.isArray(stats) ? stats : [];
 
-    const {
-      sleepDuration = 0,
-      studyDuration = 0,
-      sportDuration = 0,
-      entertainmentDuration = 0,
-      mealCount = 0
-    } = stats || {};
+    // 获取当天的统计数据
+    const dayStats = safeStats.find(item => item.statDate === date || item.stat_date === date) || {};
+
+    // 只处理 SQL 查询中指定的分类
+    const sleepDuration = Number(dayStats.sleepDuration || 0);
+    const sportDuration = Number(dayStats.sportDuration || 0);
+    const entertainmentDuration = Number(dayStats.entertainmentDuration || 0);
+    const studyDuration = Number(dayStats.studyDuration || 0);
+    const dietDuration = Number(dayStats.dietDuration || 0);
+    const dailyDuration = Number(dayStats.dailyDuration || 0);
+    const shoppingDuration = Number(dayStats.shoppingDuration || 0);
+    const travelDuration = Number(dayStats.travelDuration || 0);
+
+    // 计算用餐次数（基于饮食事件数量）
+    const dietEvents = safeEvents.filter(event => event.category === 'diet');
+    const mealCount = dietEvents.length;
 
     // 1. 统计指标（分钟 → 可读字符串）
     const statsView = {
-      sleepDuration: formatDurationByMinutes(sleepDuration || 0),
-      studyDuration: formatDurationByMinutes(studyDuration || 0),
-      // 暂时没有单独的工作时长统计，用「学习 + 运动之外的专注类事件」可以在后续版本细化
-      workDuration: '0分钟',
-      entertainmentDuration: formatDurationByMinutes(entertainmentDuration || 0),
-      exerciseDuration: formatDurationByMinutes(sportDuration || 0),
-      dietCount: Number(mealCount || 0),
+      sleepDuration: formatDurationByMinutes(sleepDuration),
+      studyDuration: formatDurationByMinutes(studyDuration),
+      entertainmentDuration: formatDurationByMinutes(entertainmentDuration),
+      exerciseDuration: formatDurationByMinutes(sportDuration),
+      dietDuration: formatDurationByMinutes(dietDuration),
+      dailyDuration: formatDurationByMinutes(dailyDuration),
+      shoppingDuration: formatDurationByMinutes(shoppingDuration),
+      travelDuration: formatDurationByMinutes(travelDuration),
+      dietCount: mealCount,
       totalEvents: safeEvents.length
     };
 
-    // 2. 关键事件：按时长从大到小挑选 5-10 条
-    const eventsWithDuration = safeEvents.map((e) => {
-      const start = dayjs(e.startDatetime || e.start_datetime);
-      const end = dayjs(
-        e.endDatetime ||
-        e.end_datetime ||
-        e.startDatetime ||
-        e.start_datetime
-      );
+    // 2. 处理事件数据，添加持续时间
+    const processedEvents = safeEvents.map((e) => {
       const durationMinutes = Math.max(
         0,
         getTotalMinutes(
-          e.startDatetime || e.start_datetime,
-          e.endDatetime || e.end_datetime || e.startDatetime || e.start_datetime
+          e.startDatetime,
+          e.endDatetime
         )
       );
 
       return {
-        raw: e,
-        start,
-        end,
-        durationMinutes
+        category: e.category || '',
+        title: e.title || e.category || '',
+        startTime: e.startDatetime || '',
+        endTime: e.endDatetime,
+        duration: durationMinutes,
+        description: e.description || ''
       };
     });
 
-    const sortedByDuration = [...eventsWithDuration].sort(
-      (a, b) => b.durationMinutes - a.durationMinutes
+    // 3. 按分类对事件进行分组
+    const eventsByCategory = processedEvents.reduce((acc, event) => {
+      const category = event.category;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      const start = dayjs(event.startTime);
+      const end = dayjs(event.endTime);
+      acc[category].push({
+        ...event,
+        line: `${start.format('HH:mm')}~${end.format('HH:mm')} ${event.title} ${formatDurationByMinutes(event.duration)} ${event.description}`.trim()
+      });
+      return acc;
+    }, {});
+
+    // 4. 关键事件：按时长从大到小挑选 5-10 条
+    const sortedByDuration = [...processedEvents].sort(
+      (a, b) => b.duration - a.duration
     );
 
-    const keyEvents = sortedByDuration.slice(0, 10).map((item) => {
-      const { raw, start, end, durationMinutes } = item;
-      const title = raw.title || raw.category || '';
-      const description = raw.description || raw.content || '';
-
+    const keyEvents = sortedByDuration.slice(0, 10).map((event) => {
+      const start = dayjs(event.startTime);
+      const end = dayjs(event.endTime);
       return {
         timeRange: `${start.format('HH:mm')}~${end.format('HH:mm')}`,
-        title,
-        category: raw.category || '',
-        duration: formatDurationByMinutes(durationMinutes),
-        description,
+        title: event.title,
+        category: event.category,
+        duration: formatDurationByMinutes(event.duration),
+        description: event.description,
         // 给 AI 用的紧凑文本
-        line: `${start.format('HH:mm')}~${end.format('HH:mm')} ${title || raw.category || ''} ${formatDurationByMinutes(durationMinutes)} ${description || ''}`.trim()
+        line: `${start.format('HH:mm')}~${end.format('HH:mm')} ${event.title} ${formatDurationByMinutes(event.duration)} ${event.description}`.trim()
       };
     });
 
-    // 3. 原始事件（简化版）
-    const simpleEvents = eventsWithDuration.map((item) => {
-      const { raw, start, end, durationMinutes } = item;
-      return {
-        category: raw.category || '',
-        title: raw.title || raw.category || '',
-        time: `${start.format('HH:mm')}~${end.format('HH:mm')}`,
-        duration: formatDurationByMinutes(durationMinutes),
-        description: raw.description || raw.content || ''
-      };
-    });
-
-    // 4. 事件 hash：数量 + 最后更新时间（HH:mm）
+    // 6. 事件 hash：数量 + 最后更新时间（HH:mm）
     let latestUpdate = null;
     safeEvents.forEach((e) => {
       const ts = dayjs(
@@ -119,12 +120,12 @@ export class DataService {
     });
 
     const eventHash = `${safeEvents.length}_${(latestUpdate || dayjs(date)).format('HH:mm')}`;
-
+    
     return {
       dateRange: date,
       stats: statsView,
       keyEvents,
-      events: simpleEvents,
+      eventsByCategory,
       eventHash
     };
   }
