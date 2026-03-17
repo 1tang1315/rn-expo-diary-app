@@ -25,12 +25,38 @@ export class EventMapper extends BaseMapper {
          OR (DATE(end_datetime) BETWEEN ? AND ?) 
          OR (DATE(start_datetime) <= ? AND DATE(end_datetime) >= ?)
        )`;
-    
+
     const params = [
       startDate, endDate,
       startDate, endDate,
       startDate, endDate
     ];
+
+    if (category !== 'all') {
+      query += ' AND category = ?';
+      params.push(category);
+    }
+
+    query += ` ORDER BY start_datetime ${sortOrder}`;
+
+    return await db.getAllAsync(query, params);
+  }
+  
+  /**
+   * 根据结束日期范围获取事件（所有事件都按结束日筛选）
+   * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} endDate - 结束日期，格式：YYYY-MM-DD
+   * @param {string} category - 事件分类，'all' 表示所有分类
+   * @param {string} sortOrder - 排序方向，'asc' 或 'desc'
+   * @returns {Promise<Array>} 数据库查询结果数组
+   */
+  async getByEndDateRange(startDate, endDate, category = 'all', sortOrder = 'desc') {
+    const db = await this.getDB();
+    let query = `SELECT * FROM event
+       WHERE deleted_at IS NULL
+       AND DATE(end_datetime) BETWEEN ? AND ?`;
+    
+    const params = [startDate, endDate];
     
     if (category !== 'all') {
       query += ' AND category = ?';

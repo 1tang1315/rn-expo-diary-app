@@ -1,6 +1,7 @@
 import CircularProgressRing from "@/components/chart/CircularProgressRing";
 import ThemeText from "@/components/theme/ThemeText";
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import { useTheme } from "@/context/ThemeContext";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -12,6 +13,7 @@ const ScoreRowCard = ({
   maxValue = 100,
   onPress
 }) => {
+  const { theme } = useTheme();
   const ringSize = 50;
   const strokeWidth = 5;
   
@@ -28,12 +30,12 @@ const ScoreRowCard = ({
   return (
     <ThemeTouchableOpacity style={styles.gridContainer} onPress={onPress}>
       <View style={styles.gridHeader}>
-        <View style={styles.gridHeaderLeft}>
-          <Text style={styles.gridIcon}>{icon}</Text>
-          <Text style={styles.gridTitle}>{label}</Text>
+          <View style={styles.gridHeaderLeft}>
+            <Text style={[styles.gridIcon, { color: theme.colors.text }]}>{icon}</Text>
+            <Text style={[styles.gridTitle, { color: theme.colors.text }]}>{label}</Text>
+          </View>
+          <Text style={[styles.gridLink, { color: theme.colors.subText }]}>查看详情 &gt;</Text>
         </View>
-        <Text style={styles.gridLink}>查看详情 &gt;</Text>
-      </View>
       
       <View style={styles.gridContent}>
         <View style={styles.gridLeft}>
@@ -56,13 +58,14 @@ const ScoreRowCard = ({
         <View style={styles.gridRight}>
           <View style={styles.evaluationContainer}>
             <View style={[styles.evaluationTag, { backgroundColor: evaluation.color }]}>
-              <Text style={styles.evaluationText}>{evaluation.text}</Text>
+              <Text style={[styles.evaluationText, { color: theme.colors.textInverse }]}>{evaluation.text}</Text>
             </View>
             <Text style={[styles.evaluationDescription, { color: evaluation.color }]}>{evaluation.desc}</Text>
           </View>
           <Text style={[
             styles.gridDetailText,
-            change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
+            { color: theme.colors.subText },
+            change > 0 ? { color: theme.colors.success } : (change < 0 ? { color: theme.colors.error } : { color: theme.colors.subText })
           ]}>
             较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '— ')} {change !== 0 ? Math.abs(change) : '持平'}
           </Text>
@@ -71,6 +74,8 @@ const ScoreRowCard = ({
     </ThemeTouchableOpacity>
   );
 };
+
+export default ScoreRowCard;
 
 const styles = StyleSheet.create({
   ringContainer: {},
@@ -81,9 +86,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 0,
   },
-  positive: { color: '#4CAF50' },
-  negative: { color: '#F44336' },
-  neutral: { color: '#999' },
   
   gridContainer: { width: '49%', height: 110 },
   gridHeader: {
@@ -97,8 +99,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gridIcon: { fontSize: 14, marginRight: 4 },
-  gridTitle: { fontSize: 14, fontWeight: '600' },
-  gridLink: { fontSize: 12, color: '#999' },
   gridContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -124,7 +124,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   evaluationText: {
-    color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -134,7 +133,5 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   gridRingScore: { fontSize: 14, fontWeight: '700' },
-  gridDetailText: { fontSize: 11, color: '#999', marginBottom: 2, lineHeight: 16 },
+  gridDetailText: { fontSize: 11, marginBottom: 2, lineHeight: 16 },
 });
-
-export default ScoreRowCard;

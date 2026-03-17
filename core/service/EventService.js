@@ -36,6 +36,19 @@ export class EventService extends BaseService {
     const results = await this.mapper.getByDateRangeAndCategory(startDate, endDate ?? startDate, category, sortOrder);
     return results.map(result => snakeToCamelObject(result));
   }
+  
+  /**
+   * 根据结束日期范围获取事件（所有事件都按结束日筛选）
+   * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} endDate - 结束日期，格式：YYYY-MM-DD
+   * @param {string} category - 事件分类，'all' 表示所有分类
+   * @param {string} sortOrder - 排序方向，'asc' 或 'desc'
+   * @returns {Promise<Array>} 转换后的对象数组
+   */
+  async getByEndDateRange(startDate, endDate, category = 'all', sortOrder = 'desc') {
+    const results = await this.mapper.getByEndDateRange(startDate, endDate ?? startDate, category, sortOrder);
+    return results.map(result => snakeToCamelObject(result));
+  }
 
   /**
    * 按关键词搜索事件

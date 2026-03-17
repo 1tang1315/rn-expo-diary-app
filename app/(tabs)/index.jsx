@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import Header from "@/components/common/Header";
 import Calendar from "@/components/common/Calendar";
+import Header from "@/components/common/Header";
 import TimelinePanel from "@/components/event";
-import dayjs from 'dayjs';
-import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import dayjs from 'dayjs';
+import React, { useState } from 'react';
 
 export default function Home() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -15,6 +15,7 @@ export default function Home() {
         <Header
           selectedDate={selectedDate}
           onToday={() => setSelectedDate(dayjs())}
+          onDateChange={(date) => setSelectedDate(date)}
         />
         <Calendar
           value={selectedDate}

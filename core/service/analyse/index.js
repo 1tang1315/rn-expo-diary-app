@@ -1,5 +1,5 @@
 import { AnalyseMapper } from "@/core/mapper";
-import { StatisticsService } from '@/core/service';
+import { EventService, StatisticsService } from '@/core/service';
 import { AiService } from '@/core/service/AiService';
 import dayjs from 'dayjs';
 import { AsyncStorage } from 'expo-sqlite/kv-store';
@@ -9,6 +9,7 @@ import { DataService } from './DataService';
 export class AnalyseService {
   constructor() {
     this.statisticsService = new StatisticsService();
+    this.eventService = new EventService();
     this.dataService = new DataService();
     this.analysisService = new AnalysisService();
     this.analyseMapper = new AnalyseMapper();
@@ -28,11 +29,13 @@ export class AnalyseService {
 
     const currentDateStr = target.format('YYYY-MM-DD');
 
-    // 获取当天所有事件 + 统计数据 → 交给 DataService 生成 AI 输入
-    const eventsToday = await this.statisticsService.getEventsByDateRange(
-      dayjs(currentDateStr).toDate(),
-      endDate ? dayjs(endDate).toDate() : dayjs(currentDateStr).toDate()
+    // 获取当天所有事件
+    const eventsToday = await this.eventService.getByEndDateRange(
+      currentDateStr,
+      endDate || currentDateStr,
+      'all'
     );
+
     const statsToday = await this.statisticsService.getDayStatistics(
       dayjs(currentDateStr).toDate()
     );
@@ -306,12 +309,6 @@ ${eventsText}
       { onThought, onOutput }
     );
 
-    // 解析并自动存入数据库
-    if (result.output) {
-      const structuredData = await this.analysisService.parseAITextToStructured(result.output, date, eventHash);
-      console.log(structuredData, "structuredData");
-    }
-
     return result;
   }
 
@@ -330,7 +327,7 @@ ${eventsText}
 
     // 获取昨日数据
     const yesterdayData = await this.analyseMapper.getYesterdayData(startDate);
-    
+
     // 构建看板数据
     return {
       totalScore: structuredData?.total.score || 0,
@@ -374,15 +371,6 @@ ${eventsText}
       callbacks,
       forceRefresh
     });
-  }
-
-  /**
-   * 获取完整的 AI 分析报告（原始 Markdown 格式）
-   * @param {string} date - 日期
-   * @returns {Promise<string|null>} 原始 AI 文本
-   */
-  async getFullAiReport(date) {
-    return this.analyseMapper.readFullAiReport(date);
   }
 }
 

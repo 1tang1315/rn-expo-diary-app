@@ -47,13 +47,6 @@ export class StatisticsService extends BaseService {
     return this.getRangeStatistics(range.start, range.end);
   }
 
-  async getEventsByDateRange(startDate, endDate) {
-    const start = formatDate(startDate);
-    const end = formatDate(endDate ?? startDate);
-    const rows = await this.statisticsMapper.getEventsByDateRange(start, end);
-    return rows.map((row) => snakeToCamelObject(row));
-  }
-
   /**
    * 获取统计数据
    * @param {string} startDate - 开始日期，格式：YYYY-MM-DD

@@ -9,6 +9,7 @@ import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 
 export default function AiAnalysisPage() {
   const params = useLocalSearchParams();
@@ -17,10 +18,9 @@ export default function AiAnalysisPage() {
   const { startDate: startParam, endDate: endParam } = params;
 
   const [streamContent, setStreamContent] = useState({ thought: "", output: "" });
-  const [aiStreamKey, setAiStreamKey] = useState(0);
+  const [aiStreamKey] = useState(0);
   const [aiContentFinalized, setAiContentFinalized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
 
   const loadData = useCallback(async (forceRefresh = false) => {
     let startDate;
@@ -34,7 +34,6 @@ export default function AiAnalysisPage() {
     }
 
     setLoading(true);
-    setErrorMsg("");
     setStreamContent({ thought: "", output: "" });
     setAiContentFinalized(false);
 
@@ -58,7 +57,6 @@ export default function AiAnalysisPage() {
       await streamPromise;
     } catch (error) {
       console.error("Error loading AI analysis:", error);
-      setErrorMsg(error?.message || "生成 AI 分析失败");
       setStreamContent({
         thought: "",
         output: "暂无 AI 分析内容（请检查 AI 配置或网络连接）"
@@ -71,7 +69,7 @@ export default function AiAnalysisPage() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      loadData().then();
     }, [loadData])
   );
 
@@ -89,15 +87,25 @@ export default function AiAnalysisPage() {
     await Clipboard.setStringAsync(text);
     Alert.alert("提示", "AI 分析内容已复制");
   };
-
-  const handleReplay = () => {
-    setAiContentFinalized(false);
-    setAiStreamKey((k) => k + 1);
-    setTimeout(() => setAiContentFinalized(true), 300);
+  
+  const handleRegenerate = () => {
+    loadData(true).then();
   };
 
-  const handleRegenerate = () => {
-    loadData(true);
+  // 动态样式
+  const dynamicStyles = {
+    aiActionButtonSecondary: {
+      backgroundColor: theme.colors.card,
+    },
+    aiActionSecondaryText: {
+      color: theme.colors.text,
+    },
+    aiActionButtonPrimary: {
+      backgroundColor: theme.colors.primary,
+    },
+    aiActionPrimaryText: {
+      color: theme.colors.primaryContrast,
+    },
   };
 
   return (
@@ -124,13 +132,6 @@ export default function AiAnalysisPage() {
         <View style={styles.loadingContainer}>
           <ThemeSubTitleText>正在生成 AI 分析...</ThemeSubTitleText>
         </View>
-      ) : errorMsg ? (
-        <View style={[styles.loadingContainer, { gap: 16 }]}>
-          <ThemeSubTitleText style={{ color: "#c62828", textAlign: "center" }}>{errorMsg}</ThemeSubTitleText>
-          <TouchableOpacity style={styles.aiActionButtonPrimary} onPress={loadData}>
-            <ThemeSubTitleText style={styles.aiActionPrimaryText}>重试</ThemeSubTitleText>
-          </TouchableOpacity>
-        </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -145,27 +146,20 @@ export default function AiAnalysisPage() {
           />
           
           <View style={styles.aiActionsContainer}>
-            <TouchableOpacity
-              style={styles.aiActionButtonSecondary}
-              onPress={handleReplay}
-            >
-              <ThemeSubTitleText style={styles.aiActionSecondaryText}>
-                重新播放本次分析
-              </ThemeSubTitleText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.aiActionButtonSecondary}
+            <ThemeTouchableOpacity
+              style={[styles.aiActionButtonPrimary, dynamicStyles.aiActionButtonPrimary]}
               onPress={handleRegenerate}
             >
-              <ThemeSubTitleText style={styles.aiActionSecondaryText}>
+              <ThemeSubTitleText style={[styles.aiActionPrimaryText, dynamicStyles.aiActionPrimaryText]}>
                 重新生成
               </ThemeSubTitleText>
-            </TouchableOpacity>
+            </ThemeTouchableOpacity>
+            
             <TouchableOpacity
-              style={styles.aiActionButtonPrimary}
+              style={[styles.aiActionButtonSecondary, dynamicStyles.aiActionButtonSecondary]}
               onPress={handleCopy}
             >
-              <ThemeSubTitleText style={styles.aiActionPrimaryText}>
+              <ThemeSubTitleText style={[styles.aiActionSecondaryText, dynamicStyles.aiActionSecondaryText]}>
                 复制 AI 分析全文
               </ThemeSubTitleText>
             </TouchableOpacity>
@@ -213,24 +207,20 @@ const styles = StyleSheet.create({
   aiActionButtonSecondary: {
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: "#f1f1f1",
     alignItems: "center",
     justifyContent: "center"
   },
   aiActionSecondaryText: {
-    fontSize: 14,
-    color: "#555"
+    fontSize: 14
   },
   aiActionButtonPrimary: {
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: "#2196F3",
     alignItems: "center",
     justifyContent: "center"
   },
   aiActionPrimaryText: {
     fontSize: 14,
-    color: "#fff",
     fontWeight: "500"
   }
 });

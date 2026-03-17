@@ -20,7 +20,6 @@ export class AnalyseMapper extends BaseMapper {
       `SELECT * FROM daily_analysis WHERE date = ? AND event_hash = ?`,
       [date, eventHash]
     );
-    console.log(existing, "existing");
 
     if (existing) {
       return {

@@ -64,12 +64,6 @@ export class AnalysisService {
       sections[currentTitle] = currentSection;
     }
 
-    // 打印提取的章节，用于调试
-    console.log('Extracted sections:', Object.keys(sections));
-    for (const [title, content] of Object.entries(sections)) {
-      console.log(`Section ${title} length:`, content.length);
-    }
-
     // 解析各个部分
     const totalSection = sections['综合评估'] || '';
     const sleepSection = sections['睡眠分析'] || '';

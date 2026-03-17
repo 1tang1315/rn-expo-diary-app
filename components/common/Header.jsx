@@ -1,23 +1,23 @@
+import CloudSyncApi from '@/api/CloudSyncApi';
 import CloudDriveConfigForm from '@/components/cloud/CloudDriveConfigForm';
 import CloudDriveTypeSelector from '@/components/cloud/CloudDriveTypeSelector';
 import Icon from "@/components/common/Icon";
 import SettingsMenu from '@/components/common/SettingsMenu';
-import ThemeTitleText from "@/components/theme/ThemeTitleText";
+import { useCloudDrive } from "@/context/CloudDriveContext";
 import { useTheme } from '@/context/ThemeContext';
-import CloudSyncApi from '@/api/CloudSyncApi';
 import dayjs from "dayjs";
 import { useNavigation } from "expo-router";
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  StyleSheet,
+  Alert, Platform,
+  StyleSheet, Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import { useCloudDrive } from "@/context/CloudDriveContext";
+import RNDateTimePicker from "@react-native-community/datetimepicker";
 
-const Header = ({ selectedDate, onToday, userId = 1 }) => {
+const Header = ({ selectedDate, onToday, onDateChange, userId = 1 }) => {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { cloudDriveConfig } = useCloudDrive();
@@ -28,6 +28,16 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
   const [selectedDriveType, setSelectedDriveType] = useState('');
   
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // 获取日期选择器配置
+  const getPickerConfig = {
+    value: selectedDate.toDate(),
+    mode: 'date',
+    display: Platform.OS === 'ios' ? 'inline' : 'spinner',
+    minimumDate: new Date(1900, 0, 1), // 最小日期
+    maximumDate: new Date(), // 禁止选择未来日期
+  };
   
   const formatCurrentDate = () => {
     const date = dayjs(selectedDate);
@@ -44,7 +54,7 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
       setIsSyncing(true);
       const hasConfig = checkConfig();
       
-      if (!hasConfig) {
+      if(!hasConfig) {
         setShowDriveSelector(true);
         setIsSyncing(false);
         return;
@@ -52,10 +62,10 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
       
       await CloudSyncApi.syncAllAuto(cloudDriveConfig.driveConfigs);
       Alert.alert("同步成功");
-    } catch (err) {
+    } catch(err) {
       console.error("同步失败", err);
       
-      if (err.code === 'NO_CONFIG') {
+      if(err.code === 'NO_CONFIG') {
         Alert.alert(
           "未配置网盘",
           "请先配置网盘账号和同步路径",
@@ -82,10 +92,38 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
     await handleSync();
   };
   
+  const handleShowDatePicker = () => {
+    setShowDatePicker(true);
+  };
+  
+  const handleDateChange = (event, newDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if(!newDate) return;
+    
+    // 转换为dayjs对象并触发日期变更
+    const selectedDay = dayjs(newDate);
+    // 这里需要触发父组件的日期变更逻辑
+    if(typeof onDateChange === 'function') {
+      onDateChange(selectedDay);
+    }
+  };
+  
   return (
     <View style={styles.headerContainer}>
       {/* 时间 日期 */}
-      <ThemeTitleText>{formatCurrentDate()}</ThemeTitleText>
+      <TouchableOpacity
+        onPress={handleShowDatePicker}
+        activeOpacity={0.8}
+      >
+        <Text style={{
+          color: theme.colors.interactive,
+          fontSize: 16,
+          fontWeight: 600
+        }}>
+          {formatCurrentDate()}
+        </Text>
+      </TouchableOpacity>
+      
       {/* 回到今日 */}
       <TouchableOpacity onPress={onToday} activeOpacity={0.8}>
         <Icon lib="Ionicons" name="today-outline" />
@@ -166,6 +204,14 @@ const Header = ({ selectedDate, onToday, userId = 1 }) => {
           }
         }}
       />
+      
+      {/* 日期选择器 - 统一使用date模式 */}
+      {showDatePicker && (
+        <RNDateTimePicker
+          {...getPickerConfig}
+          onChange={handleDateChange}
+        />
+      )}
     </View>
   );
 };

@@ -114,4 +114,27 @@ export class EventController extends BaseController {
       return Response.error(500, '筛选事件失败');
     }
   }
+
+  /**
+   * 根据结束日期范围获取事件（所有事件都按结束日筛选）
+   * @param {Object} params - 查询参数
+   * @returns {Promise<Object>} 统一格式的响应
+   */
+  async getByEndDateRange(params = {}) {
+    try {
+      // 验证参数
+      const validationResult = validateParams(params, dateRangeParamsSchema);
+      if (!validationResult.isValid) {
+        return Response.error(400, validationResult.errors.join('; '));
+      }
+
+      const { startDate, endDate, category = 'all', sortOrder } = params;
+
+      const data = await this.service.getByEndDateRange(startDate, endDate, category, sortOrder);
+      return Response.success(data, '获取成功');
+    } catch (error) {
+      console.error('获取事件失败:', error);
+      return Response.error(500, '获取事件失败');
+    }
+  }
 }

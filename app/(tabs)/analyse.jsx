@@ -2,12 +2,14 @@ import { analyseApi, eventApi } from "@/api";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import ScoreRowCard from "@/components/analyse/ScoreRowCard";
 import RadarChart from "@/components/chart/RadarChart";
+import Calendar from "@/components/common/Calendar";
 import EmptyContainer from "@/components/common/EmptyContainer";
+import Header from "@/components/common/Header";
 import LoadingContainer from "@/components/common/LoadingContainer";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
-import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import { useTheme } from "@/context/ThemeContext";
 import dayjs from "dayjs";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -15,6 +17,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "rea
 
 export default function Analyse() {
   const router = useRouter();
+  const { theme } = useTheme();
   // region  start(折叠代码注释)
   const [dashboardData, setDashboardData] = useState({
     totalScore: 0,
@@ -38,21 +41,19 @@ export default function Analyse() {
     overallSummary: {}
   });
 
-  const [loading, setLoading] = useState(false);
   const [hasEvents, setHasEvents] = useState(true);
   const [hasDashboardData, setHasDashboardData] = useState(true);
-  const [currentDateRange, setCurrentDateRange] = useState({});
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedDimension, setSelectedDimension] = useState(null);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [selectedSummary, setSelectedSummary] = useState(null);
-
   
-  const handleDateChange = useCallback(async ({ startDate, endDate, type }) => {
-    setCurrentDateRange({ startDate, endDate });
-    setLoading(true);
-    
+  const handleDateChange = useCallback(async (date) => {
     try {
+      const startDate = date.startOf('day').toDate();
+      const endDate = date.endOf('day').toDate();
+      
       // 先查询事件数据
       const events = await eventApi.getByDateRangeAndCategory({ startDate, endDate });
       const hasEventsData = Array.isArray(events) && events.length > 0;
@@ -79,21 +80,13 @@ export default function Analyse() {
       console.error('Error getting data:', error);
       setHasEvents(false);
       setHasDashboardData(false);
-    } finally {
-      setLoading(false);
     }
   }, []);
   
   useFocusEffect(
     useCallback(() => {
-      const defaultStart = dayjs().startOf('day');
-      const defaultEnd = dayjs().endOf('day');
-      handleDateChange({
-        startDate: defaultStart.toDate(),
-        endDate: defaultEnd.toDate(),
-        type: 'day'
-      }).then();
-    }, [handleDateChange])
+      handleDateChange(selectedDate).then();
+    }, [handleDateChange, selectedDate])
   );
   
   // 跳转到详情页
@@ -135,7 +128,7 @@ export default function Analyse() {
   
   const analysisData = useMemo(() => {
     const { scores = {}, scoreChanges = {} } = dashboardData || {};
-    const dimensions = dashboardData.dimensions || {};
+    
     const items = [
       { key: 'sleep', label: '睡眠', icon: '😴', score: scores.sleepScore || 0, change: scoreChanges.sleepChange || 0 },
       { key: 'diet', label: '饮食', icon: '🥗', score: scores.dietScore || 0, change: scoreChanges.dietChange || 0 },
@@ -178,23 +171,34 @@ export default function Analyse() {
   
   // endregion  end(折叠代码注释)
   const handleAiAnalysisPress = useCallback(() => {
-    const { startDate, endDate } = currentDateRange;
-    if (startDate && endDate) {
-      router.push({
-        pathname: "/ai-analysis",
-        params: {
-          startDate: dayjs(startDate).format("YYYY-MM-DD"),
-          endDate: dayjs(endDate).format("YYYY-MM-DD")
-        }
-      });
-    } else {
-      router.push("/ai-analysis");
-    }
-  }, [router, currentDateRange]);
-
+    router.push({
+      pathname: "/ai-analysis",
+      params: {
+        startDate: selectedDate.format("YYYY-MM-DD"),
+        endDate: selectedDate.format("YYYY-MM-DD")
+      }
+    });
+  }, [router, selectedDate]);
+  
   return (
     <ThemeSafeAreaView>
-      <TimeRangePicker onRangeChange={handleDateChange} />
+      <ThemeCard>
+        <Header
+          selectedDate={selectedDate}
+          onToday={() => setSelectedDate(dayjs())}
+          onDateChange={(date) => {
+            setSelectedDate(date);
+            handleDateChange(date);
+          }}
+        />
+        <Calendar
+          value={selectedDate}
+          onChange={(d) => {
+            setSelectedDate(d);
+            handleDateChange(d);
+          }}
+        />
+      </ThemeCard>
 
       {!hasEvents ? (
         <EmptyContainer 
@@ -205,10 +209,23 @@ export default function Analyse() {
         <View style={styles.emptyContainer}>
           <LoadingContainer text="AI 分析生成中..." />
           <TouchableOpacity 
-            style={styles.aiButton} 
+            style={[
+              {
+                backgroundColor: theme.colors.primary,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                borderRadius: 8
+              }
+            ]} 
             onPress={handleAiAnalysisPress}
           >
-            <Text style={styles.aiButtonText}>查看 AI 分析</Text>
+            <Text style={[
+              {
+                color: theme.colors.textInverse,
+                fontSize: 14,
+                fontWeight: '600'
+              }
+            ]}>查看 AI 分析</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -245,6 +262,8 @@ export default function Analyse() {
             title="健康维度评分"
           />
           
+
+          
           <ThemeCard>
             <MarkdownRenderer content={dashboardData.overallSummary} />
           </ThemeCard>
@@ -262,11 +281,26 @@ export default function Analyse() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            {
+              backgroundColor: theme.colors.card
+            }
+          ]}>
             {selectedDimension && (
               <>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
+                <View style={[
+                  styles.modalHeader,
+                  {
+                    borderBottomColor: theme.colors.border
+                  }
+                ]}>
+                  <Text style={[
+                    styles.modalTitle,
+                    {
+                      color: theme.colors.text
+                    }
+                  ]}>
                     {selectedDimension.label}得分详情
                   </Text>
                   <TouchableOpacity
@@ -275,7 +309,12 @@ export default function Analyse() {
                       setSelectedDimension(null);
                     }}
                   >
-                    <Text style={styles.modalCloseText}>关闭</Text>
+                    <Text style={[
+                      {
+                        fontSize: 14,
+                        color: theme.colors.primary
+                      }
+                    ]}>关闭</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -301,11 +340,26 @@ export default function Analyse() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            {
+              backgroundColor: theme.colors.card
+            }
+          ]}>
             {selectedSummary && (
               <>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
+                <View style={[
+                  styles.modalHeader,
+                  {
+                    borderBottomColor: theme.colors.border
+                  }
+                ]}>
+                  <Text style={[
+                    styles.modalTitle,
+                    {
+                      color: theme.colors.text
+                    }
+                  ]}>
                     综合评估详情
                   </Text>
                   <TouchableOpacity
@@ -314,7 +368,12 @@ export default function Analyse() {
                       setSelectedSummary(null);
                     }}
                   >
-                    <Text style={styles.modalCloseText}>关闭</Text>
+                    <Text style={[
+                      {
+                        fontSize: 14,
+                        color: theme.colors.primary
+                      }
+                    ]}>关闭</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -332,6 +391,7 @@ export default function Analyse() {
   );
 }
 
+// 样式定义
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 10,
@@ -356,17 +416,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center'
   },
-  aiButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8
-  },
-  aiButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600'
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -374,7 +423,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     width: '90%',
     maxHeight: '80%',
@@ -387,15 +435,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
   },
   modalTitle: {
     fontSize: 16,
     fontWeight: '600'
-  },
-  modalCloseText: {
-    fontSize: 14,
-    color: '#007AFF'
   },
   modalScrollView: {
     paddingHorizontal: 16,
@@ -410,5 +453,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 4
-  }
+  },
 });

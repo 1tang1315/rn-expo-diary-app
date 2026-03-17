@@ -86,6 +86,41 @@ class EventApi extends BaseApi {
   async getTotalStats(options = {}) {
     return await handleResponse(await this.controller.getTotalStats(), options);
   }
+
+  /**
+   * 根据结束日期范围获取事件（所有事件都按结束日筛选）
+   * @param {Object|string|Date|Object} params
+   * @returns {Promise<any>} 事件列表
+   */
+  async getByEndDateRange(params = {}) {
+    // 处理前端可能直接传入日期的情况
+    let processedParams = {};
+    if (typeof params === 'string') {
+      processedParams = {
+        startDate: formatDate(params)
+      };
+    } else if (params instanceof Date) {
+      processedParams = {
+        startDate: formatDate(params)
+      };
+    } else if (typeof params === 'object' && params !== null) {
+      // 检查是否是 Moment.js 对象（通过检查是否有 toISOString 方法）
+      if (params.toISOString) {
+        processedParams = {
+          startDate: formatDate(params)
+        };
+      } else {
+        processedParams = {
+          startDate: formatDate(params.startDate),
+          endDate: formatDate(params.endDate),
+          category: params.category || 'all',
+          sortOrder: params.sortOrder
+        };
+      }
+    }
+    
+    return await handleResponse(await this.controller.getByEndDateRange(processedParams));
+  }
 }
 
 export const eventApi = new EventApi();
