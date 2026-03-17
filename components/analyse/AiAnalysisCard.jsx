@@ -7,17 +7,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 /**
  * AiAnalysisCard
- *
- * 展示 AI 行为分析：
- * - reportText：原始 Markdown 分析报告（优先展示）
- * - overview / review / suggestions / positive：结构化板块（兼容旧版）
- *
- * 期望的 analysis 结构（来自 AnalysisService 标准化结果）：
- * {
- *   reportText?: string,   // Markdown 报告全文，用于 AI 分析报告展示
- *   overview: { state, keyFactors[] },
- *   review: [], suggestions: [], positive: []
- * }
  */
 export default function AiAnalysisCard({ analysis }) {
   const { theme } = useTheme();

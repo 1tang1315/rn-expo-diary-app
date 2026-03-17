@@ -1,86 +1,78 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
 import CircularProgressRing from "@/components/chart/CircularProgressRing";
-import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeText from "@/components/theme/ThemeText";
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-const ScoreRowCard = ({ 
-  label, 
+const ScoreRowCard = ({
+  label,
   icon,
-  score = 0, 
-  ratio = 0, // 占比
-  change = 0, 
+  score = 0,
+  change = 0,
   maxValue = 100,
   onPress
 }) => {
-    const ringSize = 50;
-    const strokeWidth = 5;
-
-    const getEvaluation = (score) => {
-        // Adjust evaluation logic if maxValue is not 100?
-        // Usually evaluation (Great/Good) depends on percentage.
-        const percentage = (score / maxValue) * 100;
-        if (percentage >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
-        if (percentage >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
-        if (percentage >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
-        return { text: '差', desc: '及时整改', color: '#F44336' };
-    };
-
-    const evaluation = getEvaluation(score);
-
-    return (
+  const ringSize = 50;
+  const strokeWidth = 5;
+  
+  const getEvaluation = (score) => {
+    const percentage = (score / maxValue) * 100;
+    if(percentage >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
+    if(percentage >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
+    if(percentage >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
+    return { text: '差', desc: '及时整改', color: '#F44336' };
+  };
+  
+  const evaluation = getEvaluation(score);
+  
+  return (
     <ThemeTouchableOpacity style={styles.gridContainer} onPress={onPress}>
-      <ThemeCard padding={0}>
-        <View style={styles.gridHeader}>
-          <View style={styles.gridHeaderLeft}>
-            <Text style={styles.gridIcon}>{icon}</Text>
-            <Text style={styles.gridTitle}>{label}</Text>
-          </View>
-          <Text style={styles.gridLink}>查看详情 &gt;</Text>
+      <View style={styles.gridHeader}>
+        <View style={styles.gridHeaderLeft}>
+          <Text style={styles.gridIcon}>{icon}</Text>
+          <Text style={styles.gridTitle}>{label}</Text>
         </View>
-        
-        <View style={styles.gridContent}>
-          <View style={styles.gridLeft}>
-            <CircularProgressRing
-              value={score}
-              maxValue={maxValue}
-              size={ringSize}
-              strokeWidth={strokeWidth}
-              title=""
-              description=""
-              centerContent={
-                <ThemeText style={styles.gridRingScore}>
-                  {score}
-                </ThemeText>
-              }
-              containerStyle={styles.ringContainer}
-              cardStyle={styles.ringCard}
-            />
-          </View>
-          <View style={styles.gridRight}>
-            <View style={styles.evaluationContainer}>
-              <View style={[styles.evaluationTag, { backgroundColor: evaluation.color }]}>
-                <Text style={styles.evaluationText}>{evaluation.text}</Text>
-              </View>
-              <Text style={[styles.evaluationDescription, { color: evaluation.color }]}>{evaluation.desc}</Text>
+        <Text style={styles.gridLink}>查看详情 &gt;</Text>
+      </View>
+      
+      <View style={styles.gridContent}>
+        <View style={styles.gridLeft}>
+          <CircularProgressRing
+            value={score}
+            maxValue={maxValue}
+            size={ringSize}
+            strokeWidth={strokeWidth}
+            title=""
+            description=""
+            centerContent={
+              <ThemeText style={styles.gridRingScore}>
+                {score}
+              </ThemeText>
+            }
+            containerStyle={styles.ringContainer}
+            cardStyle={styles.ringCard}
+          />
+        </View>
+        <View style={styles.gridRight}>
+          <View style={styles.evaluationContainer}>
+            <View style={[styles.evaluationTag, { backgroundColor: evaluation.color }]}>
+              <Text style={styles.evaluationText}>{evaluation.text}</Text>
             </View>
-            <Text style={styles.gridDetailText}>占比 {ratio}%</Text>
-            <Text style={[
-              styles.gridDetailText,
-              change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
-            ]}>
-               较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '- ')} {Math.abs(change)}
-            </Text>
+            <Text style={[styles.evaluationDescription, { color: evaluation.color }]}>{evaluation.desc}</Text>
           </View>
+          <Text style={[
+            styles.gridDetailText,
+            change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
+          ]}>
+            较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '— ')} {change !== 0 ? Math.abs(change) : '持平'}
+          </Text>
         </View>
-      </ThemeCard>
+      </View>
     </ThemeTouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  // Common
   ringContainer: {},
   ringCard: {
     marginTop: 0,
@@ -92,9 +84,8 @@ const styles = StyleSheet.create({
   positive: { color: '#4CAF50' },
   negative: { color: '#F44336' },
   neutral: { color: '#999' },
-
-  // Grid Layout Styles
-  gridContainer: { width: '49%', height: 100, marginBottom: 8 },
+  
+  gridContainer: { width: '49%', height: 110 },
   gridHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -118,7 +109,7 @@ const styles = StyleSheet.create({
   },
   gridRight: {
     flex: 1,
-    paddingLeft: 10,
+    paddingLeft: 5,
     justifyContent: 'flex-end',
   },
   evaluationContainer: {

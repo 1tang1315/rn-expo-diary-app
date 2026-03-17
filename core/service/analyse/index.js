@@ -1,30 +1,26 @@
-import { getDB } from '@/core/db/initDB';
+import { AnalyseMapper } from "@/core/mapper";
+import { StatisticsService } from '@/core/service';
 import { AiService } from '@/core/service/AiService';
-import { StatisticsService } from '@/core/service/StatisticsService';
 import dayjs from 'dayjs';
 import { AsyncStorage } from 'expo-sqlite/kv-store';
 import { AnalysisService } from './AnalysisService';
 import { DataService } from './DataService';
-import { SleepService } from './SleepService';
 
 export class AnalyseService {
   constructor() {
     this.statisticsService = new StatisticsService();
     this.dataService = new DataService();
     this.analysisService = new AnalysisService();
-    this.sleepService = new SleepService();
+    this.analyseMapper = new AnalyseMapper();
   }
 
   /**
-   * 获取综合看板数据（总分 + 各维度分数完全由 AI 评分）
-   * @param {Object} params
-   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
-   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
-   * @returns {Promise<Object>} 看板数据
+   * 获取每日分析输入数据
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @returns {Promise<Object>} 分析输入数据
    */
-  async getDashboard(params = {}) {
-    const { startDate, endDate } = params;
-
+  async _getDailyInput(startDate, endDate) {
     const target = dayjs(startDate, 'YYYY-MM-DD', true);
     if (!target.isValid()) {
       throw new Error('无效的日期格式');
@@ -41,11 +37,43 @@ export class AnalyseService {
       dayjs(currentDateStr).toDate()
     );
 
-    const dailyInput = this.dataService.buildDailyAnalysisInput({
+    return this.dataService.buildDailyAnalysisInput({
       date: currentDateStr,
       events: eventsToday,
       stats: statsToday
     });
+  }
+
+  /**
+   * 公共 AI 调用函数
+   * @param {Object} params - { startDate, endDate, callbacks, forceRefresh }
+   * @param {string} params.startDate - 开始日期
+   * @param {string} params.endDate - 结束日期
+   * @param {Object} params.callbacks - 回调函数 { onThought, onOutput }
+   * @param {boolean} params.forceRefresh - 是否强制刷新（忽略缓存）
+   * @returns {Promise<{ thought: string, output: string }>}
+   */
+  async _callAiService(params = {}) {
+    const { startDate, endDate, callbacks = {}, forceRefresh = false } = params;
+    const {
+      onThought = () => {
+      }, onOutput = () => {
+      }
+    } = callbacks;
+
+    // 获取每日输入数据
+    const dailyInput = await this._getDailyInput(startDate, endDate);
+    const { dateRange: date, eventHash } = dailyInput;
+
+    // 检查缓存（除非强制刷新）
+    if (!forceRefresh) {
+      const cached = await this.analyseMapper.checkCache(date, eventHash);
+      if (cached && cached.reportText) {
+        // 直接返回缓存的结果
+        onOutput(cached.reportText);
+        return { thought: '', output: cached.reportText };
+      }
+    }
 
     // 读取 AI 配置
     const [apiKey, model, apiBaseUrl] = await Promise.all([
@@ -54,32 +82,8 @@ export class AnalyseService {
       AsyncStorage.getItem('AI_DIARY_API_BASE_URL')
     ]);
 
-    // 未配置 AI 时返回一个安全的默认结构
     if (!apiKey || apiKey.trim() === '') {
-      return {
-        totalScore: 0,
-        scores: {
-          sleepScore: 0,
-          dietScore: 0,
-          sportScore: 0,
-          productivityScore: 0,
-          emotionScore: 0,
-          balanceScore: 0
-        },
-        scoreChanges: {
-          sleepChange: 0,
-          dietChange: 0,
-          sportChange: 0,
-          productivityChange: 0,
-          emotionChange: 0,
-          balanceChange: 0
-        },
-        dimensions: {},
-        aiAdvice: {
-          summary: '暂无分析数据（未配置 AI 密钥）',
-          suggestions: []
-        }
-      };
+      throw new Error('未配置 AI 密钥，无法生成分析报告');
     }
 
     const aiService = new AiService(
@@ -90,20 +94,131 @@ export class AnalyseService {
 
     const systemPrompt = `你是一名"个人行为数据分析助手"，需要根据用户一天的行为记录，输出固定结构的 Markdown 分析报告。
 
+事件分类：sleep=睡眠 diet=饮食 sports=运动 study=学习 work=工作 entertainment=娱乐 daily=日常 shopping=购物 travel=出行
+
 【输出要求】
 1. 只输出 Markdown 文本，不要输出 JSON、不要多余解释
 2. 必须包含以下章节，顺序如下：
    # 综合评估
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 睡眠分析
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 饮食分析
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 运动分析
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 效率分析
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 生活平衡
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
    # 情绪状态
-   # 今日改进重点
+   ## 评分
+   ## 概述
+   ## 得分原因
+   ## 建议
+   ## 总结
+   # 总结
 3. 每个分析章节必须包含：评分：xx、概述：、得分原因：、建议：、总结：
 4. 评分为 0-100 的整数，必须能从报告中找到清晰的行为依据
 5. 今日改进重点用有序列表，如 1. xxx  2. xxx
+6. 输出格式示例：
+   # 综合评估
+   ## 评分
+   82
+   
+   ## 概述
+   今天整体效率较高，学习时间占比较大，娱乐时间适中。
+   
+   ## 得分原因
+   - 学习时间约8小时44分钟
+   - 娱乐时间约1小时49分钟
+   - 睡眠时间较充足
+   
+   ## 建议
+   - 继续保持当前学习节奏
+   - 注意适当增加运动
+   
+   ## 总结
+   整体属于效率较高的一天。
+   
+   ---
+   
+   # 睡眠分析
+   ## 评分
+   78
+   
+   ## 概述
+   ...
+   ## 得分原因
+   ...
+   ## 建议
+   ...
+   ## 总结
+   ...
+   
+   ---
+   
+   # 饮食分析
+   ## 评分
+   88
+   ...
+   
+   ---
+   
+   # 运动分析
+   ## 评分
+   65
+   ...
+   
+   ---
+   
+   # 效率分析
+   ## 评分
+   92
+   ...
+   
+   ---
+   
+   # 生活平衡
+   ## 评分
+   85
+   ...
+   
+   ---
+   
+   # 情绪状态
+   ## 评分
+   80
+   ...
+   
+   ---
+   
+   # 总结
+   整体的总结
 
 评分维度：睡眠、饮食、运动、效率、生活平衡、情绪状态`;
 
@@ -119,54 +234,64 @@ export class AnalyseService {
 输出格式示例：
 
 # 综合评估
-评分：82
+## 评分
+82
 
-概述：
+## 概述
 今天整体效率较高，学习时间占比较大，娱乐时间适中。
 
-得分原因：
+## 得分原因
 - 学习时间约8小时44分钟
 - 娱乐时间约1小时49分钟
 - 睡眠时间较充足
 
-建议：
+## 建议
 - 继续保持当前学习节奏
 - 注意适当增加运动
 
-总结：
+## 总结
 整体属于效率较高的一天。
 
 # 睡眠分析
-评分：78
-概述：...
-得分原因：...
-建议：...
-总结：...
+## 评分
+78
+
+## 概述
+...
+## 得分原因
+...
+## 建议
+...
+## 总结
+...
 
 # 饮食分析
-评分：88
+## 评分
+88
 ...
 
 # 运动分析
-评分：65
+## 评分
+65
 ...
 
 # 效率分析
-评分：92
+## 评分
+92
 ...
 
 # 生活平衡
-评分：85
+## 评分
+85
 ...
 
 # 情绪状态
-评分：80
+## 评分
+80
 ...
 
-# 今日改进重点
-1. 尽量提前入睡
-2. 增加每日运动时间
-3. 减少连续刷短视频
+# 总结
+整体的总结
 
 下面是用户一天的行为统计数据：
 ${statsText}
@@ -175,344 +300,89 @@ ${statsText}
 ${eventsText}
 `;
 
-    // --- 缓存：daily_analysis（按日期 + event_hash） ---
-    const db = await getDB();
-    const existing = await db.getFirstAsync(
-      `SELECT analysis_json, event_hash FROM daily_analysis WHERE date = ?`,
-      [currentDateStr]
+    // 调用 AI 生成内容
+    const result = await aiService.generateContent(
+      { userPrompt, systemPrompt },
+      { onThought, onOutput }
     );
 
-    if (existing && existing.event_hash === dailyInput.eventHash) {
-      try {
-        const cached = JSON.parse(existing.analysis_json);
-        const reportText = cached.reportText || '';
-        if (reportText) {
-          const { analysis } = this.analysisService.parseMarkdownToAnalysis(reportText, {
-            dateRange: currentDateStr
-          });
-          return this.analysisService.toDashboard(analysis);
-        }
-        if (cached.overview && cached.scores) {
-          return this.analysisService.toDashboard(cached);
-        }
-      } catch (e) {
-        console.warn('解析 daily_analysis 缓存失败，回退到重新请求 AI：', e);
-      }
+    // 解析并自动存入数据库
+    if (result.output) {
+      const structuredData = await this.analysisService.parseAITextToStructured(result.output, date, eventHash);
+      console.log(structuredData, "structuredData");
     }
 
-    // --- 调用 AI，生成结构化 Markdown 报告 ---
-    const mdReport = await aiService.generateMarkdown({
-      prompt: userPrompt,
-      systemPrompt
-    });
-
-    const { analysis } = this.analysisService.parseMarkdownToAnalysis(mdReport, {
-      dateRange: currentDateStr
-    });
-
-    // 写入 / 更新缓存（保存 analysis，含 reportText）
-    const analysisStr = JSON.stringify(analysis);
-    await db.runAsync(
-      `
-      INSERT INTO daily_analysis (date, analysis_json, event_hash, created_at, updated_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT(date) DO UPDATE SET
-        analysis_json = excluded.analysis_json,
-        event_hash    = excluded.event_hash,
-        updated_at    = CURRENT_TIMESTAMP
-    `,
-      [currentDateStr, analysisStr, dailyInput.eventHash]
-    );
-
-    return this.analysisService.toDashboard(analysis);
+    return result;
   }
 
   /**
-   * 获取指定分类的事件数据
+   * 获取看板数据
    * @param {Object} params
    * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
    * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
-   * @param {string} params.category - 事件分类
-   * @returns {Promise<Array>} 事件数据
+   * @returns {Promise<Object>} 看板数据
    */
-  async getCategoryEvents(params = {}) {
-    const { startDate, endDate, category } = params;
+  async getDashboard(params = {}) {
+    const { startDate } = params;
 
-    const target = dayjs(startDate, 'YYYY-MM-DD', true);
-    if (!target.isValid()) {
-      throw new Error('无效的日期格式');
-    }
+    // 从数据库读取结构化分析数据
+    const structuredData = await this.analyseMapper.readStructuredData(startDate);
 
-    const currentDate = target.toDate();
-    const events = await this.statisticsService.getEventsByDateRange(currentDate, endDate ? dayjs(endDate).toDate() : currentDate);
-
-    // 过滤指定分类的事件
-    const categoryEvents = events.filter(event => {
-      // 处理分类名称的映射
-      const eventCategory = event.category;
-      if (category === 'mood' && (eventCategory === 'mood' || eventCategory === '情绪')) return true;
-      if (category === 'exercise' && (eventCategory === 'exercise' || eventCategory === '运动' || eventCategory === 'sport')) return true;
-      if (category === 'diet' && (eventCategory === 'diet' || eventCategory === '饮食')) return true;
-      if (category === 'productivity' && (eventCategory === 'productivity' || eventCategory === '效率')) return true;
-      if (category === 'balance' && (eventCategory === 'balance' || eventCategory === '平衡')) return true;
-      if (category === 'sleep' && (eventCategory === 'sleep' || eventCategory === '睡眠')) return true;
-      return false;
-    });
-
-    // 处理事件数据格式
-    if (categoryEvents.length > 0) {
-      let totalDurationMinutes = 0;
-      const eventItems = categoryEvents.map(event => {
-        const start = dayjs(event.startDatetime);
-        const end = dayjs(event.endDatetime || event.startDatetime);
-        const durationMinutes = end.diff(start, 'minute');
-        totalDurationMinutes += durationMinutes;
-        const durationHours = durationMinutes / 60;
-        const durationStr = durationHours >= 1 ? `${durationHours.toFixed(1)}小时` : `${durationMinutes}分钟`;
-
-        return {
-          timeRange: `${start.format('HH:mm')}~${end.format('HH:mm')}`,
-          duration: durationStr,
-          title: event.title || category,
-          description: event.content || ''
-        };
-      });
-
-      const totalHours = totalDurationMinutes / 60;
-      const totalDurationStr = totalHours >= 1 ? `${totalHours.toFixed(1)}小时` : `${totalDurationMinutes}分钟`;
-
-      // 简单计算贡献分数：基于事件数量和总时长
-      const eventCount = categoryEvents.length;
-      const baseScore = eventCount * 20; // 每个事件基础分20分
-      const durationScore = Math.min(Math.floor(totalDurationMinutes / 60) * 10, 60); // 每小时10分，最高60分
-      const contributionScore = Math.min(baseScore + durationScore, 100);
-
-      return [{
-        category: this.getCategoryName(category),
-        totalDuration: totalDurationStr,
-        contribution: `${contributionScore}分`,
-        events: eventItems
-      }];
-    }
-
-    return [];
-  }
-
-  /**
-   * 获取分类的中文名称
-   * @param {string} category - 分类英文名称
-   * @returns {string} 分类中文名称
-   */
-  getCategoryName(category) {
-    const categoryMap = {
-      sleep: '睡眠',
-      mood: '情绪',
-      exercise: '运动',
-      diet: '饮食',
-      productivity: '效率',
-      balance: '平衡'
+    // 获取昨日数据
+    const yesterdayData = await this.analyseMapper.getYesterdayData(startDate);
+    
+    // 构建看板数据
+    return {
+      totalScore: structuredData?.total.score || 0,
+      scores: {
+        sleepScore: structuredData?.sleep.score || 0,
+        dietScore: structuredData?.diet.score || 0,
+        sportScore: structuredData?.exercise.score || 0,
+        productivityScore: structuredData?.efficiency.score || 0,
+        emotionScore: structuredData?.emotion.score || 0,
+        balanceScore: structuredData?.balance.score || 0
+      },
+      scoreChanges: {
+        sleepChange: structuredData && yesterdayData ? (structuredData.sleep.score || 0) - (yesterdayData.sleep.score || 0) : 0,
+        dietChange: structuredData && yesterdayData ? (structuredData.diet.score || 0) - (yesterdayData.diet.score || 0) : 0,
+        sportChange: structuredData && yesterdayData ? (structuredData.exercise.score || 0) - (yesterdayData.exercise.score || 0) : 0,
+        productivityChange: structuredData && yesterdayData ? (structuredData.efficiency.score || 0) - (yesterdayData.efficiency.score || 0) : 0,
+        emotionChange: structuredData && yesterdayData ? (structuredData.emotion.score || 0) - (yesterdayData.emotion.score || 0) : 0,
+        balanceChange: structuredData && yesterdayData ? (structuredData.balance.score || 0) - (yesterdayData.balance.score || 0) : 0
+      },
+      dimensions: structuredData || {},
+      overallSummary: structuredData?.overallSummary
     };
-    return categoryMap[category] || category;
   }
 
   /**
-   * 获取指定类型的评分详情
-   * @param {Object} params
-   * @param {string} params.type - 评分类型
-   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
-   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
-   * @returns {Promise<Object>} 评分详情
+   * 生成 AI 分析报告（流式，直接返回原始 AI 输出，不解析）
+   * @param {Object} params - { startDate, endDate, forceRefresh }
+   * @param {string} params.startDate - 开始日期
+   * @param {string} params.endDate - 结束日期
+   * @param {boolean} params.forceRefresh - 是否强制刷新（忽略缓存）
+   * @param {Object} callbacks - { onThought, onOutput }
+   * @returns {Promise<{ thought: string, output: string }>}
    */
-  async getScoreDetail(params = {}) {
-    const { type, startDate, endDate } = params;
+  async generateAiReportStream(params = {}, callbacks = {}) {
+    const { startDate, endDate, forceRefresh = false } = params;
 
-    if (type === 'sleep') {
-      // 保持兼容的综合结构（总分 + breakdown + 事件 + ai 建议）
-      return await this.sleepService.getSleepDetail({ startDate, endDate });
-    } else {
-      // 其他类型的详情数据获取逻辑
-      // 这里暂时返回一个默认结构，后续可以根据需要扩展
-      const events = await this.getCategoryEvents({ startDate, endDate, category: type });
-
-      let breakdown = [];
-      let totalScore = 0;
-
-      if (type === 'exercise') {
-        breakdown = [
-          { label: '能量消耗得分', value: 46, maxScore: 60, ratio: 60, percentScore: 77 },
-          { label: '运动时长得分', value: 20, maxScore: 25, ratio: 25, percentScore: 80 },
-          { label: '运动连续性得分', value: 12, maxScore: 15, ratio: 15, percentScore: 80 }
-        ];
-        totalScore = 78;
-      } else if (type === 'diet') {
-        breakdown = [
-          { label: '饮食质量得分', value: 35, maxScore: 50, ratio: 50, percentScore: 70 },
-          { label: '饮食规律性得分', value: 28, maxScore: 30, ratio: 30, percentScore: 93 },
-          { label: '营养多样性得分', value: 19, maxScore: 20, ratio: 20, percentScore: 95 }
-        ];
-        totalScore = 82;
-      } else if (type === 'productivity') {
-        breakdown = [
-          { label: '专注度得分', value: 32, maxScore: 40, ratio: 40, percentScore: 80 },
-          { label: '任务完成度得分', value: 30, maxScore: 40, ratio: 40, percentScore: 75 },
-          { label: '时间管理得分', value: 26, maxScore: 20, ratio: 20, percentScore: 130 }
-        ];
-        totalScore = 88;
-      } else if (type === 'mood' || type === 'emotion') {
-        breakdown = [
-          { label: '积极情绪得分', value: 34, maxScore: 40, ratio: 40, percentScore: 85 },
-          { label: '压力管理得分', value: 24, maxScore: 30, ratio: 30, percentScore: 80 },
-          { label: '情绪稳定性得分', value: 22, maxScore: 30, ratio: 30, percentScore: 73 }
-        ];
-        totalScore = 80;
-      } else if (type === 'balance' || type === 'overall') {
-        breakdown = [
-          { label: '工作与生活平衡得分', value: 30, maxScore: 40, ratio: 40, percentScore: 75 },
-          { label: '健康习惯坚持度得分', value: 28, maxScore: 30, ratio: 30, percentScore: 93 },
-          { label: '情绪与压力平衡得分', value: 26, maxScore: 30, ratio: 30, percentScore: 87 }
-        ];
-        totalScore = 84;
-      } else {
-        breakdown = [
-          { label: '综合表现得分', value: 70, maxScore: 100, ratio: 100, percentScore: 70 }
-        ];
-        totalScore = 70;
-      }
-
-      // 为每个评分项生成详情文本
-      const breakdownWithDetails = breakdown.map(item => {
-        let detailText = `# ${item.label}详情\n\n`;
-
-        if (type === 'sleep') {
-          if (item.label.includes('时长')) {
-            detailText += `## 得分情况\n- 得分：${item.percentScore ?? item.value ?? 0}分\n- 满分：100分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 实际睡眠时长：${(item.value / item.ratio * 100 / 100 * item.maxScore / 40 * 8).toFixed(1)}小时\n- 睡眠时长区间：7-9小时（理想范围）\n\n`;
-            detailText += `## 得分原因\n睡眠时长在理想范围内，有助于身体充分恢复\n\n`;
-            detailText += `## 说明\n根据睡眠时长计算得分，理想睡眠时长为7-9小时，在此范围内得分最高。`;
-          } else if (item.label.includes('入睡')) {
-            detailText += `## 得分情况\n- 得分：${item.percentScore ?? item.value ?? 0}分\n- 满分：100分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 实际入睡时间：22:30\n- 入睡时间区间：22:00-23:30（理想范围）\n\n`;
-            detailText += `## 得分原因\n入睡时间在理想范围内，有助于保证充足睡眠\n\n`;
-            detailText += `## 说明\n根据入睡时间计算得分，理想入睡时间为22:00-23:30，在此范围内得分最高。`;
-          } else if (item.label.includes('连续')) {
-            detailText += `## 得分情况\n- 得分：${item.percentScore ?? item.value ?? 0}分\n- 满分：100分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 睡眠连续性指数：85%\n- 连续性等级：良好\n\n`;
-            detailText += `## 得分原因\n睡眠连续性较好，偶尔有中断\n\n`;
-            detailText += `## 说明\n根据睡眠连续性计算得分，睡眠中断次数越少、持续时间越长，得分越高。`;
-          } else if (item.label.includes('稳定')) {
-            detailText += `## 得分情况\n- 得分：${item.percentScore ?? item.value ?? 0}分\n- 满分：100分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 作息稳定性指数：90%\n- 稳定性等级：优秀（规律）\n\n`;
-            detailText += `## 得分原因\n作息时间稳定，入睡和起床时间规律\n\n`;
-            detailText += `## 说明\n根据作息稳定性计算得分，入睡和起床时间越规律，得分越高。`;
-          } else {
-            detailText += `## 得分情况\n- 得分：${item.percentScore ?? item.value ?? 0}分\n- 满分：100分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 说明\n根据相关指标计算得分。`;
-          }
-        } else if (type === 'exercise') {
-          if (item.label.includes('能量')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 60}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 实际能量消耗：350千卡\n- 消耗区间：300-500千卡（良好）\n\n`;
-            detailText += `## 得分原因\n能量消耗适中，达到日常活动需求\n\n`;
-            detailText += `## 说明\n根据能量消耗计算得分，消耗越多得分越高，最高60分。`;
-          } else if (item.label.includes('时长')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 25}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 实际运动时长：45分钟\n- 时长区间：30-60分钟（良好）\n\n`;
-            detailText += `## 得分原因\n运动时长充足，达到有效运动时间\n\n`;
-            detailText += `## 说明\n根据运动时长计算得分，运动时间越长得分越高，最高25分。`;
-          } else if (item.label.includes('连续')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 15}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 最长连续运动：30分钟\n- 连续性等级：良好\n\n`;
-            detailText += `## 得分原因\n运动连续性较好，能够保持一定强度\n\n`;
-            detailText += `## 说明\n根据运动连续性计算得分，运动持续时间越长得分越高，最高15分。`;
-          } else {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 100}分\n\n`;
-            detailText += `## 说明\n根据相关指标计算得分。`;
-          }
-        } else if (type === 'diet') {
-          if (item.label.includes('质量')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 50}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 饮食质量指数：75%\n- 质量等级：良好\n\n`;
-            detailText += `## 得分原因\n饮食结构合理，营养均衡\n\n`;
-            detailText += `## 说明\n根据饮食质量计算得分，营养均衡、健康饮食得分越高。`;
-          } else if (item.label.includes('规律')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 30}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 饮食规律指数：90%\n- 规律等级：优秀\n\n`;
-            detailText += `## 得分原因\n饮食时间规律，三餐定时定量\n\n`;
-            detailText += `## 说明\n根据饮食规律性计算得分，定时定量饮食得分越高。`;
-          } else if (item.label.includes('多样')) {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 20}分\n- 占比：${item.ratio ?? 0}%\n\n`;
-            detailText += `## 详细数据\n- 食物种类：12种\n- 多样性等级：良好\n\n`;
-            detailText += `## 得分原因\n食物种类丰富，营养摄入多样化\n\n`;
-            detailText += `## 说明\n根据营养多样性计算得分，食物种类越多得分越高。`;
-          } else {
-            detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 100}分\n\n`;
-            detailText += `## 说明\n根据相关指标计算得分。`;
-          }
-        } else {
-          detailText += `## 得分情况\n- 得分：${item.value ?? 0}分\n- 满分：${item.maxScore ?? 100}分\n\n`;
-          detailText += `## 说明\n根据相关指标计算得分。`;
-        }
-
-        return {
-          ...item,
-          detailText
-        };
-      });
-
-      return {
-        totalScore,
-        breakdown: breakdownWithDetails,
-        events,
-        aiAdvice: {
-          summary: `这是针对「${this.getCategoryName(type)}」维度的分析结果。`,
-          suggestions: [
-            '保持稳定的生活节奏，有助于该维度评分的持续提升。',
-            '结合实际情况适当调整目标，避免过度焦虑或过于放松。',
-            '建议坚持记录一段时间后再观察趋势变化。'
-          ]
-        }
-      };
-    }
+    // 调用公共 AI 函数获取流式结果
+    return this._callAiService({
+      startDate,
+      endDate,
+      callbacks,
+      forceRefresh
+    });
   }
 
   /**
-   * 睡眠专用：总评分
+   * 获取完整的 AI 分析报告（原始 Markdown 格式）
+   * @param {string} date - 日期
+   * @returns {Promise<string|null>} 原始 AI 文本
    */
-  async getSleepScoreSummary(params = {}) {
-    const { startDate } = params;
-    return this.sleepService.getSleepScoreSummary({ startDate });
-  }
-
-  /**
-   * 睡眠专用：各维度概览（不含 detailText）
-   */
-  async getSleepBreakdown(params = {}) {
-    const { startDate } = params;
-    return this.sleepService.getSleepBreakdown({ startDate });
-  }
-
-  /**
-   * 睡眠专用：单个维度的 Markdown 详情
-   */
-  async getSleepBreakdownDetail(params = {}) {
-    const { startDate, key } = params;
-    return this.sleepService.getSleepBreakdownDetail({ startDate, key });
-  }
-
-  /**
-   * 睡眠专用：事件列表
-   */
-  async getSleepEvents(params = {}) {
-    const { startDate } = params;
-    return this.sleepService.getSleepEvents({ startDate });
-  }
-
-  /**
-   * 睡眠专用：AI 建议
-   */
-  async getSleepAdvice(params = {}) {
-    const { startDate } = params;
-    return this.sleepService.getSleepAdvice({ startDate });
+  async getFullAiReport(date) {
+    return this.analyseMapper.readFullAiReport(date);
   }
 }
 

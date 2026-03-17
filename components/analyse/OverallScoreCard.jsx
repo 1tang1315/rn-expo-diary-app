@@ -1,55 +1,87 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
 import CircularProgressRing from "@/components/chart/CircularProgressRing";
+import ThemeButton from "@/components/theme/ThemeButton";
 import ThemeCard from "@/components/theme/ThemeCard";
-import ThemeText from "@/components/theme/ThemeText";
+import { useTheme } from "@/context/ThemeContext";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 const OverallScoreCard = ({ 
   score = 0,
-  title="综合评分",
+  title = "综合评分",
   summary = "整体健康状态良好，请继续保持。",
-  analysis = {
-    best: { label: '-', value: 0 },
-    worst: { label: '-', value: 0 },
-    fastest: { label: '-', value: 0 },
-    focus: { label: '-', value: 0 }
-  }
+  suggestions = [],
+  onAiAnalysisPress,
+  onPress,
+  maxValue = 100,
+  change = 0
 }) => {
+  const { theme } = useTheme();
+  const hasAiContent = summary || (suggestions && suggestions.length > 0);
+
+  const getEvaluation = (score) => {
+    const percentage = (score / maxValue) * 100;
+    if (percentage >= 90) return { text: '优', desc: '继续保持', color: '#4CAF50' };
+    if (percentage >= 80) return { text: '良', desc: '再接再厉', color: '#2196F3' };
+    if (percentage >= 60) return { text: '中', desc: '继续努力', color: '#FF9800' };
+    return { text: '差', desc: '及时整改', color: '#F44336' };
+  };
+
+  const evaluation = getEvaluation(score);
+
   return (
     <ThemeCard margin={0} paddingBottom={0}>
       <View style={styles.content}>
-        <View style={styles.leftSide}>
-          <CircularProgressRing
-            value={score}
-            maxValue={100}
-            size={110}
-            strokeWidth={10}
-            title={title}
-            cardStyle={styles.ringCard}
-          />
-        </View>
+        <CircularProgressRing
+          value={score}
+          maxValue={100}
+          size={110}
+          strokeWidth={10}
+          title={title}
+          cardStyle={styles.ringCard}
+        />
+        
         <View style={styles.summaryCard}>
-          <ThemeText style={styles.summaryContent} numberOfLines={3}>
-            {summary}
-          </ThemeText>
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryItem}>
-              <ThemeText style={styles.summaryItemTitle}>最佳维度</ThemeText>
-              <ThemeText style={styles.summaryItemValue}>{analysis.best.label} {analysis.best.value}</ThemeText>
-            </View>
-            <View style={styles.summaryItem}>
-              <ThemeText style={styles.summaryItemTitle}>待提升</ThemeText>
-              <ThemeText style={styles.summaryItemValue}>{analysis.worst.label} {analysis.worst.value}</ThemeText>
-            </View>
-            <View style={styles.summaryItem}>
-              <ThemeText style={styles.summaryItemTitle}>进步最快</ThemeText>
-              <ThemeText style={styles.summaryItemValue}>{analysis.fastest.label} {analysis.fastest.value > 0 ? '+' : ''}{analysis.fastest.value}</ThemeText>
-            </View>
-            <View style={styles.summaryItem}>
-              <ThemeText style={styles.summaryItemTitle}>重点关注</ThemeText>
-              <ThemeText style={styles.summaryItemValue}>{analysis.focus.label} {analysis.focus.value}</ThemeText>
-            </View>
-          </View>
+          {summary ? (
+            <>
+              <Text 
+                style={[
+                  styles.summaryContent, 
+                  { color: theme.colors.text, height: 30 }
+                ]} 
+                numberOfLines={3} 
+                ellipsizeMode="tail"
+                onPress={onPress}
+              >
+                {summary}
+              </Text>
+              
+              <View style={styles.evaluationContainer}>
+                <View style={[styles.evaluationTag, { backgroundColor: evaluation.color }]}>
+                  <Text style={styles.evaluationText}>{evaluation.text}</Text>
+                </View>
+                <Text style={[styles.evaluationDescription, { color: evaluation.color }]}>{evaluation.desc}</Text>
+              </View>
+              
+              <Text style={[
+                styles.changeText,
+                change > 0 ? styles.positive : (change < 0 ? styles.negative : styles.neutral)
+              ]}>
+                较昨日 {change > 0 ? '↑' : (change < 0 ? '↓' : '— ')} {change !== 0 ? Math.abs(change) : '持平'}
+              </Text>
+              
+              <ThemeButton
+                style={{marginBottom: 8}}
+                onPress={onAiAnalysisPress}
+                title="AI健康分析"
+              />
+            </>
+          ) : null}
+          {!hasAiContent ? (
+            <Text style={[
+              styles.summaryContent, 
+              { color: theme.colors.text }
+            ]}>暂无分析数据</Text>
+          ) : null}
         </View>
       </View>
     </ThemeCard>
@@ -59,10 +91,12 @@ const OverallScoreCard = ({
 const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "flex-start"
   },
   leftSide: {
-    marginRight: 16
+    marginRight: 16,
+    alignItems: "center",
+    justifyContent: "flex-start"
   },
   ringCard: {
     backgroundColor: 'transparent',
@@ -72,32 +106,56 @@ const styles = StyleSheet.create({
     elevation: 0
   },
   summaryCard: {
-    flex: 1
+    flex: 1,
+    marginLeft: 8
+  },
+  sectionLabelMargin: {
+    marginTop: 10
   },
   summaryContent: {
-    fontSize: 12,
-    opacity: 0.9
+    fontSize: 11,
+    opacity: 0.9,
+    lineHeight: 16,
+    marginBottom: 12
   },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between"
+  clickableText: {
+    color: '#007AFF',
+    textDecorationLine: 'underline'
   },
-  summaryItem: {
-    width: "48%",
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    marginBottom: 8
+  evaluationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    alignSelf: 'flex-start'
   },
-  summaryItemTitle: {
+  evaluationTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  evaluationText: {
+    color: '#fff',
     fontSize: 10,
-    opacity: 0.7,
-    marginBottom: 2
+    fontWeight: 'bold'
   },
-  summaryItemValue: {
-    fontSize: 12,
-    fontWeight: "600"
+  evaluationDescription: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 6
+  },
+  changeText: {
+    fontSize: 11,
+    marginBottom: 8,
+    lineHeight: 16
+  },
+  positive: {
+    color: '#4CAF50'
+  },
+  negative: {
+    color: '#F44336'
+  },
+  neutral: {
+    color: '#999'
   }
 });
 

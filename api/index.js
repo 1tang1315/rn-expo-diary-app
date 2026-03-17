@@ -8,4 +8,5 @@ export { messageApi } from './MessageApi';
 export { aiDiaryApi } from './AiApi';
 export { statisticsApi } from './StatisticsApi';
 export { default as cloudSyncApi } from './CloudSyncApi';
+export { analyseApi } from './AnalyseApi';
 

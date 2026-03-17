@@ -73,19 +73,33 @@ export class AiService {
   
   /**
    * 调用大模型生成内容
-   * @param {string} prompt - 提示词
-   * @param {object} callbacks - 回调函数
+   * @param {string|Object} promptOrParams - 若为字符串则作为用户提示词；若为对象则 { userPrompt, systemPrompt } 分别对应
+   * @param {object} callbacks - 回调函数 { onThought, onOutput }
    * @returns {Promise<{ thought: string, output: string }>}
    */
-  async generateContent(prompt, { onThought = () => {}, onOutput = () => {} } = {}) {
+  async generateContent(promptOrParams, { onThought = () => {}, onOutput = () => {} } = {}) {
     // 重置暂停状态
     this.isPaused = false;
     this.currentState.fullThought = '';
     this.currentState.fullOutput = '';
-    
-    // 记录当前请求的prompt（用于恢复）
-    this.currentState.lastPrompt = prompt;
-    
+
+    // 解析第一个参数：字符串=用户提示词，对象={ userPrompt, systemPrompt }
+    let messages;
+    if (typeof promptOrParams === 'string') {
+      messages = [{ role: 'user', content: promptOrParams }];
+    } else if (promptOrParams && typeof promptOrParams === 'object') {
+      const { userPrompt, systemPrompt } = promptOrParams;
+      messages = [
+        systemPrompt ? { role: 'system', content: systemPrompt } : null,
+        userPrompt ? { role: 'user', content: userPrompt } : null
+      ].filter(Boolean);
+    } else {
+      throw new Error('generateContent 第一个参数需为字符串或 { userPrompt, systemPrompt } 对象');
+    }
+
+    // 记录当前请求的 prompt（用于恢复）
+    this.currentState.lastPrompt = promptOrParams;
+
     return new Promise((resolve, reject) => {
       // 创建SSE连接，并赋值给类属性（方便外部关闭）
       this.sseInstance = new EventSource(`${this.API_BASE_URL}/chat/completions`, {
@@ -96,7 +110,7 @@ export class AiService {
         },
         body: JSON.stringify({
           model: this.MODEL,
-          messages: [{ role: "user", content: prompt }],
+          messages,
           temperature: 0.7,
           stream: true,
         }),

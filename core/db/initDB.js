@@ -123,34 +123,31 @@ export async function getDB() {
         );
     `);
 
-        // 每日评分缓存表
-        await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS daily_score
-        (
-            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-            date               TEXT NOT NULL UNIQUE, /* YYYY-MM-DD */
-            sleep_score        INTEGER DEFAULT 0,
-            diet_score         INTEGER DEFAULT 0,
-            sport_score        INTEGER DEFAULT 0,
-            productivity_score INTEGER DEFAULT 0,
-            emotion_score      INTEGER DEFAULT 0,
-            balance_score      INTEGER DEFAULT 0,
-            total_score        INTEGER DEFAULT 0,
-            created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at         TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
-
-        // 每日 AI 行为分析缓存表（结构化 JSON）
+        // 每日 AI 行为分析缓存表（结构化字段）
         await db.execAsync(`
         CREATE TABLE IF NOT EXISTS daily_analysis
         (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            date          TEXT NOT NULL UNIQUE, /* YYYY-MM-DD */
-            analysis_json TEXT NOT NULL,       /* AI 返回的结构化分析 JSON 字符串 */
-            event_hash    TEXT,                /* 事件数据版本，如：22_23:57 */
-            created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at    TEXT DEFAULT CURRENT_TIMESTAMP
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            date               TEXT NOT NULL UNIQUE, /* YYYY-MM-DD */
+            ai_text            TEXT, /* 原始 AI 文本 */
+            total_score        INTEGER DEFAULT 0,
+            total_text         TEXT, /* 综合评估文本 */
+            sleep_score        INTEGER DEFAULT 0,
+            sleep_text         TEXT, /* 睡眠分析文本 */
+            diet_score         INTEGER DEFAULT 0,
+            diet_text          TEXT, /* 饮食分析文本 */
+            exercise_score     INTEGER DEFAULT 0,
+            exercise_text      TEXT, /* 运动分析文本 */
+            efficiency_score   INTEGER DEFAULT 0,
+            efficiency_text    TEXT, /* 效率分析文本 */
+            balance_score      INTEGER DEFAULT 0,
+            balance_text       TEXT, /* 生活平衡文本 */
+            emotion_score      INTEGER DEFAULT 0,
+            emotion_text       TEXT, /* 情绪状态文本 */
+            overall_summary    TEXT, /* 整体总结 */
+            event_hash         TEXT, /* 事件数据版本，如：22_23:57 */
+            created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TEXT DEFAULT CURRENT_TIMESTAMP
         );
     `);
 

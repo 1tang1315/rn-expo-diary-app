@@ -17,7 +17,6 @@ import ThemeText from "@/components/theme/ThemeText";
  * - centerContent: 自定义中间内容（React 节点，优先级高于 title/description 默认内容）
  * - ringColor: 进度颜色
  * - trackColor: 底轨颜色
- * - cardStyle: 外层卡片样式扩展
  * - containerStyle: 圆环容器样式扩展
  */
 const CircularProgressRing = ({
@@ -30,7 +29,6 @@ const CircularProgressRing = ({
   centerContent,
   ringColor = "#4CAF50",
   trackColor = "rgba(255,255,255,0.15)",
-  cardStyle,
   containerStyle
 }) => {
   const radius = (size - strokeWidth) / 2;
@@ -57,7 +55,7 @@ const CircularProgressRing = ({
   };
 
   return (
-    <ThemeCard style={[styles.card, cardStyle]}>
+    <ThemeCard>
       <View style={[styles.container, { width: size, height: size }, containerStyle]}>
         <Svg width={size} height={size}>
           <Circle
@@ -90,12 +88,6 @@ const CircularProgressRing = ({
 };
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    alignItems: "center"
-  },
   container: {
     justifyContent: "center",
     alignItems: "center"
