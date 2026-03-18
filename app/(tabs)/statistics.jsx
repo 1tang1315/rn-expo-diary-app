@@ -1,18 +1,16 @@
-import {
-  ActivityIndicator, ScrollView, StyleSheet, Text, View, Button
-} from "react-native";
-import React, { useCallback, useState } from "react";
 import { statisticsApi } from "@/api/StatisticsApi";
-import DateSelector from "@/components/statistics/DateSelector";
-import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
+import BarChart from "@/components/chart/BarChart";
 import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
-import { categories } from "@/constants/commonConstans";
-import BarChart from "@/components/chart/BarChart";
-import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
-import { useFocusEffect } from "expo-router";
-import dayjs from "dayjs";
+import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
+import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import { categories } from "@/constants/commonConstans";
+import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
+import dayjs from "dayjs";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -107,28 +105,45 @@ export default function Statistics() {
     completedEvents: []
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [currentTab, setCurrentTab] = useState('all');
+  const [dateRange, setDateRange] = useState({});
+  const isInitialized = useRef(false);
   
-  const handleDateChange = useCallback((startDate = dayjs().startOf('day'), endDate) => {
+  // 统一的统计数据请求函数
+  const fetchStatistics = useCallback(({ startDate, endDate, category }) => {
     setLoading(true);
-    
-    statisticsApi.getStatistics({ startDate, endDate, category: currentTab })
+    statisticsApi.getStatistics({ startDate, endDate, category })
       .then(data => setStatsData(data))
-      .catch(err => setError(err))
       .finally(() => setLoading(false));
-  }, [currentTab]);
+  }, []);
+  
+  const handleDateChange = useCallback(({ startDate, endDate, type }) => {
+    setDateRange({
+      startDate,
+      endDate
+    });
+    
+    fetchStatistics({ startDate, endDate, category: currentTab });
+  }, [currentTab, fetchStatistics]);
   
   useFocusEffect(
     useCallback(() => {
-      handleDateChange();
+      if (!isInitialized.current) {
+        const defaultStart = dayjs().startOf('day');
+        const defaultEnd = dayjs().endOf('day');
+        handleDateChange({
+          startDate: defaultStart.toDate(),
+          endDate: defaultEnd.toDate(),
+          type: 'day'
+        });
+        isInitialized.current = true;
+      }
     }, [handleDateChange])
   );
   
   const {
     chartData,
-    totalMinutes,
-    completedEvents
+    totalMinutes
   } = statsData;
   
   const [chartType, setChartType] = useState('pie'); // 'bar' 或 'pie'
@@ -138,7 +153,7 @@ export default function Statistics() {
     setChartTypeName(prev => (prev === '饼' ? '条' : '饼'));
   };
   
-  chartData.map(item => {
+  const processedChartData = chartData.map(item => {
     const progress = totalMinutes === 0 ? 0 : precisionDivide(item.value, totalMinutes, 4);
     const percentage = precisionMultiply(progress, 100, 2);
     return {
@@ -150,7 +165,7 @@ export default function Statistics() {
   
   return (
     <ThemeSafeAreaView>
-      <DateSelector hasRadius={false} onDataChange={handleDateChange} />
+      <TimeRangePicker onRangeChange={handleDateChange} />
       
       {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
       <ThemeCard style={{ flex: 1 }}>
@@ -159,7 +174,11 @@ export default function Statistics() {
           currentTab={currentTab}
           setCurrentTab={(tab) => {
             setCurrentTab(tab);
-            handleDateChange();
+            fetchStatistics({ 
+              startDate: dateRange.startDate, 
+              endDate: dateRange.endDate, 
+              category: tab 
+            });
           }}
         />
         
@@ -172,19 +191,11 @@ export default function Statistics() {
               <ActivityIndicator size="large" color="#3498db" />
               <Text style={styles.loadingText}>加载统计数据中...</Text>
             </View>
-          ) : error ? (
-            <View style={styles.statusContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : completedEvents.length === 0 ? (
-            <View style={styles.statusContainer}>
-              <Text style={styles.noDataText}>暂无已完成的事件数据</Text>
-            </View>
-          ) : totalMinutes === 0 ? (
+          ) : totalMinutes === 0 || chartData.length === 0 ? (
             <View style={styles.statusContainer}>
               <Text style={styles.noDataText}>所选时间段内的事件总时长为0分钟</Text>
             </View>
-          ) : (
+          ) :
             <>
               {/* 饼图区域 */}
               <View style={styles.chartContainer}>
@@ -192,17 +203,15 @@ export default function Statistics() {
                   <Button title={chartTypeName} onPress={toggleChart} />
                 </View>
                 {chartType === 'pie' ? (
-                  <PieChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
+                  <PieChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
                 ) : (
-                  <BarChart data={chartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
+                  <BarChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
                 )}
               </View>
               
               {/* 图例区域 */}
               <View style={styles.legendContainer}>
-                {chartData.map(item => {
-                  const progress = precisionDivide(item.value, totalMinutes, 4);
-                  
+                {processedChartData.map(item => {
                   return (
                     <View key={item.label} style={styles.legendItem}>
                       {/* 右边颜色块 */}
@@ -213,7 +222,7 @@ export default function Statistics() {
                           {item.label}
                           ({item.useCount}次,
                           {formatDurationByMinutes(item.value)},
-                          {precisionMultiply(progress, 100, 2)}%
+                          {item.percentage}%
                           )
                         </Text>
                         <View style={styles.progressBarContainer}>
@@ -222,7 +231,7 @@ export default function Statistics() {
                               styles.progressBar,
                               {
                                 backgroundColor: item.color,
-                                width: `${precisionMultiply(progress, 100, 2)}%`
+                                width: `${item.percentage}%`
                               }
                             ]}
                           />
@@ -233,7 +242,7 @@ export default function Statistics() {
                 })}
               </View>
             </>
-          )}
+          }
         </ScrollView>
       </ThemeCard>
     </ThemeSafeAreaView>
@@ -258,11 +267,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginTop: 16,
-    textAlign: "center"
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#e74c3c",
     textAlign: "center"
   },
   noDataText: {

@@ -1,13 +1,5 @@
 import { BaseMapper } from '@/core/mapper/BaseMapper';
 
-const OVERLAP_CONDITION = `
-  (
-    (DATE(start_datetime) BETWEEN ? AND ?)
-    OR (DATE(end_datetime) BETWEEN ? AND ?)
-    OR (DATE(start_datetime) <= ? AND DATE(end_datetime) >= ?)
-  )
-`;
-
 export class StatisticsMapper extends BaseMapper {
   constructor() {
     super('event');
@@ -40,7 +32,7 @@ export class StatisticsMapper extends BaseMapper {
       
       -- 运动：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category IN ('exercise', 'sports') THEN
+        CASE WHEN e.category IN ('sports') THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS sport_duration,
@@ -52,12 +44,19 @@ export class StatisticsMapper extends BaseMapper {
         ELSE 0 END
       ), 0)) AS entertainment_duration,
       
-      -- 学习/工作：自然日拆分时长
+      -- 学习：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category IN ('study', 'work') THEN
+        CASE WHEN e.category = 'study' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS study_duration,
+      
+      -- 工作：自然日拆分时长
+      ROUND(IFNULL(SUM(
+        CASE WHEN e.category = 'work' THEN
+          (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
+        ELSE 0 END
+      ), 0)) AS work_duration,
       
       -- 用餐：自然日拆分时长
       ROUND(IFNULL(SUM(
@@ -85,7 +84,19 @@ export class StatisticsMapper extends BaseMapper {
         CASE WHEN e.category = 'travel' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
-      ), 0)) AS travel_duration
+      ), 0)) AS travel_duration,
+      
+      -- 总时长：所有分类时长之和
+      ROUND(IFNULL(SUM(
+        CASE 
+          -- 睡眠：特殊规则→按起床日整段统计，不拆分
+          WHEN e.category = 'sleep' AND DATE(e.end_datetime) = d.stat_date THEN
+            (JULIANDAY(e.end_datetime) - JULIANDAY(e.start_datetime)) * 24 * 60
+          -- 其他分类：自然日拆分时长
+          ELSE
+            (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
+        END
+      ), 0)) AS total_duration
 
     FROM date_series d
     -- 左连接事件表，确保查询范围内的每一天都有数据（无事件则为0）
@@ -104,15 +115,88 @@ export class StatisticsMapper extends BaseMapper {
       // SQL参数：严格对应3个? → startDate, startDate, endDate
       [startDate, startDate, endDate]
     );
-    
+
     // 无数据时返回空数组，避免后续取值报错
     return result || [];
   }
-  
-  async getCategoryStatistics(startDate, endDate) {
+
+  /**
+   * 根据日期范围和分类查询事件统计信息
+   * @param {string} startDate - 开始日期，格式为 YYYY-MM-DD
+   * @param {string} endDate - 结束日期，格式为 YYYY-MM-DD
+   * @param {string} category - 分类名称，'all' 表示所有分类
+   * @returns {Object} 统计结果对象，包含总时长、总事件数、按标题统计和按分类统计
+   */
+  async getCategoryDetailStatistics(startDate, endDate, category) {
     const db = await this.getDB();
-    return db.getAllAsync(
+
+    // 构建日期条件：睡眠分类使用结束日期作为归属日期，其他分类使用开始日期
+    // 当 category 为 'all' 时，使用开始日期作为归属日期（除了睡眠事件）
+    const dateCondition = category === 'sleep'
+      ? `DATE(end_datetime) BETWEEN ? AND ?`
+      : `DATE(start_datetime) BETWEEN ? AND ?`;
+
+    // 构建分类条件：当 category 为 'all' 时不添加分类过滤
+    const categoryCondition = category === 'all' ? '' : 'AND category = ?';
+
+    // 构建参数数组：根据是否为 'all' 分类调整参数顺序
+    const params = category === 'all' ? [startDate, endDate] : [category, startDate, endDate];
+
+    // 获取分类下的总时长和总次数
+    const totalStats = await db.getFirstAsync(
       `
+    SELECT
+      ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+      COUNT(*) AS event_count
+    FROM event
+    WHERE deleted_at IS NULL
+      AND status = 'completed'
+      ${categoryCondition}
+      AND ${dateCondition}
+    `,
+      params
+    );
+
+    // 获取按标题划分的统计信息，按总时长降序排序
+    const titleStats = await db.getAllAsync(
+      `
+    SELECT
+      COALESCE(title, '无标题') AS title,
+      ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+      COUNT(*) AS event_count
+    FROM event
+    WHERE deleted_at IS NULL
+      AND status = 'completed'
+      ${categoryCondition}
+      AND ${dateCondition}
+    GROUP BY title
+    ORDER BY total_minutes DESC
+    `,
+      params
+    );
+
+    // 获取各分类的统计信息（当 category 为 'all' 时）
+    let categoryStats = [];
+    if (category === 'all') {
+      // 对于睡眠分类，使用结束日期作为归属日期
+      const sleepStats = await db.getFirstAsync(
+        `
+      SELECT
+        'sleep' AS category,
+        ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+        COUNT(*) AS event_count
+      FROM event
+      WHERE deleted_at IS NULL
+        AND status = 'completed'
+        AND category = 'sleep'
+        AND DATE(end_datetime) BETWEEN ? AND ?
+      `,
+        [startDate, endDate]
+      );
+
+      // 对于其他分类，使用开始日期作为归属日期
+      const otherCategories = await db.getAllAsync(
+        `
       SELECT
         category,
         ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
@@ -120,11 +204,27 @@ export class StatisticsMapper extends BaseMapper {
       FROM event
       WHERE deleted_at IS NULL
         AND status = 'completed'
-        AND ${OVERLAP_CONDITION}
+        AND category != 'sleep'
+        AND DATE(start_datetime) BETWEEN ? AND ?
       GROUP BY category
       ORDER BY total_minutes DESC
       `,
-      [startDate, endDate, startDate, endDate, startDate, endDate]
-    );
+        [startDate, endDate]
+      );
+
+      // 合并睡眠和其他分类的统计信息
+      if (sleepStats) {
+        categoryStats.push(sleepStats);
+      }
+      categoryStats = [...categoryStats, ...otherCategories];
+    }
+
+    // 返回统计结果，确保默认值为 0
+    return {
+      total_minutes: totalStats?.total_minutes || 0,
+      total_events: totalStats?.event_count || 0,
+      title_statistics: titleStats,
+      category_statistics: categoryStats
+    };
   }
 }
