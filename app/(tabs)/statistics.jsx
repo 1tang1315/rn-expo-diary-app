@@ -8,12 +8,12 @@ import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import { categories } from "@/constants/commonConstans";
+import { useTheme } from "@/context/ThemeContext";
 import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import dayjs from "dayjs";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useTheme } from "@/context/ThemeContext";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -133,7 +133,7 @@ export default function Statistics() {
   
   useFocusEffect(
     useCallback(() => {
-      if (!isInitialized.current) {
+      if(!isInitialized.current) {
         const defaultStart = dayjs().startOf('day');
         const defaultEnd = dayjs().endOf('day');
         handleDateChange({
@@ -170,84 +170,81 @@ export default function Statistics() {
   
   return (
     <ThemeSafeAreaView>
-      <TimeRangePicker onRangeChange={handleDateChange} />
-      
-      {/* 状态判断(加载中 错误 无事件)与图表内容的容器 */}
       <ThemeCard style={{ flex: 1 }}>
+        <TimeRangePicker onRangeChange={handleDateChange} />
+        
         <CategoryTab
           categories={categories}
           currentTab={currentTab}
           setCurrentTab={(tab) => {
             setCurrentTab(tab);
-            fetchStatistics({ 
-              startDate: dateRange.startDate, 
-              endDate: dateRange.endDate, 
-              category: tab 
+            fetchStatistics({
+              startDate: dateRange.startDate,
+              endDate: dateRange.endDate,
+              category: tab
             });
           }}
         />
         
-        <ScrollView
-          style={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
-              <LoadingContainer text="加载统计数据中..." />
-            </View>
-          ) : totalMinutes === 0 || chartData.length === 0 ? (
-            <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
-              <EmptyContainer text="所选时间段内的事件总时长为0分钟" />
-            </View>
-          ) : 
-            <>
-              {/* 饼图区域 */}
-              <View style={styles.chartContainer}>
-                <View style={styles.toggleButton}>
-                  <Button title={chartTypeName} onPress={toggleChart} />
-                </View>
-                {chartType === 'pie' ? (
-                  <PieChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
-                ) : (
-                  <BarChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
-                )}
+        {loading ? (
+          <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
+            <LoadingContainer text="加载统计数据中..." />
+          </View>
+        ) : totalMinutes === 0 || chartData.length === 0 ? (
+          <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
+            <EmptyContainer text="所选时间段内的事件总时长为0分钟" />
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* 饼图区域 */}
+            <ThemeCard margin={0} innerCard={true} style={styles.chartContainer}>
+              <View style={styles.toggleButton}>
+                <Button title={chartTypeName} onPress={toggleChart} />
               </View>
-              
-              {/* 图例区域 */}
-              <View style={[styles.legendContainer, { backgroundColor: theme.colors.card }]}>
-                {processedChartData.map(item => {
-                  return (
-                    <View key={item.label} style={styles.legendItem}>
-                      {/* 右边颜色块 */}
-                      <View style={[styles.colorBox, { backgroundColor: item.color }]} />
-                      
-                      <View style={styles.legendRightContainer}>
-                        <Text style={[styles.legendText, { color: theme.colors.text }]}>
-                          {item.label}
-                          ({item.useCount}次,
-                          {formatDurationByMinutes(item.value)},
-                          {item.percentage}%
-                          )
-                        </Text>
-                        <View style={[styles.progressBarContainer, { backgroundColor: theme.colors.border }]}>
-                          <View
-                            style={[
-                              styles.progressBar,
-                              {
-                                backgroundColor: item.color,
-                                width: `${item.percentage}%`
-                              }
-                            ]}
-                          />
-                        </View>
+              {chartType === 'pie' ? (
+                <PieChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
+              ) : (
+                <BarChart data={processedChartData} title={`总完成时长: ${formatDurationByMinutes(totalMinutes)}`} />
+              )}
+            </ThemeCard>
+            
+            {/* 图例区域 */}
+            <ThemeCard innerCard={true} style={styles.legendContainer}>
+              {processedChartData.map(item => {
+                return (
+                  <View key={item.label} style={styles.legendItem}>
+                    {/* 右边颜色块 */}
+                    <View style={[styles.colorBox, { backgroundColor: item.color }]} />
+                    
+                    <View style={styles.legendRightContainer}>
+                      <Text style={[styles.legendText, { color: theme.colors.text }]}>
+                        {item.label}
+                        ({item.useCount}次,
+                        {formatDurationByMinutes(item.value)},
+                        {item.percentage}%
+                        )
+                      </Text>
+                      <View style={[styles.progressBarContainer, { backgroundColor: theme.colors.border }]}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              backgroundColor: item.color,
+                              width: `${item.percentage}%`
+                            }
+                          ]}
+                        />
                       </View>
                     </View>
-                  )
-                })}
-              </View>
-            </>
-          }
-        </ScrollView>
+                  </View>
+                )
+              })}
+            </ThemeCard>
+          </ScrollView>
+        )}
       </ThemeCard>
     </ThemeSafeAreaView>
   );

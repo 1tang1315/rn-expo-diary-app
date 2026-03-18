@@ -212,19 +212,13 @@ const styles = (theme) => StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: 20,
-    borderRadius: 10,
-    backgroundColor: theme.colors.card,
+    borderRadius: 10
   },
   tooltip: {
     position: "absolute",
-    backgroundColor: "rgba(0,0,0,0.7)",
     padding: 8,
     borderRadius: 4,
     zIndex: 10,
-  },
-  tooltipText: {
-    color: "#fff",
-    fontSize: 14,
   },
   title: {
     fontSize: 16,
