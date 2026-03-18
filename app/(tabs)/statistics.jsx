@@ -2,6 +2,8 @@ import { statisticsApi } from "@/api/StatisticsApi";
 import BarChart from "@/components/chart/BarChart";
 import PieChart from "@/components/chart/PieChart";
 import CategoryTab from "@/components/common/CategoryTab";
+import EmptyContainer from "@/components/common/EmptyContainer";
+import LoadingContainer from "@/components/common/LoadingContainer";
 import TimeRangePicker from "@/components/common/TimeRangePicker";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
@@ -10,7 +12,8 @@ import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
 import dayjs from "dayjs";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 /**
  * 高精度除法计算（无浮点数精度误差）
@@ -99,6 +102,8 @@ function precisionMultiply(num1, num2, decimalPlaces) {
 }
 
 export default function Statistics() {
+  const { theme } = useTheme();
+  
   const [statsData, setStatsData] = useState({
     chartData: [],
     totalMinutes: 0,
@@ -187,15 +192,14 @@ export default function Statistics() {
           showsVerticalScrollIndicator={false}
         >
           {loading ? (
-            <View style={styles.statusContainer}>
-              <ActivityIndicator size="large" color="#3498db" />
-              <Text style={styles.loadingText}>加载统计数据中...</Text>
+            <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
+              <LoadingContainer text="加载统计数据中..." />
             </View>
           ) : totalMinutes === 0 || chartData.length === 0 ? (
-            <View style={styles.statusContainer}>
-              <Text style={styles.noDataText}>所选时间段内的事件总时长为0分钟</Text>
+            <View style={[styles.statusContainer, { backgroundColor: theme.colors.card }]}>
+              <EmptyContainer text="所选时间段内的事件总时长为0分钟" />
             </View>
-          ) :
+          ) : 
             <>
               {/* 饼图区域 */}
               <View style={styles.chartContainer}>
@@ -210,7 +214,7 @@ export default function Statistics() {
               </View>
               
               {/* 图例区域 */}
-              <View style={styles.legendContainer}>
+              <View style={[styles.legendContainer, { backgroundColor: theme.colors.card }]}>
                 {processedChartData.map(item => {
                   return (
                     <View key={item.label} style={styles.legendItem}>
@@ -218,14 +222,14 @@ export default function Statistics() {
                       <View style={[styles.colorBox, { backgroundColor: item.color }]} />
                       
                       <View style={styles.legendRightContainer}>
-                        <Text style={styles.legendText}>
+                        <Text style={[styles.legendText, { color: theme.colors.text }]}>
                           {item.label}
                           ({item.useCount}次,
                           {formatDurationByMinutes(item.value)},
                           {item.percentage}%
                           )
                         </Text>
-                        <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBarContainer, { backgroundColor: theme.colors.border }]}>
                           <View
                             style={[
                               styles.progressBar,
@@ -259,19 +263,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 450,
     padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    boxShadow: '0 2px 2px rgba(0, 0, 0, 0.05)'
+    borderRadius: 10
   },
   loadingText: {
     fontSize: 16,
-    color: "#666",
     marginTop: 16,
     textAlign: "center"
   },
   noDataText: {
     fontSize: 16,
-    color: "#666",
     textAlign: "center",
   },
   chartContainer: {
@@ -297,9 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginVertical: 10,
     padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#fff",
-    boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)'
+    borderRadius: 10
   },
   legendItem: {
     display: "flex",
@@ -319,19 +317,16 @@ const styles = StyleSheet.create({
     flex: 1
   },
   legendText: {
-    fontSize: 14,
-    color: "#333"
+    fontSize: 14
   },
   progressBarContainer: {
     height: 6,
     marginTop: 4,
     borderRadius: 3,
-    backgroundColor: '#e0e0e0',
     overflow: 'hidden'
   },
   progressBar: {
     height: '100%',
-    borderRadius: 3,
-    transition: 'width 0.3s ease'
+    borderRadius: 3
   },
 });

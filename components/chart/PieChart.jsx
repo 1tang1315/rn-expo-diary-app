@@ -1,6 +1,7 @@
+import { useTheme } from "@/context/ThemeContext";
 import React from "react";
-import { View, Text, StyleSheet, TouchableWithoutFeedback, Dimensions } from "react-native";
-import Svg, { Path, G, Text as SvgText, Circle } from "react-native-svg";
+import { Dimensions, StyleSheet, Text, TouchableWithoutFeedback, View } from "react-native";
+import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -10,6 +11,8 @@ const { width: screenWidth } = Dimensions.get('window');
  * @props {number} size - 饼图尺寸（宽高）
  */
 const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 250 }) => {
+  const { theme } = useTheme();
+  
   // 计算总和 & 每个扇形的角度
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const sectors = data.map((item, index) => {
@@ -113,7 +116,7 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
       <Path
         key={`guide-${sector.index}`}
         d={`M ${guideStartX} ${guideStartY} L ${radialEndX} ${radialEndY} L ${horizontalEndX} ${horizontalEndY}`}
-        stroke={sector.color}
+        stroke={theme.colors.subText}
         strokeWidth={1.5}
         fill="none"
       />
@@ -135,7 +138,7 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
           x={labelX}
           y={labelY + 4}
           fontSize={12}
-          fill={sector.color}
+          fill={theme.colors.text}
           textAnchor={isLeft ? "end" : "start"}
           dominantBaseline="ideographic"
         >
@@ -189,10 +192,10 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
   };
   
   return (
-    <View style={styles.container}>
+    <View style={styles(theme).container}>
       {/* 标题 */}
-      {title && <Text style={styles.title}>{title}</Text>}
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {title && <Text style={styles(theme).title}>{title}</Text>}
+      {subtitle && <Text style={styles(theme).subtitle}>{subtitle}</Text>}
       
       {/* 饼图主体和标签 */}
       <TouchableWithoutFeedback>
@@ -204,13 +207,13 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
   );
 };
 
-const styles = StyleSheet.create({
+const styles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
     padding: 20,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.card,
   },
   tooltip: {
     position: "absolute",
@@ -226,10 +229,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "bold",
+    color: theme.colors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: "#666"
+    color: theme.colors.subText
   },
 });
 

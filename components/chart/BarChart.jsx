@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import Svg, { Rect, G, Text as SvgText } from "react-native-svg";
+import { useTheme } from "@/context/ThemeContext";
 
 const BarChart = ({
   data,
@@ -10,6 +11,7 @@ const BarChart = ({
   barWidth = 30,
   spacing = 20
 }) => {
+  const { theme } = useTheme();
   const scrollRef = useRef(null);
   const totalWidth = data.length * (barWidth + spacing); // 总宽度
   
@@ -29,8 +31,15 @@ const BarChart = ({
   const maxValue = Math.max(...data.map(d => d.value));
   const scaleY = height / maxValue;
   
+  const containerStyle = {
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: theme.colors.card
+  };
+  
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       <ScrollView
         ref={scrollRef}
         horizontal showsHorizontalScrollIndicator={false}
@@ -52,14 +61,14 @@ const BarChart = ({
               y={-20}
               fontSize="16"
               fontWeight="bold"
-              fill="#333"
+              fill={theme.colors.text}
               textAnchor="middle"
             >{title}</SvgText>
             <SvgText
               x={Math.max(totalWidth, width) / 2}
               y={-5}
               fontSize="12"
-              fill="#666"
+              fill={theme.colors.subText}
               textAnchor="middle"
             >{subtitle}</SvgText>
           </G>
@@ -87,7 +96,7 @@ const BarChart = ({
                   x={x + barWidth / 2}
                   y={y - 5}
                   fontSize="12"
-                  fill="#333"
+                  fill={theme.colors.text}
                   textAnchor="middle"
                 >{item.value}</SvgText>
                 
@@ -95,7 +104,7 @@ const BarChart = ({
                   x={x + barWidth / 2}
                   y={height + 20}
                   fontSize="12"
-                  fill="#333"
+                  fill={theme.colors.subText}
                   textAnchor="middle"
                 >{shortLabel}</SvgText>
               </G>
@@ -108,28 +117,3 @@ const BarChart = ({
 };
 
 export default BarChart;
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff'
-  },
-  labels: {
-    flexDirection: "row",
-    marginTop: 10,
-    justifyContent: "center",
-  },
-  labelText: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#333",
-  },
-  valueText: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "bold",
-    marginTop: 2,
-  },
-});
