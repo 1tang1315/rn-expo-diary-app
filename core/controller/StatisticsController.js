@@ -39,17 +39,32 @@ export class StatisticsController extends BaseController {
     try {
       const { startDate, endDate, category = 'all', viewType = 'week' } = params;
       
-      // 获取事件数据
-      const events = await this.service.mapper.getByDateRangeAndCategory(startDate, endDate, category);
-      const camelEvents = events.map(event => snakeToCamelObject(event));
-      
-      // 处理统计数据
-      const statsData = this.service.processStatsData(camelEvents, viewType, { startDate, endDate });
+      // 获取统计数据
+      const statsData = await this.service.getStatistics(startDate, endDate, category);
       
       return Response.success(statsData, '获取成功');
     } catch (error) {
       console.error('获取统计数据失败:', error);
       return Response.error(500, '获取统计数据失败');
+    }
+  }
+
+  /**
+   * 获取打卡页面数据
+   * @param {Object} params - 查询参数
+   * @returns {Promise<Object>} 统一格式的响应
+   */
+  async getHabitTrackingData(params = {}) {
+    try {
+      const { startDate, endDate, category = 'all' } = params;
+      
+      // 获取打卡数据
+      const habitData = await this.service.getHabitTrackingData(startDate, endDate, category);
+      
+      return Response.success(habitData, '获取成功');
+    } catch (error) {
+      console.error('获取打卡数据失败:', error);
+      return Response.error(500, '获取打卡数据失败');
     }
   }
 }

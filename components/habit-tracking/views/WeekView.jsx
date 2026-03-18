@@ -9,7 +9,7 @@ import ThemeCard from "@/components/theme/ThemeCard";
 import dayjs from "dayjs";
 
 const WeekView = ({ items, weekStartDate }) => {
-  const generateWeekCells = (weeklyCounts) => {
+  const generateWeekCells = (dailyData) => {
     const cells = [];
     const firstDayOfWeek = weekStartDate || dayjs().startOf('week');
     
@@ -17,7 +17,7 @@ const WeekView = ({ items, weekStartDate }) => {
       const currentDay = firstDayOfWeek.add(i, 'day');
       const dayNum = currentDay.date();
       const dateKey = currentDay.format('YYYY-MM-DD');
-      const count = weeklyCounts?.[i] || 0;
+      const count = dailyData?.[dateKey] || 0;
       
       cells.push({
         type: 'date',
@@ -50,7 +50,7 @@ const WeekView = ({ items, weekStartDate }) => {
             <WeekHeader size={cellSize} />
           
             <View style={styles.row}>
-              {generateWeekCells(item.weeklyCounts).map((cell) => {
+              {generateWeekCells(item.dailyData).map((cell) => {
                 if (cell.type === 'empty') {
                   return <View key={cell.key} style={{ width: cellSize, height: cellSize }} />;
                 }

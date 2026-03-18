@@ -127,7 +127,7 @@ export class StatisticsMapper extends BaseMapper {
    * @param {string} category - 分类名称，'all' 表示所有分类
    * @returns {Object} 统计结果对象，包含总时长、总事件数、按标题统计和按分类统计
    */
-  async getCategoryDetailStatistics(startDate, endDate, category) {
+  async getCategoryStatistics(startDate, endDate, category) {
     const db = await this.getDB();
 
     // 构建日期条件：睡眠分类使用结束日期作为归属日期，其他分类使用开始日期
@@ -226,5 +226,71 @@ export class StatisticsMapper extends BaseMapper {
       title_statistics: titleStats,
       category_statistics: categoryStats
     };
+  }
+
+  /**
+   * 获取打卡页面所需的详细事件数据
+   * @param {string} startDate - 开始日期，格式为 YYYY-MM-DD
+   * @param {string} endDate - 结束日期，格式为 YYYY-MM-DD
+   * @param {string} category - 分类名称，'all' 表示所有分类
+   * @returns {Array} 详细的事件数据数组
+   */
+  async getHabitTrackingData(startDate, endDate, category = 'all') {
+    const db = await this.getDB();
+
+    // 构建日期条件：睡眠分类使用结束日期作为归属日期，其他分类使用开始日期
+    const dateCondition = category === 'sleep'
+      ? `DATE(end_datetime) BETWEEN ? AND ?`
+      : `DATE(start_datetime) BETWEEN ? AND ?`;
+
+    // 构建分类条件：当 category 为 'all' 时不添加分类过滤
+    const categoryCondition = category === 'all' ? '' : 'AND category = ?';
+
+    // 构建参数数组：根据是否为 'all' 分类调整参数顺序
+    const params = category === 'all' ? [startDate, endDate] : [category, startDate, endDate];
+
+    // 获取详细的事件数据
+    const events = await db.getAllAsync(
+      `
+    SELECT
+      COALESCE(title, '无标题') AS title,
+      start_datetime,
+      end_datetime,
+      ROUND((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60, 0) AS duration_minutes,
+      category
+    FROM event
+    WHERE deleted_at IS NULL
+      AND status = 'completed'
+      ${categoryCondition}
+      AND ${dateCondition}
+    ORDER BY start_datetime ASC
+    `,
+      params
+    );
+
+    // 按标题分组并计算统计信息
+    const groupedEvents = events.reduce((acc, event) => {
+      if (!acc[event.title]) {
+        acc[event.title] = {
+          title: event.title,
+          count: 0,
+          totalMinutes: 0,
+          timeRanges: []
+        };
+      }
+
+      acc[event.title].count++;
+      acc[event.title].totalMinutes += event.duration_minutes;
+      acc[event.title].timeRanges.push({
+        start: event.start_datetime,
+        end: event.end_datetime,
+        duration: event.duration_minutes
+      });
+
+      return acc;
+    }, {});
+
+    // 转换为数组并返回
+    return Object.values(groupedEvents);
   }
 }

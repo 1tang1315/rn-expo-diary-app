@@ -78,7 +78,44 @@ class StatisticsApi extends BaseApi {
       }
     }
     
-    return await handleResponse(await this.controller.getStatsData(processedParams), options);
+    const response = await handleResponse(await this.controller.getStatsData(processedParams), options);
+    return response || {};
+  }
+
+  /**
+   * 获取打卡页面数据
+   * @param {Object} params - 查询参数
+   * @param {Object} options - 配置选项
+   * @returns {Promise<any>} 处理后的打卡统计数据
+   */
+  async getHabitTrackingData(params = {}, options = {}) {
+    // 处理前端可能直接传入日期的情况
+    let processedParams = {};
+    if (typeof params === 'string') {
+      processedParams = {
+        startDate: formatDate(params)
+      };
+    } else if (params instanceof Date) {
+      processedParams = {
+        startDate: formatDate(params)
+      };
+    } else if (typeof params === 'object' && params !== null) {
+      // 检查是否是 Moment.js 对象（通过检查是否有 toISOString 方法）
+      if (params.toISOString) {
+        processedParams = {
+          startDate: formatDate(params)
+        };
+      } else {
+        processedParams = {
+          startDate: formatDate(params.startDate),
+          endDate: formatDate(params.endDate),
+          category: params.category || 'all'
+        };
+      }
+    }
+    
+    const response = await handleResponse(await this.controller.getHabitTrackingData(processedParams), options);
+    return response || [];
   }
 }
 

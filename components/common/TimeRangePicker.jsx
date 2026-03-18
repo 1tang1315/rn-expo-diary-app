@@ -69,7 +69,7 @@ const TimeRangePicker = ({
   }, [activeType, currentDate]);
   
   // 时间范围变化时触发外部回调
-  useEffect(() => {
+  const triggerRangeChange = useCallback(() => {
     if(onRangeChange) {
       onRangeChange({
         type: activeType,
@@ -82,6 +82,11 @@ const TimeRangePicker = ({
       });
     }
   }, [activeType, currentRange, onRangeChange]);
+  
+  // 只在组件挂载时触发一次初始值
+  useEffect(() => {
+    triggerRangeChange();
+  }, []);
   
   // 上一个时间周期
   const handlePrev = useCallback(() => {
@@ -126,6 +131,14 @@ const TimeRangePicker = ({
     }
     setCurrentDate(newDate);
   }, [activeType, currentDate]);
+  
+  // 当currentDate或activeType变化时触发回调
+  useEffect(() => {
+    // 延迟执行，确保状态更新完成
+    setTimeout(() => {
+      triggerRangeChange();
+    }, 0);
+  }, [currentDate, activeType, triggerRangeChange]);
   
   // 打开日期选择器
   const openPicker = useCallback(() => {

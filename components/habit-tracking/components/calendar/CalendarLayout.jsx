@@ -75,7 +75,7 @@ export const renderCalendarCell = ({ item, cardItem, size = 38 }) => {
     return <View style={{ width: size, height: size }} />;
   }
   
-  const count = cardItem.dailyCounts[item.dateKey] || 0;
+  const count = cardItem.dailyData?.[item.dateKey] || 0;
   return (
     <DateCell
       dayNum={item.dayNum}
