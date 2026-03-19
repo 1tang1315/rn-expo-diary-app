@@ -45,7 +45,6 @@ const DataGenerationPage = () => {
     });
     const events = (await eventApi.getByDateRangeAndCategory({ startDate, endDate, sortOrder: "asc" }));
     
-    console.log(events, "events");
     setEvents(events);
     setIsLoading(false);
   }, [])
@@ -197,7 +196,10 @@ const DataGenerationPage = () => {
       </View>
       
       {/* 主内容区 */}
-      <ScrollView style={themeStyles.content}>
+      <ScrollView
+        style={themeStyles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 日期选择区域 */}
         <DateSelector onDataChange={ handleDateChange } />
         
@@ -250,7 +252,7 @@ const styles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 30 : 16
+    paddingVertical: 10
   },
   backBtn: {
     position: 'absolute',
