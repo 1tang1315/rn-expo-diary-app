@@ -175,38 +175,34 @@ export default function Calendar({
     
     if (expanded) {
       // 月视图逻辑
-      setBase(prev => {
-        const next = prev[adjustMethod](1, unit);
-        const { row, col } = selectedPosRef.current;
-        
-        if (row != null && col != null) {
-          const newData = buildMonthMatrix(next);
-          const target = newData[row * 7 + col];
-          if (target?.isValid()) {
-            setAnchor(target);
-            onChange?.(target);
-          }
+      const nextBase = base[adjustMethod](1, unit);
+      setBase(nextBase);
+      
+      const { row, col } = selectedPosRef.current;
+      if (row != null && col != null) {
+        const newData = buildMonthMatrix(nextBase);
+        const target = newData[row * 7 + col];
+        if (target?.isValid()) {
+          setAnchor(target);
+          onChange?.(target);
         }
-        return next;
-      });
+      }
     } else {
       // 周视图逻辑
-      setAnchor(prev => {
-        const next = prev[adjustMethod](1, unit);
-        const { col } = selectedPosRef.current;
-        
-        if (col != null) {
-          const newData = getWeekData(next);
-          const target = newData[col];
-          if (target?.isValid()) {
-            setBase(target);
-            onChange?.(target);
-          }
+      const nextAnchor = anchor[adjustMethod](1, unit);
+      setAnchor(nextAnchor);
+      
+      const { col } = selectedPosRef.current;
+      if (col != null) {
+        const newData = getWeekData(nextAnchor);
+        const target = newData[col];
+        if (target?.isValid()) {
+          setBase(target);
+          onChange?.(target);
         }
-        return next;
-      });
+      }
     }
-  }, [expanded, onChange]);
+  }, [expanded, onChange, base, anchor]);
   
   // 初始化/更新手势(上下 折叠/展开; 左右 上/下 一个月)
   useEffect(() => {
