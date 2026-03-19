@@ -1,11 +1,11 @@
-import { Image, View, Text, StyleSheet } from "react-native";
-import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { formatDate } from "@/utils/formatTimeUtils";
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import { formatDate } from "@/utils/formatTimeUtils";
+import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 const StorageCard = ({ item, onPress }) => {
   // 判断是否为退役产品（有结束时间且已过期）
-  const isRetired = item.endDate && new Date(item.endDate) < new Date();
+  const isRetired = item.endDate && !isNaN(new Date(item.endDate).getTime()) && new Date(item.endDate) < new Date();
   
   return (
     <ThemeTouchableOpacity
@@ -48,14 +48,14 @@ const StorageCard = ({ item, onPress }) => {
         </View>
         
         <View style={styles.statsSection}>
-          <View>
+          <View style={styles.statsLeft}>
             <View style={styles.statRow}>
               <Ionicons name="calendar-outline" size={14} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
               <Text style={[styles.statText, isRetired && styles.retiredText]}>
                 {formatDate(item.startDate)}
               </Text>
             </View>
-            
+
             {item.endDate && (
               <View style={styles.statRow}>
                 <Ionicons name="calendar-clear-outline" size={14} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
@@ -63,16 +63,20 @@ const StorageCard = ({ item, onPress }) => {
               </View>
             )}
           </View>
-          
-          <View>
+
+          <View style={styles.statsRight}>
             <View style={styles.statRow}>
-              <FontAwesome5 name="coins" size={13} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
-              <Text style={[styles.statText, isRetired && styles.retiredText]}>{item.daysUsed} 天</Text>
+              <MaterialIcons
+                name={item.icon}
+                size={13}
+                color={isRetired ? "#bdc3c7" : "#7f8c8d"}
+              />
+              <Text style={[styles.statTextRight, isRetired && styles.retiredText]}>{item.daysUsed} 天</Text>
             </View>
-            
+
             <View style={styles.statRow}>
-              <Text style={[styles.statText, isRetired && styles.retiredText]}>¥ </Text>
-              <Text style={[styles.statText, isRetired && styles.retiredText]}>{item.dailyPrice}/天</Text>
+              <FontAwesome5 name="yen-sign" size={13} color={isRetired ? "#bdc3c7" : "#7f8c8d"} />
+              <Text style={[styles.statTextRight, isRetired && styles.retiredText]}>{item.dailyPrice}/天</Text>
             </View>
           </View>
         </View>
@@ -168,10 +172,16 @@ const styles = StyleSheet.create({
   // 底部
   statsSection: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 5
+    alignItems: 'flex-start',
+  },
+  statsLeft: {
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  statsRight: {
+    alignItems: 'flex-end',
+    gap: 4,
   },
   statRow: {
     flexDirection: 'row',
@@ -184,6 +194,31 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: '#7f8c8d'
+  },
+  statTextRight: {
+    height: 15,
+    lineHeight: 15,
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#7f8c8d',
+    textAlign: 'right',
+    minWidth: 70,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  badge: {
+    backgroundColor: '#e8f4f8',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    color: '#3498db',
   },
 });
 

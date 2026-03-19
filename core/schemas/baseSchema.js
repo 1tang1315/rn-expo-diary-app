@@ -67,13 +67,21 @@ export const baseUpdateSchema = {
   properties: {
     title: {
       type: 'string',
-      minLength: 1,
       maxLength: 100,
       description: '标题'
+    },
+    name: {
+      type: 'string',
+      maxLength: 100,
+      description: '名称'
     },
     content: {
       type: 'string',
       description: '内容'
+    },
+    detail: {
+      type: 'string',
+      description: '详情'
     },
     category: {
       type: 'string',

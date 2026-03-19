@@ -54,8 +54,7 @@ export class BaseService {
    */
   async update(id, data) {
     // 数据处理：设置更新时间
-    const now = getLocalDateTimeByDayjs();
-    data.updatedAt = now;
+    data.updatedAt = getLocalDateTimeByDayjs();
 
     // 转换为下划线命名
     const po = camelToSnakeObject(data);
@@ -71,14 +70,7 @@ export class BaseService {
    * @returns {Promise<boolean>} 是否删除成功
    */
   async delete(id) {
-    // 数据处理：设置删除时间
-    const now = getLocalDateTimeByDayjs();
-    const data = { deletedAt: now };
-
-    // 转换为下划线命名
-    const po = camelToSnakeObject(data);
-
-    return await this.mapper.delete(id, po);
+    return await this.mapper.delete(id);
   }
 
   /**
@@ -89,7 +81,7 @@ export class BaseService {
   filterPOFields(po) {
     const filtered = {};
     Object.keys(po).forEach(key => {
-      if (key !== 'id' && po[key] !== null) {
+      if (key !== 'id' && po[key] !== undefined) {
         filtered[key] = po[key];
       }
     });

@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View, Text, StyleSheet, FlatList,
-  ActivityIndicator
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import CategoryTab from "@/components/common/CategoryTab";
-import StorageCard from "@/components/storage/StorageCard";
-import AddButton from "@/components/common/AddButton";
-import EmptyContainer from "@/components/common/EmptyContainer";
-import StorageModal from "@/components/storage/StorageModal";
-import { storageCategories } from "@/constants/commonConstans";
 import { storageApi } from '@/api';
+import AddButton from "@/components/common/AddButton";
+import CategoryTab from "@/components/common/CategoryTab";
+import EmptyContainer from "@/components/common/EmptyContainer";
 import ExpandableCard from "@/components/common/ExpandableCard";
-import { useTheme } from "@/context/ThemeContext";
+import StorageCard from "@/components/storage/StorageCard";
+import StorageModal from "@/components/storage/StorageModal";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
+import { storageCategories } from "@/constants/commonConstans";
+import { useTheme } from "@/context/ThemeContext";
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native';
 
 // 常量定义
 const MS_PER_DAY = 1000 * 60 * 60 * 24; // 每天的毫秒数
@@ -30,12 +33,16 @@ export default function Storage() {
 
   const processSingleItem = useCallback((item) => {
     const today = new Date();
-    const startDate = item.start_date ? new Date(item.start_date) : null;
-    const endDate = item.end_date ? new Date(item.end_date) : today;
+    const startDate = item.startDate ? new Date(item.startDate) : null;
+    // 检查 endDate 是否为有效日期
+    const isValidEndDate = item.endDate && !isNaN(new Date(item.endDate).getTime());
+    const endDate = isValidEndDate ? new Date(item.endDate) : null;
     
     // 计算使用天数
-    const daysUsed = startDate
+    const daysUsed = startDate && endDate
       ? Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / MS_PER_DAY))
+      : startDate
+      ? Math.max(1, Math.floor((today.getTime() - startDate.getTime()) / MS_PER_DAY))
       : 1;
     
     // 计算每日价格 (总价/使用天数，最低0元)
@@ -53,8 +60,8 @@ export default function Storage() {
       daysUsed,
       image: item.image,
       detail: item.detail,
-      startDate: item.start_date,
-      endDate: item.end_date
+      startDate: item.startDate,
+      endDate: isValidEndDate ? item.endDate : null
     };
   }, []);
   
@@ -74,7 +81,6 @@ export default function Storage() {
     try {
       setIsLoading(true);
       
-      // 使用新架构的 API 获取所有项目
       const response = await storageApi.getAllWithSort({ sortField: 'start_date', sortOrder: 'desc' });
       
       // 处理数据并更新状态
@@ -110,8 +116,16 @@ export default function Storage() {
   } = useMemo(() => {
     const today = new Date();
     const total = filteredItems.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
-    const active = filteredItems.filter(item => !item.endDate || new Date(item.endDate) >= today);
-    const retired = filteredItems.filter(item => item.endDate && new Date(item.endDate) < today);
+    const active = filteredItems.filter(item => {
+      if (!item.endDate) return true;
+      const endDate = new Date(item.endDate);
+      return !isNaN(endDate.getTime()) && endDate >= today;
+    });
+    const retired = filteredItems.filter(item => {
+      if (!item.endDate) return false;
+      const endDate = new Date(item.endDate);
+      return !isNaN(endDate.getTime()) && endDate < today;
+    });
     const activeVal = active.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
     const retiredVal = retired.reduce((sum, item) => sum + Number(item.price) * 100, 0) / 100;
     
@@ -207,36 +221,41 @@ export default function Storage() {
       />
       
       <View style={styles.sectionContainer}>
-        <FlatList
-          data={[
-            { key: 'active', title: `未退役(${activeItems.length}件)`, items: activeItems },
-            { key: 'retired', title: `已退役(${retiredItems.length}件)`, items: retiredItems },
-          ]}
-          renderItem={({ item: section }) => {
-            if (section.items.length === 0) return null;
-            return (
-              <ExpandableCard title={section.title}>
-                <FlatList
-                  showsVerticalScrollIndicator={false}
-                  data={section.items}
-                  renderItem={({ item }) => (
-                    <StorageCard item={item} onPress={() => openModal(item)} />
-                  )}
-                  keyExtractor={(item) => item.id}
-                  removeClippedSubviews={true}
-                  maxToRenderPerBatch={10}
-                  windowSize={7}
-                  nestedScrollEnabled={true}
-                />
-              </ExpandableCard>
-            );
-          }}
-          keyExtractor={(section) => section.key}
-          ListEmptyComponent={() => (
-            <EmptyContainer icon="folder-open" text="暂无储物物品" />
-          )}
-          showsVerticalScrollIndicator={false}
-        />
+        {activeItems.length > 0 || retiredItems.length > 0 ? (
+          <FlatList
+            data={[
+              { key: 'active', title: `未退役(${activeItems.length}件)`, items: activeItems },
+              { key: 'retired', title: `已退役(${retiredItems.length}件)`, items: retiredItems },
+            ]}
+            renderItem={({ item: section }) => {
+              if (section.items.length === 0) return null;
+              return (
+                <ExpandableCard title={section.title}>
+                  <FlatList
+                    showsVerticalScrollIndicator={false}
+                    data={section.items}
+                    extraData={section.items}
+                    renderItem={({ item }) => (
+                      <StorageCard item={item} onPress={() => openModal(item)} />
+                    )}
+                    keyExtractor={(item) => item.id}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    windowSize={7}
+                    nestedScrollEnabled={true}
+                  />
+                </ExpandableCard>
+              );
+            }}
+            keyExtractor={(section) => section.key}
+            extraData={allItems}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <EmptyContainer iconName="folder-open" text="暂无储物物品" />
+          </View>
+        )}
       </View>
       
       {/* 添加按钮 */}

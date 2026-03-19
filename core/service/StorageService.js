@@ -4,7 +4,7 @@
 import { StorageMapper } from '@/core/mapper';
 import { BaseService } from '@/core/service';
 import { snakeToCamelObject } from '@/core/utils';
-import { deleteLocalImage } from '@/db/imageDB';
+import { deleteLocalImage } from '@/core/db/imageDB';
 
 export class StorageService extends BaseService {
   constructor() {

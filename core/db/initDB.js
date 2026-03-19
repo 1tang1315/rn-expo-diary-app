@@ -116,7 +116,7 @@ export async function getDB() {
             detail     TEXT,
             image      TEXT,
             start_date TEXT DEFAULT CURRENT_TIMESTAMP,
-            end_date   TEXT DEFAULT CURRENT_TIMESTAMP,
+            end_date   TEXT DEFAULT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             deleted_at TEXT DEFAULT NULL

@@ -1,5 +1,5 @@
 import { BASE_IMAGE_DIR } from "@/constants/commonConstans";
-import { getAllTables, getDB } from '@/db';
+import { getAllTables, getDB } from '@/core/db';
 import { Buffer } from 'buffer';
 import * as FileSystem from "expo-file-system";
 import SyncStatusService from './SyncStatusService';

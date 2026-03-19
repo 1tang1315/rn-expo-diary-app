@@ -3,12 +3,11 @@ import BaseModal from "@/components/common/BaseModal";
 import CategoryModal from "@/components/common/CategoryModal";
 import Icon from "@/components/common/Icon";
 import ThemeButton from "@/components/theme/ThemeButton";
-import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeTextInput from "@/components/theme/ThemeTextInput";
-import ThemeTouchableOpacity from "@/components/theme/ThemeView";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 import { storageCategories, storageCategoryIcons } from "@/constants/commonConstans";
-import { ImageDirType, saveImageToLocal } from "@/db/imageDB";
+import { ImageDirType, saveImageToLocal } from "@/core/db/imageDB";
 import { formatDate } from "@/utils/formatTimeUtils";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -71,7 +70,7 @@ const StorageItemModal = ({
         detail: currentItem.detail || '',
         image: currentItem.image || '',
         startDate: currentItem.startDate ? new Date(currentItem.startDate) : new Date(),
-        endDate: currentItem.endDate ? new Date(currentItem.endDate) : null
+        endDate: currentItem.endDate && !isNaN(new Date(currentItem.endDate).getTime()) ? new Date(currentItem.endDate) : null
       });
     } else {
       const defaultIcon = getDefaultIcon(storageCategories[0].id);
@@ -229,207 +228,206 @@ const StorageItemModal = ({
       endDate: formData.endDate ? formatDate(formData.endDate) : null
     };
     
-    try {
-      if(currentItem) {
-        const response = await storageApi.update(parseInt(currentItem.id), itemParams);
-        Alert.alert('成功', response.data?.success ? '物品信息已更新' : '更新物品失败');
-      } else {
-        await storageApi.create(itemParams);
-        Alert.alert('成功', '新物品已添加');
-      }
-      onRefresh();
-      onClose();
-    } catch(error) {
-      console.error('保存失败:', error);
-      Alert.alert('错误', '保存失败，请稍后再试');
+    if(currentItem) {
+      await storageApi.update(parseInt(currentItem.id), itemParams);
+      Alert.alert('成功', '物品已更新');
+    } else {
+      await storageApi.create(itemParams);
+      Alert.alert('成功', '物品已创建');
     }
+    
+    // 等待保存操作完成后再刷新数据和关闭弹窗
+    onRefresh();
+    onClose();
   };
-  
-  // 删除逻辑
-  const handleDelete = async () => {
-    if(!currentItem) return;
-    Alert.alert('确认删除', '此操作不可恢复，确定要删除吗？', [
-      {
-        text: '取消',
-        style: 'cancel'
-      },
-      {
-        text: '删除',
-        style: 'destructive',
-        onPress: async () => {
-          await storageApi.delete(parseInt(currentItem.id));
-          onRefresh();
-          onClose();
-          Alert.alert('成功', '物品已删除');
-        }
+
+// 删除逻辑
+const handleDelete = async () => {
+  if(!currentItem) return;
+  Alert.alert('确认删除', '此操作不可恢复，确定要删除吗？', [
+    {
+      text: '取消',
+      style: 'cancel'
+    },
+    {
+      text: '删除',
+      style: 'destructive',
+      onPress: async () => {
+        await storageApi.delete(parseInt(currentItem.id));
+        onRefresh();
+        onClose();
+        Alert.alert('成功', '物品已删除');
       }
-    ]);
-  };
-  
-  // 分类展示
-  const renderCategorySelector = () => {
-    const category = storageCategories.find(cat => cat.id === formData.category) || {};
-    return (
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>物品分类</ThemeSubTitleText>
-        <ThemeButton
-          style={styles.categoryDisplay}
-          iconLib="MaterialIcons"
-          iconName={category.icon || 'layers'}
-          iconSize={18}
-          title={category.name || '未选择分类'}
-          textStyle={styles.categoryText}
-          onPress={() => setSelectors(prev => ({
-            ...prev,
-            showCategory: true
-          }))}></ThemeButton>
-      </View>
-    );
-  };
-  
-  // 核心内容区域（作为 BaseModal 的 children 传入）
-  const renderContent = () => (
-    <ScrollView
-      style={styles.formScrollView}
-      showsVerticalScrollIndicator={false}
-    >
-      {renderCategorySelector()}
-      <CategoryModal
-        visible={selectors.showCategory}
-        onClose={() => setSelectors(prev => ({
-          ...prev,
-          showCategory: false
-        }))}
-        selectedCategory={formData.category}
-        categories={storageCategories}
-        onSelect={confirmCategory}
-      />
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>物品名称（必填）</ThemeSubTitleText>
-        <ThemeTextInput
-          style={styles.formInput}
-          value={formData.name}
-          onChangeText={(val) => handleInputChange('name', val)}
-          placeholder="请输入物品名称"
-          maxLength={50}
-        />
-      </View>
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>物品价格（必填）</ThemeSubTitleText>
-        <ThemeTextInput
-          style={styles.formInput}
-          value={formData.price}
-          onChangeText={(val) => handleInputChange('price', val)}
-          placeholder="请输入价格"
-          keyboardType="decimal-pad"
-          maxLength={12}
-        />
-        <Text style={styles.priceHintText}>单位：元，支持两位小数</Text>
-      </View>
-      
-      {renderIconSelector()}
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>物品图片</ThemeSubTitleText>
-        <ThemeTouchableOpacity
-          onPress={pickImage}
-          style={styles.imagePickerContainer}
-        >
-          {formData.image ? (
-            <Image
-              source={{ uri: formData.image }}
-              style={styles.imagePreview}
-              resizeMode="cover"
-            />
-          ) : null}
-          
-          <ThemeCard padding={0} margin={0} style={styles.imagePickerOverlay}>
-            <Icon lib="Ionicons" name="camera-outline" size={24} />
-            <Text style={styles.imagePickerText}>选择图片</Text>
-          </ThemeCard>
-        </ThemeTouchableOpacity>
-      </View>
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>物品详情</ThemeSubTitleText>
-        <ThemeTextInput
-          style={[styles.formInput, styles.multilineInput]}
-          value={formData.detail}
-          onChangeText={(val) => handleInputChange('detail', val)}
-          placeholder="请输入物品详情"
-          multiline
-          numberOfLines={4}
-        />
-      </View>
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>
-          启用日期:
-          <Text style={styles.dateDisplayText}>{formatDate(formData.startDate)}</Text>
-        </ThemeSubTitleText>
-        <View style={styles.dateButtonGroup}>
-          <ThemeButton title="修改日期" onPress={() => toggleDatetimePicker('start')}></ThemeButton>
-        </View>
-        {selectors.showDatetime && selectors.datetimeTarget === 'start' && (
-          <DateTimePicker
-            value={formData.startDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-            onChange={handleDateChange}
-            maximumDate={new Date(2100, 11, 31)}
-            minimumDate={new Date(2000, 0, 1)}
-          />
-        )}
-      </View>
-      
-      <View style={styles.formGroup}>
-        <ThemeSubTitleText style={styles.formLabel}>
-          退役日期（可选）:
-          <Text style={styles.dateDisplayText}>
-            {formData.endDate ? formatDate(formData.endDate) : '未设置'}
-          </Text>
-        </ThemeSubTitleText>
-        <View style={styles.dateButtonGroup}>
-          <ThemeButton title="选择日期" onPress={() => toggleDatetimePicker('end')}></ThemeButton>
-          {formData.endDate && (
-            <ThemeButton
-              style={styles.clearButton}
-              textStyle={styles.clearButtonText}
-              title="清除"
-              onPress={() => handleInputChange('endDate', null)}>
-            </ThemeButton>
-          )}
-        </View>
-        {selectors.showDatetime && selectors.datetimeTarget === 'end' && (
-          <DateTimePicker
-            value={formData.endDate || new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
-            onChange={handleDateChange}
-            maximumDate={new Date(2100, 11, 31)}
-            minimumDate={formData.startDate}
-          />
-        )}
-      </View>
-    </ScrollView>
-  );
-  
+    }
+  ]);
+};
+
+// 分类展示
+const renderCategorySelector = () => {
+  const category = storageCategories.find(cat => cat.id === formData.category) || {};
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
-      title={currentItem ? '编辑物品' : '添加新物品'}
-      onConfirm={handleSave}
-      confirmText={currentItem ? '更新' : '保存'}
-      showDelete={!!currentItem}
-      onDelete={handleDelete}
-    >
-      {renderContent()}
-    </BaseModal>
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>物品分类</ThemeSubTitleText>
+      <ThemeButton
+        style={styles.categoryDisplay}
+        iconLib="MaterialIcons"
+        iconName={category.icon || 'layers'}
+        iconSize={18}
+        title={category.name || '未选择分类'}
+        textStyle={styles.categoryText}
+        onPress={() => setSelectors(prev => ({
+          ...prev,
+          showCategory: true
+        }))}></ThemeButton>
+    </View>
   );
 };
+
+// 核心内容区域（作为 BaseModal 的 children 传入）
+const renderContent = () => (
+  <ScrollView
+    style={styles.formScrollView}
+    showsVerticalScrollIndicator={false}
+  >
+    {renderCategorySelector()}
+    <CategoryModal
+      visible={selectors.showCategory}
+      onClose={() => setSelectors(prev => ({
+        ...prev,
+        showCategory: false
+      }))}
+      selectedCategory={formData.category}
+      categories={storageCategories}
+      onSelect={confirmCategory}
+    />
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>物品名称（必填）</ThemeSubTitleText>
+      <ThemeTextInput
+        style={styles.formInput}
+        value={formData.name}
+        onChangeText={(val) => handleInputChange('name', val)}
+        placeholder="请输入物品名称"
+        maxLength={50}
+      />
+    </View>
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>物品价格（必填）</ThemeSubTitleText>
+      <ThemeTextInput
+        style={styles.formInput}
+        value={formData.price}
+        onChangeText={(val) => handleInputChange('price', val)}
+        placeholder="请输入价格"
+        keyboardType="decimal-pad"
+        maxLength={12}
+      />
+      <Text style={styles.priceHintText}>单位：元，支持两位小数</Text>
+    </View>
+    
+    {renderIconSelector()}
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>物品图片</ThemeSubTitleText>
+      <ThemeTouchableOpacity
+        onPress={pickImage}
+        style={styles.imagePickerContainer}
+        activeOpacity={0.8}
+      >
+        {formData.image ? (
+          <Image
+            source={{ uri: formData.image }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />
+        ) : null}
+        
+        <View style={styles.imagePickerOverlay}>
+          <Icon lib="Ionicons" name="camera-outline" size={24} color="#fff" />
+          <Text style={styles.imagePickerText}>选择图片</Text>
+        </View>
+      </ThemeTouchableOpacity>
+    </View>
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>物品详情</ThemeSubTitleText>
+      <ThemeTextInput
+        style={[styles.formInput, styles.multilineInput]}
+        value={formData.detail}
+        onChangeText={(val) => handleInputChange('detail', val)}
+        placeholder="请输入物品详情"
+        multiline
+        numberOfLines={4}
+      />
+    </View>
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>
+        启用日期:
+        <Text style={styles.dateDisplayText}>{formatDate(formData.startDate)}</Text>
+      </ThemeSubTitleText>
+      <View style={styles.dateButtonGroup}>
+        <ThemeButton title="修改日期" onPress={() => toggleDatetimePicker('start')}></ThemeButton>
+      </View>
+      {selectors.showDatetime && selectors.datetimeTarget === 'start' && (
+        <DateTimePicker
+          value={formData.startDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+          onChange={handleDateChange}
+          maximumDate={new Date(2100, 11, 31)}
+          minimumDate={new Date(2000, 0, 1)}
+        />
+      )}
+    </View>
+    
+    <View style={styles.formGroup}>
+      <ThemeSubTitleText style={styles.formLabel}>
+        退役日期（可选）:
+        <Text style={styles.dateDisplayText}>
+          {formData.endDate ? formatDate(formData.endDate) : '未设置'}
+        </Text>
+      </ThemeSubTitleText>
+      <View style={styles.dateButtonGroup}>
+        <ThemeButton title="选择日期" onPress={() => toggleDatetimePicker('end')}></ThemeButton>
+        {formData.endDate && (
+          <ThemeButton
+            style={styles.clearButton}
+            textStyle={styles.clearButtonText}
+            title="清除"
+            onPress={() => handleInputChange('endDate', null)}>
+          </ThemeButton>
+        )}
+      </View>
+      {selectors.showDatetime && selectors.datetimeTarget === 'end' && (
+        <DateTimePicker
+          value={formData.endDate || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+          onChange={handleDateChange}
+          maximumDate={new Date(2100, 11, 31)}
+          minimumDate={formData.startDate}
+        />
+      )}
+    </View>
+  </ScrollView>
+);
+
+return (
+  <BaseModal
+    visible={visible}
+    onClose={onClose}
+    title={currentItem ? '编辑物品' : '添加新物品'}
+    onConfirm={handleSave}
+    confirmText={currentItem ? '更新' : '保存'}
+    showDelete={!!currentItem}
+    onDelete={handleDelete}
+  >
+    {renderContent()}
+  </BaseModal>
+);
+}
+;
 
 const styles = StyleSheet.create({
   formScrollView: {
