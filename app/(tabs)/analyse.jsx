@@ -1,6 +1,7 @@
 import { analyseApi, eventApi } from "@/api";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import ScoreRowCard from "@/components/analyse/ScoreRowCard";
+import LineChart from "@/components/chart/LineChart";
 import RadarChart from "@/components/chart/RadarChart";
 import Calendar from "@/components/common/Calendar";
 import EmptyContainer from "@/components/common/EmptyContainer";
@@ -14,6 +15,7 @@ import dayjs from "dayjs";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 
 export default function Analyse() {
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function Analyse() {
     dimensions: {},
     overallSummary: {}
   });
-
+  
   const [hasEvents, setHasEvents] = useState(true);
   const [hasDashboardData, setHasDashboardData] = useState(true);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -48,6 +50,48 @@ export default function Analyse() {
   const [selectedDimension, setSelectedDimension] = useState(null);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [selectedSummary, setSelectedSummary] = useState(null);
+  const [trendData, setTrendData] = useState([]);
+  const [trendRange, setTrendRange] = useState(7); // 趋势图天数: 7, 14, 30
+
+  // 获取趋势数据（支持7/14/30天）
+  const fetchTrendData = useCallback(async (currentDate, days = 7) => {
+    try {
+      const endDate = currentDate;
+      const startDate = currentDate.subtract(days - 1, 'day');
+
+      const trend = await analyseApi.getScoreTrend({
+        startDate: startDate.toDate(),
+        endDate: endDate.toDate()
+      });
+
+      // 补齐没有数据的日期（后端已过滤掉score为0的日期）
+      const filledTrend = [];
+      for(let i = 0; i < days; i++) {
+        const date = startDate.add(i, 'day');
+        const dateStr = date.format('YYYY-MM-DD');
+        const existingData = trend?.find(t => t.date === dateStr);
+
+        if(existingData) {
+          filledTrend.push(existingData);
+        } else {
+          filledTrend.push({
+            date: dateStr,
+            totalScore: 0,
+            sleepScore: 0,
+            dietScore: 0,
+            exerciseScore: 0,
+            efficiencyScore: 0,
+            balanceScore: 0,
+            emotionScore: 0
+          });
+        }
+      }
+
+      setTrendData(filledTrend);
+    } catch(error) {
+      console.error('Error fetching trend data:', error);
+    }
+  }, []);
   
   const handleDateChange = useCallback(async (date) => {
     try {
@@ -59,14 +103,14 @@ export default function Analyse() {
       const hasEventsData = Array.isArray(events) && events.length > 0;
       setHasEvents(hasEventsData);
       
-      if (hasEventsData) {
+      if(hasEventsData) {
         // 有事件数据，再查询dashboard数据
         const scoreResult = await analyseApi.getDashboard({ startDate, endDate });
         
         if(scoreResult) {
           setDashboardData(scoreResult);
           // 检查是否有dashboard数据
-          const hasAnyDashboardData = scoreResult.totalScore > 0 || 
+          const hasAnyDashboardData = scoreResult.totalScore > 0 ||
             Object.values(scoreResult.scores || {}).some(score => score > 0);
           setHasDashboardData(hasAnyDashboardData);
         } else {
@@ -76,17 +120,21 @@ export default function Analyse() {
         setHasDashboardData(false);
       }
       
+      // 同时获取趋势数据
+      await fetchTrendData(date, trendRange);
+      
     } catch(error) {
       console.error('Error getting data:', error);
       setHasEvents(false);
       setHasDashboardData(false);
     }
-  }, []);
+  }, [fetchTrendData, trendRange]);
   
   useFocusEffect(
     useCallback(() => {
       handleDateChange(selectedDate).then();
-    }, [handleDateChange, selectedDate])
+      fetchTrendData(selectedDate, trendRange).then();
+    }, [handleDateChange, selectedDate, fetchTrendData, trendRange])
   );
   
   // 跳转到详情页
@@ -104,7 +152,7 @@ export default function Analyse() {
     };
     const key = dimKeyMap[baseLabel];
     const dim = (dashboardData.dimensions || {})[key];
-    if (dim) {
+    if(dim) {
       setSelectedDimension({
         label: baseLabel,
         score: dim.score || 0,
@@ -114,11 +162,11 @@ export default function Analyse() {
       setDetailModalVisible(true);
     }
   }, [dashboardData]);
-
+  
   // 处理总结文本点击
   const handleSummaryPress = useCallback(() => {
     const total = dashboardData.dimensions?.total;
-    if (total) {
+    if(total) {
       setSelectedSummary({
         text: total.text || ''
       });
@@ -168,6 +216,17 @@ export default function Analyse() {
     };
   }, [dashboardData]);
   
+  // 格式化趋势数据为 LineChart 所需的格式
+  const trendChartData = useMemo(() => {
+    if(!trendData || trendData.length === 0) return [];
+    
+    return trendData.map(item => ({
+      label: dayjs(item.date).format('DD'),
+      value: item.totalScore || 0,
+      color: theme.colors.primary
+    }));
+  }, [trendData, theme.colors.primary]);
+  
   
   // endregion  end(折叠代码注释)
   const handleAiAnalysisPress = useCallback(() => {
@@ -188,27 +247,27 @@ export default function Analyse() {
           onToday={() => setSelectedDate(dayjs())}
           onDateChange={(date) => {
             setSelectedDate(date);
-            handleDateChange(date);
+            handleDateChange(date).then();
           }}
         />
         <Calendar
           value={selectedDate}
           onChange={(d) => {
             setSelectedDate(d);
-            handleDateChange(d);
+            handleDateChange(d).then();
           }}
         />
       </ThemeCard>
-
+      
       {!hasEvents ? (
-        <EmptyContainer 
-          iconName="calendar-plus-o" 
+        <EmptyContainer
+          iconName="calendar-plus-o"
           text="当前事件数据为空"
         />
       ) : !hasDashboardData ? (
         <View style={styles.emptyContainer}>
           <LoadingContainer text="AI 分析生成中..." />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               {
                 backgroundColor: theme.colors.primary,
@@ -216,7 +275,7 @@ export default function Analyse() {
                 paddingVertical: 12,
                 borderRadius: 8
               }
-            ]} 
+            ]}
             onPress={handleAiAnalysisPress}
           >
             <Text style={[
@@ -262,7 +321,48 @@ export default function Analyse() {
             title="健康维度评分"
           />
           
-
+          <ThemeCard>
+            <View style={styles.trendChartHeader}>
+              <Text style={[styles.trendChartTitle, { color: theme.colors.text }]}>
+                {trendRange}天评分趋势
+              </Text>
+              <View style={styles.trendRangeButtons}>
+                {[7, 14, 30].map(days => (
+                  <ThemeTouchableOpacity
+                    key={days}
+                    style={[
+                      styles.trendRangeBtn,
+                      { backgroundColor: trendRange === days ? theme.colors.primary : 'transparent' }
+                    ]}
+                    onPress={() => {
+                      setTrendRange(days);
+                      fetchTrendData(selectedDate, days).then();
+                    }}
+                  >
+                    <Text style={[
+                      styles.trendRangeBtnText,
+                      { color: trendRange === days ? theme.colors.textInverse : theme.colors.text }
+                    ]}>
+                      {days}天
+                    </Text>
+                  </ThemeTouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <LineChart
+              data={trendChartData}
+              width={340}
+              height={200}
+              itemWidth={50}
+              pointRadius={6}
+              lineWidth={2}
+              showArea={true}
+              showPoints={true}
+              showValues={true}
+              curveType="curve"
+            />
+          </ThemeCard>
           
           <ThemeCard>
             <MarkdownRenderer content={dashboardData.overallSummary} />
@@ -328,7 +428,7 @@ export default function Analyse() {
           </View>
         </View>
       </Modal>
-
+      
       {/* 总结详情弹窗（使用 Markdown 渲染） */}
       <Modal
         visible={summaryModalVisible}
@@ -453,5 +553,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 4
+  },
+  trendChartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4
+  },
+  trendChartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  trendRangeButtons: {
+    flexDirection: 'row',
+    gap: 4
+  },
+  trendRangeBtn: {
+    minHeight: 20,
+    borderWidth: 1
+  },
+  trendRangeBtnText: {
+    fontSize: 12,
+    fontWeight: '500'
   },
 });

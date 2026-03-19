@@ -266,5 +266,47 @@ export class AnalyseMapper extends BaseMapper {
     );
     return result.changes > 0;
   }
+
+  /**
+   * 获取日期范围内的评分趋势数据
+   * @param {string} startDate - 开始日期（YYYY-MM-DD）
+   * @param {string} endDate - 结束日期（YYYY-MM-DD）
+   * @returns {Promise<Array>} 每日评分数据数组
+   */
+  async getScoreTrend(startDate, endDate) {
+    const db = await this.getDB();
+    const results = await db.getAllAsync(
+      `SELECT date, total_score, sleep_score, diet_score, exercise_score, efficiency_score, balance_score, emotion_score
+       FROM daily_analysis
+       WHERE date >= ? AND date <= ?
+       ORDER BY date ASC`,
+      [startDate, endDate]
+    );
+
+    return results.map(item => ({
+      date: item.date,
+      total: {
+        score: item.total_score || 0
+      },
+      sleep: {
+        score: item.sleep_score || 0
+      },
+      diet: {
+        score: item.diet_score || 0
+      },
+      exercise: {
+        score: item.exercise_score || 0
+      },
+      efficiency: {
+        score: item.efficiency_score || 0
+      },
+      balance: {
+        score: item.balance_score || 0
+      },
+      emotion: {
+        score: item.emotion_score || 0
+      }
+    }));
+  }
 }
 

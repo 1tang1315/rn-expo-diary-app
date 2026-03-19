@@ -50,5 +50,27 @@ export class AnalyseController extends BaseController {
       return Response.error(500, error.message || '生成 AI 分析报告失败');
     }
   }
+
+  /**
+   * 获取评分趋势数据
+   * @param {Object} params
+   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
+   * @returns {Promise<Object>} 统一响应
+   */
+  async getScoreTrend(params = {}) {
+    try {
+      const { startDate, endDate } = params;
+      if (!startDate || !endDate) {
+        return Response.error(400, '开始日期和结束日期为必填参数');
+      }
+
+      const data = await this.service.getScoreTrend({ startDate, endDate });
+      return Response.success(data, '获取评分趋势成功');
+    } catch (error) {
+      console.error('获取评分趋势失败:', error);
+      return Response.error(500, '获取评分趋势失败');
+    }
+  }
 }
 

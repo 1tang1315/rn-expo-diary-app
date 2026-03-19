@@ -387,5 +387,37 @@ ${eventsByCategoryText}
       forceRefresh
     });
   }
+
+  /**
+   * 获取评分趋势数据
+   * @param {Object} params
+   * @param {string} params.startDate - 开始日期，格式：YYYY-MM-DD
+   * @param {string} params.endDate - 结束日期，格式：YYYY-MM-DD
+   * @returns {Promise<Array>} 每日评分数据数组（过滤掉score全为0的日期）
+   */
+  async getScoreTrend(params = {}) {
+    const { startDate, endDate } = params;
+
+    if (!startDate || !endDate) {
+      throw new Error('开始日期和结束日期为必填参数');
+    }
+
+    // 从数据库获取日期范围内的评分数据
+    const trendData = await this.analyseMapper.getScoreTrend(startDate, endDate);
+
+    // 过滤掉 score 全为 0 的无效数据，并转换为前端直接可用的格式
+    return trendData
+      .filter(item => item.total.score > 0)
+      .map(item => ({
+        date: item.date,
+        totalScore: item.total.score,
+        sleepScore: item.sleep.score,
+        dietScore: item.diet.score,
+        exerciseScore: item.exercise.score,
+        efficiencyScore: item.efficiency.score,
+        balanceScore: item.balance.score,
+        emotionScore: item.emotion.score
+      }));
+  }
 }
 

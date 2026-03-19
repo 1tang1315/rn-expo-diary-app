@@ -115,6 +115,30 @@ class AnalyseApi extends BaseApi {
       };
     }
   }
+
+  /**
+   * 获取评分趋势数据
+   * @param {Object} params - 查询参数
+   * @param {Date} params.startDate - 开始日期
+   * @param {Date} params.endDate - 结束日期
+   * @returns {Promise<Array>} 每日评分数据数组
+   */
+  async getScoreTrend(params = {}) {
+    const startDate = params.startDate ? formatDate(params.startDate) : null;
+    const endDate = params.endDate ? formatDate(params.endDate) : null;
+
+    if (!startDate || !endDate) {
+      return [];
+    }
+
+    try {
+      const res = await this.controller.getScoreTrend({ startDate, endDate });
+      return await handleResponse(res);
+    } catch (error) {
+      console.error('Error getting score trend:', error);
+      return [];
+    }
+  }
 }
 
 export const analyseApi = new AnalyseApi();

@@ -7,6 +7,7 @@ export class AnalysisService {
   constructor() {
     this.analyseMapper = new AnalyseMapper();
   }
+
   /**
    * 从 AI 文本报告解析为结构化数据
    * @param {string} text - AI 返回的纯文本
