@@ -1,24 +1,31 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Platform, Alert, ActivityIndicator
-} from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import dayjs from 'dayjs';
 import { eventApi } from '@/api/EventApi';
-import { useNavigation } from "expo-router";
-import { formatPreviewContent, getPlainTextContent } from "@/utils/previewFormatter";
 import DateSelector from "@/components/statistics/DateSelector";
 import FormatSelector from "@/components/statistics/FormatSelector";
 import PreviewBox from "@/components/statistics/PreviewBox";
+import { formatPreviewContent, getPlainTextContent } from "@/utils/previewFormatter";
+import { Ionicons } from '@expo/vector-icons';
+import dayjs from 'dayjs';
+import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
+import { useNavigation } from "expo-router";
+import * as Sharing from 'expo-sharing';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TouchableOpacity,
+  View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
+import { useTheme } from "@/context/ThemeContext";
 
 const DataGenerationPage = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   
   // 状态管理
   const [selectedFormat, setSelectedFormat] = useState('txt');
@@ -38,6 +45,7 @@ const DataGenerationPage = () => {
     });
     const events = (await eventApi.getByDateRangeAndCategory({ startDate, endDate, sortOrder: "asc" }));
     
+    console.log(events, "events");
     setEvents(events);
     setIsLoading(false);
   }, [])
@@ -75,7 +83,7 @@ const DataGenerationPage = () => {
         );
         setPlainTextContent(plainContent);
         // 生成预览用的Text组件
-        previewContent = <Text style={styles.previewText}>{plainContent}</Text>;
+        previewContent = <Text style={themeStyles.previewText}>{plainContent}</Text>;
       } else {
         // Image
         previewContent = formatPreviewContent(
@@ -83,7 +91,7 @@ const DataGenerationPage = () => {
           queryStart,
           queryEnd,
           events,
-          styles,
+          themeStyles,
           dateRangeText
         );
         setPlainTextContent(''); // 清空纯文本
@@ -173,21 +181,23 @@ const DataGenerationPage = () => {
     generatePreview().then();
   }, [dateRange, generatePreview, selectedFormat]);
   
+  const themeStyles = styles(theme);
+  
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <SafeAreaView edges={['top']} style={themeStyles.container}>
       {/* 顶部导航栏 */}
-      <View style={styles.header}>
+      <View style={themeStyles.header}>
         <TouchableOpacity
-          style={styles.backBtn}
+          style={themeStyles.backBtn}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.pageTitle}>数据生成与导出</Text>
+        <Text style={themeStyles.pageTitle}>数据生成与导出</Text>
       </View>
       
       {/* 主内容区 */}
-      <ScrollView style={styles.content}>
+      <ScrollView style={themeStyles.content}>
         {/* 日期选择区域 */}
         <DateSelector onDataChange={ handleDateChange } />
         
@@ -210,17 +220,17 @@ const DataGenerationPage = () => {
       
       {/* 导出按钮 */}
       <TouchableOpacity
-        style={styles.exportBtnContainer}
+        style={themeStyles.exportBtnContainer}
         onPress={handleExport}
         disabled={isLoading}
       >
-        <View style={[styles.exportBtn, isLoading && styles.exportBtnDisabled]}>
+        <View style={[themeStyles.exportBtn, isLoading && themeStyles.exportBtnDisabled]}>
           {isLoading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={theme.colors.textInverse} />
           ) : (
             <>
-              <Ionicons name="download-outline" size={20} color="#fff" style={styles.exportIcon} />
-              <Text style={styles.exportText}>导出数据</Text>
+              <Ionicons name="download-outline" size={20} color={theme.colors.textInverse} style={themeStyles.exportIcon} />
+              <Text style={themeStyles.exportText}>导出数据</Text>
             </>
           )}
         </View>
@@ -230,20 +240,17 @@ const DataGenerationPage = () => {
 };
 
 // 样式定义
-const styles = StyleSheet.create({
+const styles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#F5F7FA',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 30 : 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E8EBF2',
+    paddingVertical: Platform.OS === 'ios' ? 30 : 16
   },
   backBtn: {
     position: 'absolute',
@@ -255,13 +262,13 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text,
     flex: 1,
     textAlign: 'center',
   },
   content: {
     flex: 1,
-    padding: 16
+    padding: 10
   },
   
   // Image 格式预览样式
@@ -273,22 +280,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8EBF2',
+    borderBottomColor: theme.colors.border,
   },
   imageDailyHeader: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text,
     marginBottom: 4,
   },
   imageDailySubHeader: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.subText,
     marginBottom: 8,
   },
   imageDailyEvents: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.text,
     lineHeight: 22,
     whiteSpace: 'pre-wrap',
     marginBottom: 12,
@@ -301,17 +308,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#4A6CF7',
+    borderTopColor: theme.colors.interactive,
   },
   imageTotalHeader: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4A6CF7',
+    color: theme.colors.interactive,
     marginBottom: 4,
   },
   imageTotalSubHeader: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.subText,
     marginBottom: 8,
   },
   imageTotalChart: {
@@ -323,7 +330,7 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingBottom: 25,
     elevation: 3,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.card,
     boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.1)',
   },
   exportBtn: {
@@ -332,10 +339,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#4A6CF7'
+    backgroundColor: theme.colors.interactive
   },
   exportBtnDisabled: {
-    backgroundColor: '#A3B7FF',
+    backgroundColor: theme.colors.disabledBackground,
   },
   exportIcon: {
     marginRight: 8,
@@ -343,7 +350,13 @@ const styles = StyleSheet.create({
   exportText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#fff',
+    color: theme.colors.textInverse,
+  },
+  previewText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 22,
+    whiteSpace: 'pre-wrap',
   },
 });
 

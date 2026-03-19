@@ -11,6 +11,61 @@ import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 const DateSelector = ({ onDataChange }) => {
   const { theme } = useTheme();
   
+  const styles = StyleSheet.create({
+    sectionTitle: {
+      paddingVertical: 10,
+      fontSize: 16,
+      fontWeight: '600'
+    },
+    dateTypeSwitcher: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 10,
+    },
+    dateTypeBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dateTypeTextContainer: {
+      alignItems: 'center',
+    },
+    dateTypeHint: {
+      fontSize: 10,
+      color: theme.colors.subText,
+      marginTop: 2,
+    },
+    dateTypeHintActive: {
+      color: theme.colors.textInverse,
+    },
+    dateTypeText: {
+      fontSize: 14,
+      color: theme.colors.subText,
+    },
+    dateTypeTextActive: {
+      color: theme.colors.textInverse,
+      fontWeight: '500',
+    },
+    datePickerContainer: {
+      gap: 8,
+    },
+    dateSelectBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: theme.colors.innerCard,
+    },
+    dateIcon: {
+      marginRight: 12,
+    },
+    dateText: {
+      fontSize: 15
+    },
+  });
+  
   const [dateType, setDateType] = useState('single');
   const [startDate, setStartDate] = useState(dayjs().startOf('day'));
   const [endDate, setEndDate] = useState(dayjs().startOf('day'));
@@ -110,58 +165,3 @@ const DateSelector = ({ onDataChange }) => {
 };
 
 export default DateSelector;
-
-const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  dateTypeSwitcher: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  dateTypeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dateTypeTextContainer: {
-    alignItems: 'center',
-  },
-  dateTypeHint: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 2,
-  },
-  dateTypeHintActive: {
-    color: '#e0e0e0',
-  },
-  dateTypeText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  dateTypeTextActive: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  datePickerContainer: {
-    gap: 8,
-  },
-  dateSelectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  dateIcon: {
-    marginRight: 12,
-  },
-  dateText: {
-    fontSize: 15
-  },
-});

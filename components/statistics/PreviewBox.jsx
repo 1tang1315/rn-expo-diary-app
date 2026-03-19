@@ -1,6 +1,7 @@
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { forwardRef } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PreviewBox = forwardRef(({
   isLoading,
@@ -9,6 +10,52 @@ const PreviewBox = forwardRef(({
   onCopy,
   plainTextContent
 }, ref) => {
+  const { theme } = useTheme();
+  
+  const styles = StyleSheet.create({
+    sectionCard: {
+      marginBottom: 25,
+      borderRadius: 8,
+      padding: 16,
+      backgroundColor: theme.colors.card,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 16,
+    },
+    previewContainer: {
+      minHeight: 200,
+      padding: 16,
+      borderRadius: 8,
+      backgroundColor: theme.colors.innerCard,
+    },
+    previewText: {
+      fontSize: 14,
+      color: theme.colors.text,
+      lineHeight: 22,
+      whiteSpace: 'pre-wrap',
+    },
+    copyBtn: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: theme.colors.innerCard,
+    },
+    copyBtnIcon: {
+      color: theme.colors.interactive,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: theme.colors.subText,
+    },
+  });
+  
   const renderPreviewContent = (previewData) => {
     // 是否为纯字符串
     const isPureText = typeof previewData === 'string';
@@ -51,7 +98,7 @@ const PreviewBox = forwardRef(({
       <View ref={ref} style={styles.previewContainer} collapsable={false}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#4A6CF7" />
+            <ActivityIndicator size="small" color={theme.colors.interactive} />
             <Text style={styles.loadingText}>生成预览中...</Text>
           </View>
         ) : (
@@ -64,49 +111,3 @@ const PreviewBox = forwardRef(({
 
 PreviewBox.displayName = "PreviewBox";
 export default PreviewBox;
-
-const styles = StyleSheet.create({
-  sectionCard: {
-    marginBottom: 25,
-    borderRadius: 8,
-    padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  previewContainer: {
-    minHeight: 200,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  previewText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 22,
-    whiteSpace: 'pre-wrap', // 保留换行符
-  },
-  copyBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-  },
-  copyBtnIcon: {
-    color: '#4A6CF7',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#666',
-  },
-});

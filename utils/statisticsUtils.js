@@ -14,7 +14,7 @@ export const processStatistics = (data, groupByCategory = false) => {
     
     
     // 计算时长（分钟）
-    const durationMinutes = getTotalMinutes(item.start_datetime, item.end_datetime);
+    const durationMinutes = getTotalMinutes(item.startDatetime, item.endDatetime);
     
     // 第一次groupedData[key]没有, 进行初始化
     if (!groupedData[key]) {
@@ -36,8 +36,8 @@ export const processStatistics = (data, groupByCategory = false) => {
   }));
   
   const totalMinutes = completedEvents.reduce((sum, e) => {
-    const start = dayjs(e.start_datetime);
-    const end = dayjs(e.end_datetime);
+    const start = dayjs(e.startDatetime);
+    const end = dayjs(e.endDatetime);
     const duration = end.diff(start, 'minute');
     return sum + (duration > 0 ? duration : 0);
   }, 0);

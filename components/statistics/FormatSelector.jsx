@@ -1,5 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
+import { useTheme } from "@/context/ThemeContext";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { StyleSheet, Text, View } from "react-native";
 
 // 支持的导出格式配置
 const formats = [
@@ -21,12 +23,62 @@ const formats = [
 ];
 
 const FormatSelector = ({ selectedFormat, setSelectedFormat }) => {
+  const { theme } = useTheme();
+  
+  const styles = StyleSheet.create({
+    sectionCard: {
+      marginBottom: 10,
+      borderRadius: 8,
+      padding: 16,
+      backgroundColor: theme.colors.card,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 16,
+    },
+    sectionTitleContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    formatGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    formatCard: {
+      width: '46%',
+      padding: 16,
+      borderRadius: 8,
+      backgroundColor: theme.colors.innerCard,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    formatCardActive: {
+      backgroundColor: theme.colors.interactive,
+    },
+    formatText: {
+      fontSize: 14,
+      color: theme.colors.text,
+      flex: 1,
+      lineHeight: 24,
+    },
+    formatTextActive: {
+      color: '#fff',
+    },
+  });
+  
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>选择导出格式</Text>
+      
       <View style={styles.formatGrid}>
         {formats.map((format) => (
-          <TouchableOpacity
+          <ThemeTouchableOpacity
             key={format.id}
             style={[styles.formatCard, selectedFormat === format.id && styles.formatCardActive]}
             onPress={() => setSelectedFormat(format.id)}
@@ -34,12 +86,12 @@ const FormatSelector = ({ selectedFormat, setSelectedFormat }) => {
             <FontAwesome5
               name={format.icon}
               size={24}
-              color={selectedFormat === format.id ? '#fff' : '#4A6CF7'}
+              color={selectedFormat === format.id ? '#fff' : theme.colors.interactive}
             />
-            <Text style={[styles.formatText, selectedFormat === format.id && styles.formatTextActive]}>
+            <Text numberOfLines={1} style={[styles.formatText, selectedFormat === format.id && styles.formatTextActive]}>
               {format.name}
             </Text>
-          </TouchableOpacity>
+          </ThemeTouchableOpacity>
         ))}
       </View>
     </View>
@@ -47,51 +99,3 @@ const FormatSelector = ({ selectedFormat, setSelectedFormat }) => {
 };
 
 export default FormatSelector;
-
-const styles = StyleSheet.create({
-  sectionCard: {
-    marginBottom: 10,
-    borderRadius: 8,
-    padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  formatGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  formatCard: {
-    width: '46%',
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F7FA',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  formatCardActive: {
-    backgroundColor: '#4A6CF7',
-  },
-  formatText: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  formatTextActive: {
-    color: '#fff',
-  },
-});

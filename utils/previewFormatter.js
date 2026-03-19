@@ -10,18 +10,20 @@ import { categories } from "@/constants/commonConstans";
 function groupEventsByDate (events) {
   // 使用数组的 reduce 方法进行分组
   return events.reduce((acc, event) => {
-    // 1. 使用 dayjs 解析事件的开始时间，并格式化为 'YYYY-MM-DD' 字符串，作为分组的键
-    const eventDate = dayjs(event.start_datetime).format('YYYY-MM-DD');
+    // 睡眠分类使用结束日期作为归属日期，其他分类使用开始日期
+    const eventDate = event.category === 'sleep' 
+      ? dayjs(event.endDatetime).format('YYYY-MM-DD')
+      : dayjs(event.startDatetime).format('YYYY-MM-DD');
     
-    // 2. 如果累加器 (acc) 中还没有这个日期的数组，就先创建一个空数组
+    // 如果累加器 (acc) 中还没有这个日期的数组，就先创建一个空数组
     if(!acc[eventDate]) {
       acc[eventDate] = [];
     }
     
-    // 3. 将当前事件推入对应日期的数组中
+    // 将当前事件推入对应日期的数组中
     acc[eventDate].push(event);
     
-    // 4. 返回累加器，继续下一次迭代
+    // 返回累加器，继续下一次迭代
     return acc;
   }, {}); // 初始化一个空对象作为累加器
 }
@@ -33,7 +35,7 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
   };
   const options = presets[mode];
   
-  const totalDuration = dayEvents.reduce((sum, e) => sum + getTotalMinutes(e.start_datetime, e.end_datetime), 0);
+  const totalDuration = dayEvents.reduce((sum, e) => sum + getTotalMinutes(e.startDatetime, e.endDatetime), 0);
   
   const dayHeader = `${options.headerLevel}📅 日期: ${date}
 📊 事件总数: ${dayEvents.length} 个
@@ -49,7 +51,7 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
   
   dayEvents.forEach(e => {
     const categoryName = getCategoryName(e.category) || "未分类";
-    const duration = getTotalMinutes(e.start_datetime, e.end_datetime);
+    const duration = getTotalMinutes(e.startDatetime, e.endDatetime);
     eventsByCategory[categoryName].events.push(e);
     eventsByCategory[categoryName].totalDuration += duration;
   });
@@ -63,8 +65,8 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
     
     const categoryEventsText = events
       .map(e => {
-        const duration = getTotalMinutes(e.start_datetime, e.end_datetime);
-        return `${options.itemPrefix}${dayjs(e.start_datetime).format("HH:mm")}~${dayjs(e.end_datetime).format("HH:mm")} (${formatDurationByMinutes(duration)}): ${e.title || "无标题"}${e.description ? `\n${options.detailPrefix}详情: ${e.description}` : ""}`;
+        const duration = getTotalMinutes(e.startDatetime, e.endDatetime);
+        return `${options.itemPrefix}${dayjs(e.startDatetime).format("HH:mm")}~${dayjs(e.endDatetime).format("HH:mm")} (${formatDurationByMinutes(duration)}): ${e.title || "无标题"}${e.description ? `\n${options.detailPrefix}详情: ${e.description}` : ""}`;
       })
       .join("\n");
     
