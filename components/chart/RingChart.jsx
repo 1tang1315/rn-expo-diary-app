@@ -3,6 +3,7 @@ import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, G, Text as SvgText } from 'react-native-svg';
 import ThemeCard from "@/components/theme/ThemeCard";
 import { useTheme } from '@/context/ThemeContext';
+import { normalizeChartData, sumValues, toNonNegativeFiniteNumber } from "./utils";
 
 import LoadingContainer from "@/components/common/LoadingContainer";
 import EmptyContainer from "@/components/common/EmptyContainer";
@@ -25,16 +26,18 @@ const RingChart = ({
   showText = true,
 }) => {
   const { theme } = useTheme();
-  const containerWidth = width || screenWidth - 20;
+  const safeData = normalizeChartData(data);
+  const containerWidth = toNonNegativeFiniteNumber(width, screenWidth - 20) || (screenWidth - 20);
+  const safeHeight = toNonNegativeFiniteNumber(height, 200);
   
   const centerX = containerWidth / 2;
-  const centerY = height / 2;
+  const centerY = safeHeight / 2;
   
-  const minDim = Math.min(containerWidth, height);
-  const computedOuterRadius = outerRadius || (minDim / 2) - 10;
-  const computedInnerRadius = innerRadius || computedOuterRadius * 0.65;
+  const minDim = Math.min(containerWidth, safeHeight);
+  const computedOuterRadius = toNonNegativeFiniteNumber(outerRadius, (minDim / 2) - 10);
+  const computedInnerRadius = toNonNegativeFiniteNumber(innerRadius, computedOuterRadius * 0.65);
   
-  const total = data ? data.reduce((sum, item) => sum + item.value, 0) : 0;
+  const total = sumValues(safeData);
   
   const d2r = (d) => (d * Math.PI) / 180;
   
@@ -76,9 +79,9 @@ const RingChart = ({
       );
     }
 
-    if (!data || data.length === 0) {
+    if (!safeData || safeData.length === 0) {
       return (
-        <View style={{ height: height - 60, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <View style={{ height: safeHeight - 60, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <EmptyContainer text="暂无数据" />
         </View>
       );
@@ -87,9 +90,9 @@ const RingChart = ({
     return (
       <>
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <Svg width={containerWidth} height={height}>
-            {data.map((item, index) => {
-              const percentage = total === 0 ? 0 : item.value / total;
+          <Svg width={containerWidth} height={safeHeight}>
+            {safeData.map((item, index) => {
+              const percentage = total > 0 ? (item.value / total) : 0;
               const angle = percentage * 360;
               const startAngle = currentAngle;
               const endAngle = startAngle + angle;
@@ -140,7 +143,7 @@ const RingChart = ({
               textAnchor="middle"
               alignmentBaseline="middle"
             >
-              {centerLabel || total}
+              {centerLabel !== undefined ? centerLabel : total}
             </SvgText>
             <SvgText
               x={centerX}
@@ -158,7 +161,7 @@ const RingChart = ({
         {/* 底部标签 */}
         {!hideLegend && (
           <View style={styles.legendContainer}>
-            {data.map((item, index) => (
+            {safeData.map((item, index) => (
               <View key={index} style={styles.legendItem}>
                 <View style={[styles.legendColor, { backgroundColor: item.color || theme.colors.primary }]} />
                 <Text style={[styles.legendText, { color: theme.colors.text }]}>{item.label}</Text>
@@ -171,7 +174,7 @@ const RingChart = ({
   };
 
   return (
-    <ThemeCard style={[styles.container, { width: containerWidth, minHeight: height }, style]}>
+    <ThemeCard style={[styles.container, { width: containerWidth, minHeight: safeHeight }, style]}>
       {(title || subtitle) && (
         <View style={styles.header}>
           {title && <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>}

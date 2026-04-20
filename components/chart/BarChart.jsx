@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { View, ScrollView } from "react-native";
 import Svg, { Rect, G, Text as SvgText } from "react-native-svg";
 import { useTheme } from "@/context/ThemeContext";
+import { maxValueOf, normalizeChartData, scaleYFor } from "./utils";
 
 const BarChart = ({
   data,
@@ -27,9 +28,10 @@ const BarChart = ({
   }, [totalWidth, width]);
   
   if(!data || data.length === 0) return null;
-  
-  const maxValue = Math.max(...data.map(d => d.value));
-  const scaleY = height / maxValue;
+
+  const safeData = normalizeChartData(data);
+  const maxValue = maxValueOf(safeData);
+  const scaleY = scaleYFor({ height, maxValue });
   
   const containerStyle = {
     alignItems: "center",
@@ -71,13 +73,13 @@ const BarChart = ({
             >{subtitle}</SvgText>
           </G>
           
-          {data.map((item, index) => {
+          {safeData.map((item, index) => {
             const barHeight = item.value * scaleY;
             const x = index * (barWidth + spacing) + (Math.max(totalWidth, width) - totalWidth) / 2;
             const y = height - barHeight;
             
             const shortLabel =
-              item.label.length <= 3 ? item.label : item.label.slice(0, 2) + "...";
+              String(item.label).length <= 3 ? String(item.label) : String(item.label).slice(0, 2) + "...";
             
             return (
               <G key={index}>

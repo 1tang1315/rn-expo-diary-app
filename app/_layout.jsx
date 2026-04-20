@@ -12,7 +12,6 @@ import { SplashScreen, Stack } from "expo-router";
 import { AsyncStorage } from "expo-sqlite/kv-store";
 import { useEffect, useState } from "react";
 
-
 dayjs.extend(weekday);
 dayjs.extend(localeData);
 dayjs.extend(updateLocale);
@@ -51,8 +50,6 @@ export default function RootLayout() {
       console.error('自动生成日记任务失败：', e);
     });
   }, []);
-
-
   
   if(!config) return null;
   

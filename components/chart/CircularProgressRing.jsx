@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeText from "@/components/theme/ThemeText";
+import { toFiniteNumber, toNonNegativeFiniteNumber } from "./utils";
 
 /**
  * 通用圆形进度环组件
@@ -31,10 +32,14 @@ const CircularProgressRing = ({
   trackColor = "rgba(255,255,255,0.15)",
   containerStyle
 }) => {
-  const radius = (size - strokeWidth) / 2;
+  const safeSize = toNonNegativeFiniteNumber(size, 140);
+  const safeStrokeWidth = toNonNegativeFiniteNumber(strokeWidth, 10);
+  const safeValue = toNonNegativeFiniteNumber(value, 0);
+  const safeMax = Math.max(1, toFiniteNumber(maxValue, 100));
+
+  const radius = (safeSize - safeStrokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const safeMax = maxValue > 0 ? maxValue : 1;
-  const progress = Math.min(Math.max(value, 0), safeMax);
+  const progress = Math.min(safeValue, safeMax);
   const progressRatio = progress / safeMax;
   const strokeDashoffset = circumference * (1 - progressRatio);
 
@@ -45,7 +50,7 @@ const CircularProgressRing = ({
 
     return (
       <View style={styles.centerDefault}>
-        <ThemeText style={styles.valueText}>{value}</ThemeText>
+        <ThemeText style={styles.valueText}>{safeValue}</ThemeText>
         {title ? <ThemeText style={styles.titleText}>{title}</ThemeText> : null}
         {description ? (
           <ThemeText style={styles.descriptionText}>{description}</ThemeText>
@@ -56,29 +61,29 @@ const CircularProgressRing = ({
 
   return (
     <ThemeCard>
-      <View style={[styles.container, { width: size, height: size }, containerStyle]}>
-        <Svg width={size} height={size}>
+      <View style={[styles.container, { width: safeSize, height: safeSize }, containerStyle]}>
+        <Svg width={safeSize} height={safeSize}>
           <Circle
             stroke={trackColor}
             fill="transparent"
-            cx={size / 2}
-            cy={size / 2}
+            cx={safeSize / 2}
+            cy={safeSize / 2}
             r={radius}
-            strokeWidth={strokeWidth}
+            strokeWidth={safeStrokeWidth}
           />
           <Circle
             stroke={ringColor}
             fill="transparent"
-            cx={size / 2}
-            cy={size / 2}
+            cx={safeSize / 2}
+            cy={safeSize / 2}
             r={radius}
-            strokeWidth={strokeWidth}
+            strokeWidth={safeStrokeWidth}
             strokeDasharray={`${circumference} ${circumference}`}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             rotation="-90"
-            originX={size / 2}
-            originY={size / 2}
+            originX={safeSize / 2}
+            originY={safeSize / 2}
           />
         </Svg>
         <View style={styles.centerWrapper}>{renderCenterContent()}</View>

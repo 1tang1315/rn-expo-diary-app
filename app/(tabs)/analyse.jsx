@@ -1,8 +1,7 @@
 import { analyseApi, eventApi } from "@/api";
 import OverallScoreCard from "@/components/analyse/OverallScoreCard";
 import ScoreRowCard from "@/components/analyse/ScoreRowCard";
-import LineChart from "@/components/chart/LineChart";
-import RadarChart from "@/components/chart/RadarChart";
+import { LineChart, RadarChart } from "@/components/chart";
 import Calendar from "@/components/common/Calendar";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import Header from "@/components/common/Header";

@@ -2,7 +2,7 @@ import { AnalyseMapper } from "@/core/mapper";
 import { EventService, StatisticsService } from '@/core/service';
 import { AiService } from '@/core/service/AiService';
 import dayjs from 'dayjs';
-import { AsyncStorage } from 'expo-sqlite/kv-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AnalysisService } from './AnalysisService';
 import { DataService } from './DataService';
 

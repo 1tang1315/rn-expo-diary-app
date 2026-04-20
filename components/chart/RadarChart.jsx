@@ -3,6 +3,7 @@ import { useTheme } from '@/context/ThemeContext';
 import React from 'react';
 import { Dimensions, StyleSheet, Text } from 'react-native';
 import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
+import { normalizeChartData, toFiniteNumber, toNonNegativeFiniteNumber } from "./utils";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -23,6 +24,8 @@ const RadarChart = ({
   const { theme } = useTheme();
 
   if (!data || data.length === 0) return null;
+  const safeData = normalizeChartData(data);
+  const safeMaxValue = Math.max(1, toFiniteNumber(maxValue, 100));
 
   // 解析颜色，使用主题默认值
   // 如果可用则使用 theme.colors.primaryTransparent，否则回退或计算
@@ -33,19 +36,20 @@ const RadarChart = ({
 
   // 如果提供了显式尺寸则使用，否则根据宽高约束计算
   // 如果未提供宽度，则依赖 flexbox 布局或安全默认值（如屏幕宽度减去内边距）
-  const containerWidth = width || screenWidth - 20;
+  const containerWidth = toNonNegativeFiniteNumber(width, screenWidth - 20) || (screenWidth - 20);
   
   // 计算有效图表直径
   // 我们希望适应最小尺寸（宽或高）并减去标签内边距
-  const availableSize = Math.min(containerWidth, height);
-  const chartDiameter = size || (availableSize - 80); // 每侧预留 40px 用于显示标签
+  const safeHeight = toNonNegativeFiniteNumber(height, 250);
+  const availableSize = Math.min(containerWidth, safeHeight);
+  const chartDiameter = toNonNegativeFiniteNumber(size, (availableSize - 80)); // 每侧预留 40px 用于显示标签
   const radius = chartDiameter / 2;
   
   // 图表绘制区域中心
   const centerX = containerWidth / 2;
-  const centerY = height / 2;
+  const centerY = safeHeight / 2;
   
-  const angleSlice = (Math.PI * 2) / data.length;
+  const angleSlice = (Math.PI * 2) / safeData.length;
 
   // 计算相对于中心的坐标的辅助函数
   const getCoordinates = (value, index, max) => {
@@ -60,33 +64,33 @@ const RadarChart = ({
   // 生成网格点
   const gridLevels = [];
   for (let i = 1; i <= levels; i++) {
-    const levelPoints = data.map((_, index) => {
-      const { x, y } = getCoordinates(maxValue * (i / levels), index, maxValue);
+    const levelPoints = safeData.map((_, index) => {
+      const { x, y } = getCoordinates(safeMaxValue * (i / levels), index, safeMaxValue);
       return `${x},${y}`;
     }).join(' ');
     gridLevels.push(levelPoints);
   }
 
   // 生成数据点
-  const dataPoints = data.map((item, index) => {
-    const { x, y } = getCoordinates(item.value, index, maxValue);
+  const dataPoints = safeData.map((item, index) => {
+    const { x, y } = getCoordinates(item.value, index, safeMaxValue);
     return `${x},${y}`;
   }).join(' ');
   
   // 生成轴线
-  const axisLines = data.map((_, index) => {
-      const { x, y } = getCoordinates(maxValue, index, maxValue);
+  const axisLines = safeData.map((_, index) => {
+      const { x, y } = getCoordinates(safeMaxValue, index, safeMaxValue);
       return { x1: centerX, y1: centerY, x2: x, y2: y };
   });
 
   return (
-    <ThemeCard style={[styles.container, { height }, width ? { width } : { width: '100%' }, style]}>
+    <ThemeCard style={[styles.container, { height: safeHeight }, width ? { width: containerWidth } : { width: '100%' }, style]}>
       {title && (
         <Text style={[styles.title, { color: theme.colors.text }]}>
           {title}
         </Text>
       )}
-      <Svg height={height} width={containerWidth} style={{ alignSelf: 'center' }}>
+      <Svg height={safeHeight} width={containerWidth} style={{ alignSelf: 'center' }}>
         {/* 绘制网格层级 */}
         {gridLevels.map((points, index) => (
           <Polygon
@@ -120,8 +124,8 @@ const RadarChart = ({
         />
 
         {/* 绘制数据点（圆点） */}
-        {data.map((item, index) => {
-             const { x, y } = getCoordinates(item.value, index, maxValue);
+        {safeData.map((item, index) => {
+             const { x, y } = getCoordinates(item.value, index, safeMaxValue);
              return (
                  <Circle
                     key={`point-${index}`}
@@ -134,9 +138,9 @@ const RadarChart = ({
         })}
 
         {/* 绘制数值文本 */}
-        {data.map((item, index) => {
+        {safeData.map((item, index) => {
             const angle = index * angleSlice - Math.PI / 2;
-            const rPoint = (item.value / maxValue) * radius;
+            const rPoint = (item.value / safeMaxValue) * radius;
             // 沿半径向外推文本
             const rText = rPoint + 12; 
             const x = centerX + rText * Math.cos(angle);
@@ -159,7 +163,7 @@ const RadarChart = ({
         })}
 
         {/* 绘制标签 */}
-        {data.map((item, index) => {
+        {safeData.map((item, index) => {
           const angle = index * angleSlice - Math.PI / 2;
           const labelDist = radius + 20; // 距离中心的距离
           const x = centerX + labelDist * Math.cos(angle);

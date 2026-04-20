@@ -2,6 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import React, { useEffect, useRef } from "react";
 import { ScrollView, View } from "react-native";
 import Svg, { Circle, G, Path, Polyline, Text as SvgText } from "react-native-svg";
+import { maxValueOf, normalizeChartData, scaleYFor } from "./utils";
 
 const LineChart = ({
   data,
@@ -31,10 +32,11 @@ const LineChart = ({
     }
   }, [totalWidth, width, data]);
   
-  if(!data || data.length === 0) return null;
-  
-  const maxValue = Math.max(...data.map(d => d.value));
-  const scaleY = height / maxValue;
+  if (!data || data.length === 0) return null;
+
+  const safeData = normalizeChartData(data);
+  const maxValue = maxValueOf(safeData);
+  const scaleY = scaleYFor({ height, maxValue });
   
   const containerStyle = {
     alignItems: "center",
@@ -42,7 +44,7 @@ const LineChart = ({
   };
   
   // 计算点坐标
-  const points = data.map((item, index) => ({
+  const points = safeData.map((item, index) => ({
     x: index * itemWidth + (Math.max(totalWidth, width) - totalWidth) / 2 + itemWidth / 2,
     y: height - item.value * scaleY,
     value: item.value,
@@ -183,9 +185,10 @@ const LineChart = ({
           ))}
           
           {/* X轴标签 */}
-          {data.map((item, index) => {
+          {safeData.map((item, index) => {
             const x = index * itemWidth + (Math.max(totalWidth, width) - totalWidth) / 2 + itemWidth / 2;
-            const shortLabel = item.label.length <= 3 ? item.label : item.label.slice(0, 2) + "...";
+            const labelStr = String(item.label ?? "");
+            const shortLabel = labelStr.length <= 3 ? labelStr : labelStr.slice(0, 2) + "...";
             return (
               <SvgText
                 key={index}

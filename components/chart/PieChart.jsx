@@ -2,6 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import React from "react";
 import { Dimensions, StyleSheet, Text, TouchableWithoutFeedback, View } from "react-native";
 import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
+import { normalizeChartData, sumValues } from "./utils";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -14,9 +15,10 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
   const { theme } = useTheme();
   
   // 计算总和 & 每个扇形的角度
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const sectors = data.map((item, index) => {
-    const percentage = item.value / total;
+  const safeData = normalizeChartData(data);
+  const total = sumValues(safeData);
+  const sectors = safeData.map((item, index) => {
+    const percentage = total > 0 ? item.value / total : 0;
     const angle = percentage * 360;
     return { ...item, percentage, angle, index };
   });
@@ -150,6 +152,9 @@ const PieChart = ({ data, title, subtitle, width = screenWidth - 40, height = 25
   
   // 渲染所有元素
   const renderAllElements = () => {
+    // total 为 0 时避免除零导致的 NaN Path
+    if (total <= 0) return null;
+
     // 单项特殊处理
     if (sectors.length === 1) {
       const sector = sectors[0];

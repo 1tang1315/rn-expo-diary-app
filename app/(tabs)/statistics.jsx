@@ -1,6 +1,5 @@
 import { statisticsApi } from "@/api/StatisticsApi";
-import BarChart from "@/components/chart/BarChart";
-import PieChart from "@/components/chart/PieChart";
+import { BarChart, PieChart } from "@/components/chart";
 import CategoryTab from "@/components/common/CategoryTab";
 import EmptyContainer from "@/components/common/EmptyContainer";
 import LoadingContainer from "@/components/common/LoadingContainer";

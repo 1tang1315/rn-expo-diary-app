@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { processStatistics } from "@/utils/statisticsUtils";
 import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
 import { Text, View } from "react-native";
-import PieChart from "@/components/chart/PieChart";
+import { PieChart } from "@/components/chart";
 import { getCategoryName } from "@/utils/categoryUtils";
 import { categories } from "@/constants/commonConstans";
 
