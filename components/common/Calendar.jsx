@@ -1,5 +1,5 @@
 import React, {
-  useState, useCallback, useRef, useEffect
+  useState, useCallback, useRef, useEffect, useMemo
 } from 'react';
 import {
   View, Text, Pressable, StyleSheet, PanResponder
@@ -123,6 +123,81 @@ export default function Calendar({
   onChange
 }) {
   const { theme } = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    pageContainer: {
+      flexShrink: 0,
+      paddingBottom: 8
+    },
+    row: {
+      flexDirection: 'row',
+      width: '100%',
+      justifyContent: 'space-between'
+    },
+    weekCell: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8
+    },
+    weekText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.dim
+    },
+    weekendText: { color: theme.colors.weekend },
+    cell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 4
+    },
+    cellInner: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      paddingVertical: 6,
+      borderRadius: 8
+    },
+    cellToday: {
+      borderWidth: 1,
+      borderRadius: '50%',
+      borderColor: theme.colors.today
+    },
+    cellSelected: {
+      borderRadius: '50%',
+      backgroundColor: `${theme.colors.primary}15`
+    },
+    dayNum: {
+      fontSize: 16,
+      fontWeight: '500',
+      marginBottom: 2
+    },
+    lunarText: {
+      fontSize: 11,
+      fontWeight: '400',
+      lineHeight: 12
+    },
+    footer: {
+      paddingVertical: 4,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.dim
+    },
+    lineIcon: {
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      width: 30,
+      height: 4,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 2
+    },
+    emptyState: {
+      paddingVertical: 40,
+      alignItems: 'center'
+    },
+    emptyText: {
+      fontSize: 14,
+      color: theme.colors.dim
+    },
+  }), [theme]);
   
   // 当天日期
   const [base, setBase] = useState(() => value ? dayjs(value) : dayjs());
@@ -197,6 +272,8 @@ export default function Calendar({
         const newData = getWeekData(nextAnchor);
         const target = newData[col];
         if (target?.isValid()) {
+          // 周视图下翻页：保持“选中列”不变，因此锚点也要同步到该列对应的日期
+          setAnchor(target);
           setBase(target);
           onChange?.(target);
         }
@@ -223,9 +300,11 @@ export default function Calendar({
         const dyAbs = Math.abs(gesture.dy);
         const triggerThreshold = expanded ? 30 : 40;
         if(dxAbs > dyAbs * 1.2 && dxAbs > triggerThreshold) {
-          gesture?.dx > 0 ? handlePeriodChange('prev') : handlePeriodChange('next');
+          if (gesture?.dx > 0) handlePeriodChange('prev');
+          else handlePeriodChange('next');
         } else if(dyAbs > dxAbs * 1.5 && dyAbs > 40) {
-          gesture?.dy > 0 ? setExpanded(true) : setExpanded(false);
+          if (gesture?.dy > 0) setExpanded(true);
+          else setExpanded(false);
         }
         isSwipingRef.current = false;
         setTimeout(() => setIsSwiping(false), 100);
@@ -274,7 +353,22 @@ export default function Calendar({
   const renderCell = useCallback((d, idx, row, col) => {
     if(!d.isValid()) return null;
     const currentCycleBase = expanded ? base : anchor;
-    const inCycle = expanded ? d.isSame(currentCycleBase, 'month') : d.isSame(currentCycleBase, 'week');
+    const inCycle = expanded
+      ? d.isSame(currentCycleBase, 'month')
+      : (() => {
+          /**
+           * 周视图“是否属于本周”的判断不能用 dayjs 的 `isSame(x, 'week')`。
+           * 原因：dayjs 的 week 边界会受「周起始日」(周一/周日) 影响，
+           * 在某些 locale 下周日会被算到“下一周/上一周”，导致：
+           * - 周模式下周日无法点击/切换
+           * - 选中周日后，其它 6 天都变成“非本周”从而无法点击
+           *
+           * 这里改成：以 `getWeekData(currentCycleBase)` 生成的那一行作为“本周”的唯一标准。
+           * 只要日期在这一行里，就认为属于本周。
+           */
+          const weekRow = getWeekData(currentCycleBase);
+          return weekRow.some((wd) => wd.isSame(d, 'day'));
+        })();
     const isToday = d.isSame(today, 'day');
     const isSelected = d.isSame(anchor, 'day');
     const isWeekend = d.day() === 0 || d.day() === 6;
@@ -306,7 +400,20 @@ export default function Calendar({
         </View>
       </Pressable>
     );
-  }, [base, anchor, today, expanded, handleSelectDate]);
+  }, [
+    anchor,
+    base,
+    expanded,
+    handleSelectDate,
+    styles,
+    theme.colors.dim,
+    theme.colors.holiday,
+    theme.colors.subText,
+    theme.colors.text,
+    theme.colors.today,
+    theme.colors.weekend,
+    today,
+  ]);
   
   const renderPageRows = useCallback((data) => {
     if(!data || data.length === 0) return null;
@@ -321,7 +428,7 @@ export default function Calendar({
       );
     }
     return rows;
-  }, [renderCell]);
+  }, [renderCell, styles.row]);
   
   if(currentData.length === 0) {
     return (
@@ -339,82 +446,6 @@ export default function Calendar({
       </View>
     );
   }
-  
-  const styles = StyleSheet.create({
-    pageContainer: {
-      flexShrink: 0,
-      paddingBottom: 8
-    },
-    row: {
-      flexDirection: 'row',
-      width: '100%',
-      justifyContent: 'space-between'
-    },
-    weekCell: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 8
-    },
-    weekText: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: theme.colors.dim
-    },
-    weekendText: { color: theme.colors.weekend },
-    cell: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 4
-    },
-    cellInner: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '100%',
-      paddingVertical: 6,
-      borderRadius: 8
-    },
-    cellToday: {
-      borderWidth: 1,
-      borderRadius: '50%',
-      borderColor: theme.colors.today
-    },
-    cellSelected: {
-      borderRadius: '50%',
-      backgroundColor: `${theme.colors.primary}15`
-    },
-    dayNum: {
-      fontSize: 16,
-      fontWeight: '500',
-      marginBottom: 2
-    },
-    lunarText: {
-      fontSize: 11,
-      fontWeight: '400',
-      lineHeight: 12
-    },
-    footer: {
-      paddingVertical: 4,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.colors.dim
-    },
-    lineIcon: {
-      marginLeft: 'auto',
-      marginRight: 'auto',
-      width: 30,
-      height: 4,
-      backgroundColor: theme.colors.primary,
-      borderRadius: 2
-    },
-    emptyState: {
-      paddingVertical: 40,
-      alignItems: 'center'
-    },
-    emptyText: {
-      fontSize: 14,
-      color: theme.colors.dim
-    },
-  });
   
   return (
     <ThemeCard
