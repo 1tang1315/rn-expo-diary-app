@@ -4,7 +4,7 @@ import CheckStat from "@/components/habit-tracking/CheckStat";
 import StatsCard from "@/components/habit-tracking/StatsCard";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AsyncStorage } from "expo-sqlite/kv-store";
 import dayjs from "dayjs";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from 'react';
