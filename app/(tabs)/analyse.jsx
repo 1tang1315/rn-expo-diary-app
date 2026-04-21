@@ -241,6 +241,12 @@ export default function Analyse() {
       focus: sortedByChange[sortedByChange.length - 1]
     };
   }, [dashboardData]);
+
+  const overallSummaryText = useMemo(() => {
+    const summary = dashboardData?.overallSummary;
+    if(typeof summary !== 'string') return '';
+    return summary.trim();
+  }, [dashboardData?.overallSummary]);
   
   // 格式化趋势数据为 LineChart 所需的格式
   const trendChartData = useMemo(() => {
@@ -385,9 +391,11 @@ export default function Analyse() {
             />
           </ThemeCard>
           
-          <ThemeCard>
-            <MarkdownRenderer content={dashboardData.overallSummary} />
-          </ThemeCard>
+          {overallSummaryText ? (
+            <ThemeCard>
+              <MarkdownRenderer content={overallSummaryText} />
+            </ThemeCard>
+          ) : null}
         </ScrollView>
       )}
       

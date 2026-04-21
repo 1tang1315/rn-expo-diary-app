@@ -132,7 +132,6 @@ export class AnalyseMapper extends BaseMapper {
    * @returns {Promise<Object|null>} 结构化分析数据
    */
   async readStructuredData(date) {
-    console.log(date, "date");
     const db = await this.getDB();
     const existing = await db.getFirstAsync(
       `SELECT * FROM daily_analysis WHERE date = ?`,
