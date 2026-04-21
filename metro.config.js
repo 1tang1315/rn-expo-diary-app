@@ -1,15 +1,11 @@
-const { getDefaultConfig } = require('@expo/metro-config');
-
+const { getDefaultConfig } = require("@expo/metro-config");
 const config = getDefaultConfig(__dirname);
 
-const {
-  wrapWithReanimatedMetroConfig,
-} = require('react-native-reanimated/metro-config');
+// Let Metro treat .wasm as static binary assets.
+if (!config.resolver.assetExts.includes("wasm")) {
+  config.resolver.assetExts.push("wasm");
+}
 
-// 让 Metro 识别 .wasm 文件（视为二进制资源）
-config.resolver.assetExts.push('wasm');
-
-// 处理 WASM 文件的打包规则（避免被转译）
 config.transformer.getTransformOptions = async () => ({
   transform: {
     experimentalImportSupport: false,
@@ -17,4 +13,4 @@ config.transformer.getTransformOptions = async () => ({
   },
 });
 
-module.exports = wrapWithReanimatedMetroConfig(config);
+module.exports = config;
