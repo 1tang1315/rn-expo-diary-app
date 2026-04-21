@@ -222,7 +222,10 @@ export default function Diary() {
         if(isDeleting) {
           toggleSelect(item.id);
         } else {
-          navigation.navigate('diary-edit', { nodeId: item.id });
+          navigation.navigate('diary-edit', {
+            nodeId: item.id,
+            folderId: item.folderId
+          });
         }
       }}
       onLongPress={() => setIsDeleting(true)}
