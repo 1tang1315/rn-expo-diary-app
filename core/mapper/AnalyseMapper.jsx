@@ -69,7 +69,6 @@ export class AnalyseMapper extends BaseMapper {
    * @param {string} aiText - 原始 AI 文本
    */
   async writeStructuredData(date, eventHash, structuredData, aiText) {
-    console.log(date, "date");
     const db = await this.getDB();
     await db.runAsync(
       `
