@@ -120,7 +120,8 @@ function getWeekData(anchor) {
 
 export default function Calendar({
   value,
-  onChange
+  onChange,
+  canSelectDate
 }) {
   const { theme } = useTheme();
   const styles = useMemo(() => StyleSheet.create({
@@ -341,6 +342,9 @@ export default function Calendar({
   const handleSelectDate = useCallback((d, row, col) => {
     if(!d.isValid() || isSwiping) return;
     const newDate = d.clone();
+    if(typeof canSelectDate === "function" && !canSelectDate(newDate)) {
+      return;
+    }
     setAnchor(newDate);
     setBase(newDate); // 更新选中锚点
     onChange?.(newDate); // 更新月视图基准（确保月视图显示选中日期所在月)
@@ -348,7 +352,7 @@ export default function Calendar({
       row,
       col
     };
-  }, [isSwiping, onChange]);
+  }, [canSelectDate, isSwiping, onChange]);
   
   const renderCell = useCallback((d, idx, row, col) => {
     if(!d.isValid()) return null;

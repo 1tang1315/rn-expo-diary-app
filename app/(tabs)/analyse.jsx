@@ -10,10 +10,11 @@ import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import ThemeCard from "@/components/theme/ThemeCard";
 import ThemeSafeAreaView from "@/components/theme/ThemeSafeAreaView";
 import { useTheme } from "@/context/ThemeContext";
+import { autoGenerateYesterdayAnalysis } from "@/utils/autoGenerateAnalysisUtils.js";
 import dayjs from "dayjs";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ThemeTouchableOpacity from "@/components/theme/ThemeTouchableOpacity";
 
 export default function Analyse() {
@@ -44,7 +45,31 @@ export default function Analyse() {
   
   const [hasEvents, setHasEvents] = useState(true);
   const [hasDashboardData, setHasDashboardData] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [selectedDate, setSelectedDate] = useState(dayjs().subtract(1, "day"));
+  const isTodayOrFuture = useCallback((date) => {
+    return dayjs(date).isSame(dayjs(), "day") || dayjs(date).isAfter(dayjs(), "day");
+  }, []);
+
+  const canSelectAnalysisDate = useCallback((date) => {
+    if(isTodayOrFuture(date)) {
+      const isToday = dayjs(date).isSame(dayjs(), "day");
+      const dateLabel = dayjs(date).format("MM月DD日");
+      const message = isToday
+        ? "今天还没结束，AI 分析会在明天可用。先专注记录，明天再来查看吧。"
+        : `${dateLabel} 还没到，未来日期暂不支持分析。请在当天结束后再来查看。`;
+
+      Alert.alert("暂不可查看", message, [{ text: "我知道了", style: "cancel" }]);
+      return false;
+    }
+    return true;
+  }, [isTodayOrFuture]);
+
+  const handleRestrictedDateSelect = useCallback((date) => {
+    if(!canSelectAnalysisDate(date)) return;
+    setSelectedDate(date);
+    handleDateChange(date).then();
+  }, [canSelectAnalysisDate, handleDateChange]);
+
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedDimension, setSelectedDimension] = useState(null);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
@@ -131,7 +156,9 @@ export default function Analyse() {
   
   useFocusEffect(
     useCallback(() => {
-      handleDateChange(selectedDate).then();
+      autoGenerateYesterdayAnalysis().then(() => {
+        handleDateChange(selectedDate).then();
+      });
       fetchTrendData(selectedDate, trendRange).then();
     }, [handleDateChange, selectedDate, fetchTrendData, trendRange])
   );
@@ -243,18 +270,13 @@ export default function Analyse() {
       <ThemeCard>
         <Header
           selectedDate={selectedDate}
-          onToday={() => setSelectedDate(dayjs())}
-          onDateChange={(date) => {
-            setSelectedDate(date);
-            handleDateChange(date).then();
-          }}
+          onToday={() => handleRestrictedDateSelect(dayjs().subtract(1, "day"))}
+          onDateChange={handleRestrictedDateSelect}
         />
         <Calendar
           value={selectedDate}
-          onChange={(d) => {
-            setSelectedDate(d);
-            handleDateChange(d).then();
-          }}
+          canSelectDate={canSelectAnalysisDate}
+          onChange={handleRestrictedDateSelect}
         />
       </ThemeCard>
       
