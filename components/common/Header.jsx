@@ -110,24 +110,30 @@ const Header = ({ selectedDate, onToday, onDateChange, userId = 1 }) => {
   
   return (
     <View style={styles.headerContainer}>
-      {/* 时间 日期 */}
-      <TouchableOpacity
-        onPress={handleShowDatePicker}
-        activeOpacity={0.8}
-      >
-        <Text style={{
-          color: theme.colors.interactive,
-          fontSize: 16,
-          fontWeight: 600
-        }}>
-          {formatCurrentDate()}
-        </Text>
-      </TouchableOpacity>
-      
-      {/* 回到今日 */}
-      <TouchableOpacity onPress={onToday} activeOpacity={0.8}>
-        <Icon lib="Ionicons" name="today-outline" />
-      </TouchableOpacity>
+      <View style={styles.headerLeftButtons}>
+        {/* 时间 日期 */}
+        <TouchableOpacity
+          onPress={handleShowDatePicker}
+          activeOpacity={0.8}
+        >
+          <Text style={{
+            color: theme.colors.interactive,
+            fontSize: 16,
+            fontWeight: 600
+          }}>
+            {formatCurrentDate()}
+          </Text>
+        </TouchableOpacity>
+        
+        {/* 回到今日 */}
+        <TouchableOpacity
+          style={styles.headerLeftButton}
+          onPress={onToday}
+          activeOpacity={0.8}
+        >
+          <Icon lib="Ionicons" name="today-outline" />
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.headerRightButtons}>
         {/* 同步 */}
@@ -222,6 +228,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 5
+  },
+  headerLeftButtons: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  headerLeftButton: {
+    marginLeft: 10
   },
   headerRightButtons: {
     flexDirection: 'row',
