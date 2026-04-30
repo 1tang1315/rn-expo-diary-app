@@ -308,6 +308,14 @@ export default function DiaryEdit() {
     }
     await startAiRegenerate({ forceNew: true });
   };
+
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert('提示', '当前页面无法返回上一页');
+  };
   
   // 撤销功能
   const handleUndo = () => {
@@ -413,9 +421,10 @@ export default function DiaryEdit() {
       {/* 顶部导航 */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => navigation.goBack()}
-          disabled={editorLocked}
+          style={styles.backButton}
+          onPress={handleGoBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityLabel="返回"
         >
           <Icon lib="Ionicons" name="arrow-back" size={24} />
         </TouchableOpacity>
@@ -661,6 +670,16 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 8,
+  },
+  backButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
   },
   
   contentContainer: {
