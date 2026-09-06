@@ -1,13 +1,85 @@
 /**
  * 事件服务类，处理事件相关的业务逻辑
  */
+import { BASE_IMAGE_DIR } from '@/constants/commonConstans';
+import { deleteLocalImage } from '@/core/db/imageDB';
 import { EventMapper } from '@/core/mapper';
 import { BaseService } from '@/core/service';
 import { snakeToCamelObject } from '@/core/utils';
+import {
+  applyInstantDatetimes,
+  hydrateEventRow,
+  serializeEventExtras,
+  serializeEventImages,
+} from '@/utils/eventPayloadUtils';
+import { toEventImageUri } from '@/utils/eventImageUtils';
 
 export class EventService extends BaseService {
   constructor() {
     super(new EventMapper());
+  }
+
+  mapEvent(po) {
+    if (!po) return po;
+    return hydrateEventRow(snakeToCamelObject(po));
+  }
+
+  prepareWrite(data) {
+    let next = { ...data };
+    if (!next.timeKind && !next.time_kind) {
+      next.timeKind = 'interval';
+    }
+    next = applyInstantDatetimes(next);
+    const extrasObj = next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras)
+      ? next.extras
+      : {};
+    const imagesArr = Array.isArray(next.images) ? next.images : [];
+    next.extras = serializeEventExtras(extrasObj);
+    next.images = serializeEventImages(imagesArr);
+    return next;
+  }
+
+  async deleteEventImages(images) {
+    if (!Array.isArray(images)) return;
+    for (const key of images) {
+      if (typeof key === 'string' && key) {
+        await deleteLocalImage(toEventImageUri(BASE_IMAGE_DIR, key));
+      }
+    }
+  }
+
+  async getById(id) {
+    const po = await this.mapper.getById(id);
+    return po ? this.mapEvent(po) : null;
+  }
+
+  async getAll() {
+    const pos = await this.mapper.getAll();
+    return pos.map((po) => this.mapEvent(po));
+  }
+
+  async create(data) {
+    return super.create(this.prepareWrite(data));
+  }
+
+  async update(id, data) {
+    const existing = await this.getById(id);
+    const result = await super.update(id, this.prepareWrite(data));
+    if (result && existing?.images?.length) {
+      const nextImages = Array.isArray(data.images) ? data.images : [];
+      const removed = existing.images.filter((key) => !nextImages.includes(key));
+      await this.deleteEventImages(removed);
+    }
+    return result;
+  }
+
+  async delete(id) {
+    const existing = await this.getById(id);
+    const result = await super.delete(id);
+    if (result && existing?.images?.length) {
+      await this.deleteEventImages(existing.images);
+    }
+    return result;
   }
 
   /**
@@ -17,70 +89,50 @@ export class EventService extends BaseService {
    * @returns {Promise<Array>} 转换后的对象数组
    */
   async getByDateRange(startDate, endDate) {
-    // 转换日期对象为YYYY-MM-DD格式字符串
     const start = startDate.toISOString().split('T')[0];
     const end = endDate.toISOString().split('T')[0];
     const results = await this.mapper.getByDateRangeAndCategory(start, end, 'all', 'desc');
-    return results.map(result => snakeToCamelObject(result));
+    return results.map((result) => this.mapEvent(result));
   }
 
   /**
    * 根据日期范围和分类获取事件
-   * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
-   * @param {string} endDate - 结束日期，格式：YYYY-MM-DD
-   * @param {string} category - 事件分类，'all' 表示所有分类
-   * @param {string} sortOrder - 排序方向，'asc' 或 'desc'
-   * @returns {Promise<Array>} 转换后的对象数组
    */
   async getByDateRangeAndCategory(startDate, endDate, category = 'all', sortOrder = 'desc') {
     const results = await this.mapper.getByDateRangeAndCategory(startDate, endDate ?? startDate, category, sortOrder);
-    return results.map(result => snakeToCamelObject(result));
+    return results.map((result) => this.mapEvent(result));
   }
-  
+
   /**
    * 根据结束日期范围获取事件（所有事件都按结束日筛选）
-   * @param {string} startDate - 开始日期，格式：YYYY-MM-DD
-   * @param {string} endDate - 结束日期，格式：YYYY-MM-DD
-   * @param {string} category - 事件分类，'all' 表示所有分类
-   * @param {string} sortOrder - 排序方向，'asc' 或 'desc'
-   * @returns {Promise<Array>} 转换后的对象数组
    */
   async getByEndDateRange(startDate, endDate, category = 'all', sortOrder = 'desc') {
     const results = await this.mapper.getByEndDateRange(startDate, endDate ?? startDate, category, sortOrder);
-    return results.map(result => snakeToCamelObject(result));
+    return results.map((result) => this.mapEvent(result));
   }
 
   /**
    * 按关键词搜索事件
-   * @param {string} keyword - 搜索关键词
-   * @returns {Promise<Array>} 转换后的对象数组
    */
   async searchByKeyword(keyword) {
-    // 数据处理：处理搜索关键词
     const searchTerm = `%${keyword}%`;
     const results = await this.mapper.searchByKeyword(keyword, searchTerm);
-    return results.map(result => snakeToCamelObject(result));
+    return results.map((result) => this.mapEvent(result));
   }
 
   /**
    * 按分类获取常用标题
-   * @param {string} category - 事件分类
-   * @param {number} limit - 最多返回数量
-   * @returns {Promise<Array>} 常用标题数组
    */
   async getCommonTitlesByCategory(category, limit = 5) {
     const results = await this.mapper.getCommonTitlesByCategory(category, limit) ?? [];
-    // 数据处理：提取标题
-    return results.map(item => item.title);
+    return results.map((item) => item.title);
   }
 
   /**
    * 获取事件统计数据
-   * @returns {Promise<Object>} 统计数据
    */
   async getTotalStats() {
     const rawStats = await this.mapper.getTotalStats();
-    // 数据处理：格式化统计数据
     const totalEvents = rawStats.totalEvents || 0;
     const totalRecords = rawStats.totalRecords || 0;
     const totalDuration = rawStats.totalHours
@@ -98,9 +150,6 @@ export class EventService extends BaseService {
 
   /**
    * 更新事件状态
-   * @param {number} id - 事件ID
-   * @param {string} status - 新状态
-   * @returns {Promise<boolean>} 是否更新成功
    */
   async updateStatus(id, status) {
     const event = await this.getById(id);
@@ -113,17 +162,10 @@ export class EventService extends BaseService {
   }
 
   /**
-   * 按条件筛选搜索事件（支持搜索类型、日期范围、排序方式）
-   * @param {Object} options - 筛选选项
-   * @param {string} options.keyword - 搜索关键词
-   * @param {'title' | 'description' | 'both'} options.searchType - 搜索类型：标题/描述/全部
-   * @param {string} options.startDate - 开始日期，格式：YYYY-MM-DD
-   * @param {string} options.endDate - 结束日期，格式：YYYY-MM-DD
-   * @param {'asc' | 'desc'} options.sortOrder - 排序方式：升序/降序
-   * @returns {Promise<Array>} 匹配的事件数组
+   * 按条件筛选搜索事件
    */
   async getByFilters(options) {
     const results = await this.mapper.getByFilters(options);
-    return results.map(result => snakeToCamelObject(result));
+    return results.map((result) => this.mapEvent(result));
   }
 }

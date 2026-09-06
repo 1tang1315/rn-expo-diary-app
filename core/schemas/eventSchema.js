@@ -148,6 +148,20 @@ export const eventCreateSchema = {
       type: 'string',
       format: 'date-time',
       description: '创建时间'
+    },
+    timeKind: {
+      type: 'string',
+      enum: ['instant', 'interval'],
+      description: '时刻或时间段'
+    },
+    extras: {
+      type: 'object',
+      description: '分类扩展 JSON'
+    },
+    images: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '图片相对 key'
     }
   },
   required: []
@@ -194,6 +208,20 @@ export const eventUpdateSchema = {
       type: 'string',
       format: 'date-time',
       description: '更新时间'
+    },
+    timeKind: {
+      type: 'string',
+      enum: ['instant', 'interval'],
+      description: '时刻或时间段'
+    },
+    extras: {
+      type: 'object',
+      description: '分类扩展 JSON'
+    },
+    images: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '图片相对 key'
     }
   }
 };
@@ -246,6 +274,20 @@ export const eventResponseSchema = {
       type: 'string',
       format: 'date-time',
       description: '更新时间'
+    },
+    timeKind: {
+      type: 'string',
+      enum: ['instant', 'interval'],
+      description: '时刻或时间段'
+    },
+    extras: {
+      type: 'object',
+      description: '分类扩展 JSON'
+    },
+    images: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '图片相对 key'
     }
   },
   required: ['id']
