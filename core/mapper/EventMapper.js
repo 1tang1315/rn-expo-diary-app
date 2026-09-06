@@ -2,6 +2,7 @@
  * 事件仓库类，处理事件相关的数据访问
  */
 import { BaseMapper } from './BaseMapper';
+import { sqlEventDurationHours } from '@/core/db/eventDurationSql';
 
 export class EventMapper extends BaseMapper {
   constructor() {
@@ -144,9 +145,7 @@ export class EventMapper extends BaseMapper {
 
     // 总时长（小时）
     const [totalDurationResult] = await db.getAllAsync(`
-      SELECT SUM(
-        (JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24
-      ) AS totalHours FROM event WHERE deleted_at IS NULL
+      SELECT SUM(${sqlEventDurationHours()}) AS totalHours FROM event WHERE deleted_at IS NULL
     `);
     const totalHours = totalDurationResult.totalHours;
 

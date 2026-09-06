@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { processStatistics } from "@/utils/statisticsUtils";
-import { formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
+import { formatDurationByMinutes } from "@/utils/formatTimeUtils";
+import { getEventDurationMinutes } from "@/utils/eventDurationUtils";
 import { Text, View } from "react-native";
 import { PieChart } from "@/components/chart";
 import { getCategoryName } from "@/utils/categoryUtils";
@@ -35,7 +36,7 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
   };
   const options = presets[mode];
   
-  const totalDuration = dayEvents.reduce((sum, e) => sum + getTotalMinutes(e.startDatetime, e.endDatetime), 0);
+  const totalDuration = dayEvents.reduce((sum, e) => sum + getEventDurationMinutes(e), 0);
   
   const dayHeader = `${options.headerLevel}📅 日期: ${date}
 📊 事件总数: ${dayEvents.length} 个
@@ -51,7 +52,7 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
   
   dayEvents.forEach(e => {
     const categoryName = getCategoryName(e.category) || "未分类";
-    const duration = getTotalMinutes(e.startDatetime, e.endDatetime);
+    const duration = getEventDurationMinutes(e);
     eventsByCategory[categoryName].events.push(e);
     eventsByCategory[categoryName].totalDuration += duration;
   });
@@ -65,7 +66,7 @@ function formatDayEvents(date, dayEvents, mode="txt" ) {
     
     const categoryEventsText = events
       .map(e => {
-        const duration = getTotalMinutes(e.startDatetime, e.endDatetime);
+        const duration = getEventDurationMinutes(e);
         return `${options.itemPrefix}${dayjs(e.startDatetime).format("HH:mm")}~${dayjs(e.endDatetime).format("HH:mm")} (${formatDurationByMinutes(duration)}): ${e.title || "无标题"}${e.description ? `\n${options.detailPrefix}详情: ${e.description}` : ""}`;
       })
       .join("\n");

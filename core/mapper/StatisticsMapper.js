@@ -1,4 +1,5 @@
 import { BaseMapper } from '@/core/mapper/BaseMapper';
+import { sqlEventDurationMinutes } from '@/core/db/eventDurationSql';
 
 export class StatisticsMapper extends BaseMapper {
   constructor() {
@@ -25,63 +26,72 @@ export class StatisticsMapper extends BaseMapper {
       d.stat_date, -- 统计日期（YYYY-MM-DD）
       -- 睡眠：特殊规则→按起床日整段统计，不拆分
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'sleep' AND DATE(e.end_datetime) = d.stat_date THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'sleep' AND DATE(e.end_datetime) = d.stat_date THEN
           (JULIANDAY(e.end_datetime) - JULIANDAY(e.start_datetime)) * 24 * 60
         ELSE 0 END
       ), 0)) AS sleep_duration,
       
       -- 运动：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category IN ('sports') THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category IN ('sports') THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS sport_duration,
       
       -- 娱乐：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'entertainment' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'entertainment' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS entertainment_duration,
       
       -- 学习：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'study' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'study' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS study_duration,
       
       -- 工作：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'work' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'work' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS work_duration,
       
       -- 用餐：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'diet' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'diet' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS diet_duration,
       
       -- 日常：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'daily' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'daily' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS daily_duration,
       
       -- 购物：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'shopping' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'shopping' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS shopping_duration,
       
       -- 出行：自然日拆分时长
       ROUND(IFNULL(SUM(
-        CASE WHEN e.category = 'travel' THEN
+        CASE WHEN e.time_kind = 'instant' THEN 0
+        WHEN e.category = 'travel' THEN
           (JULIANDAY(MIN(e.end_datetime, DATE(d.stat_date, '+1 day'))) - JULIANDAY(MAX(e.start_datetime, d.stat_date))) * 24 * 60
         ELSE 0 END
       ), 0)) AS travel_duration,
@@ -89,6 +99,7 @@ export class StatisticsMapper extends BaseMapper {
       -- 总时长：所有分类时长之和
       ROUND(IFNULL(SUM(
         CASE 
+          WHEN e.time_kind = 'instant' THEN 0
           -- 睡眠：特殊规则→按起床日整段统计，不拆分
           WHEN e.category = 'sleep' AND DATE(e.end_datetime) = d.stat_date THEN
             (JULIANDAY(e.end_datetime) - JULIANDAY(e.start_datetime)) * 24 * 60
@@ -146,7 +157,7 @@ export class StatisticsMapper extends BaseMapper {
     const totalStats = await db.getFirstAsync(
       `
     SELECT
-      ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+      ROUND(SUM(${sqlEventDurationMinutes()}), 0) AS total_minutes,
       COUNT(*) AS event_count
     FROM event
     WHERE deleted_at IS NULL
@@ -162,7 +173,7 @@ export class StatisticsMapper extends BaseMapper {
       `
     SELECT
       COALESCE(title, '无标题') AS title,
-      ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+      ROUND(SUM(${sqlEventDurationMinutes()}), 0) AS total_minutes,
       COUNT(*) AS event_count
     FROM event
     WHERE deleted_at IS NULL
@@ -183,7 +194,7 @@ export class StatisticsMapper extends BaseMapper {
         `
       SELECT
         'sleep' AS category,
-        ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+        ROUND(SUM(${sqlEventDurationMinutes()}), 0) AS total_minutes,
         COUNT(*) AS event_count
       FROM event
       WHERE deleted_at IS NULL
@@ -199,7 +210,7 @@ export class StatisticsMapper extends BaseMapper {
         `
       SELECT
         category,
-        ROUND(SUM((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60), 0) AS total_minutes,
+        ROUND(SUM(${sqlEventDurationMinutes()}), 0) AS total_minutes,
         COUNT(*) AS event_count
       FROM event
       WHERE deleted_at IS NULL
@@ -256,7 +267,7 @@ export class StatisticsMapper extends BaseMapper {
       COALESCE(title, '无标题') AS title,
       start_datetime,
       end_datetime,
-      ROUND((JULIANDAY(end_datetime) - JULIANDAY(start_datetime)) * 24 * 60, 0) AS duration_minutes,
+      ROUND(${sqlEventDurationMinutes()}, 0) AS duration_minutes,
       category
     FROM event
     WHERE deleted_at IS NULL

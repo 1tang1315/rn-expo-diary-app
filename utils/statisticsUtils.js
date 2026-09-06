@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { statisticsColors as colors } from "@/constants/commonConstans";
-import { getTotalMinutes } from "@/utils/formatTimeUtils";
+import { getEventDurationMinutes } from "@/utils/eventDurationUtils";
 import { getCategoryName } from "@/utils/categoryUtils";
 
 export const processStatistics = (data, groupByCategory = false) => {
@@ -14,7 +14,7 @@ export const processStatistics = (data, groupByCategory = false) => {
     
     
     // 计算时长（分钟）
-    const durationMinutes = getTotalMinutes(item.startDatetime, item.endDatetime);
+    const durationMinutes = getEventDurationMinutes(item);
     
     // 第一次groupedData[key]没有, 进行初始化
     if (!groupedData[key]) {
@@ -35,12 +35,7 @@ export const processStatistics = (data, groupByCategory = false) => {
     useCount: groupedData[key].useCount
   }));
   
-  const totalMinutes = completedEvents.reduce((sum, e) => {
-    const start = dayjs(e.startDatetime);
-    const end = dayjs(e.endDatetime);
-    const duration = end.diff(start, 'minute');
-    return sum + (duration > 0 ? duration : 0);
-  }, 0);
+  const totalMinutes = completedEvents.reduce((sum, e) => sum + getEventDurationMinutes(e), 0);
   
   return { chartData, totalMinutes, completedEvents };
 };

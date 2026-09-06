@@ -1,4 +1,5 @@
-import { formatDurationByMinutes, getTotalMinutes } from '@/utils/formatTimeUtils';
+import { formatDurationByMinutes } from '@/utils/formatTimeUtils';
+import { getEventDurationMinutes } from '@/utils/eventDurationUtils';
 import dayjs from 'dayjs';
 
 /**
@@ -50,13 +51,7 @@ export class DataService {
 
     // 2. 处理事件数据，添加持续时间
     const processedEvents = safeEvents.map((e) => {
-      const durationMinutes = Math.max(
-        0,
-        getTotalMinutes(
-          e.startDatetime,
-          e.endDatetime
-        )
-      );
+      const durationMinutes = Math.max(0, getEventDurationMinutes(e));
 
       return {
         category: e.category || '',

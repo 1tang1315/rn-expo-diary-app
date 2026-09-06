@@ -1,4 +1,5 @@
-import { formatDate, formatDurationByMinutes, getTotalMinutes } from "@/utils/formatTimeUtils";
+import { formatDate, formatDurationByMinutes } from "@/utils/formatTimeUtils";
+import { getEventDurationMinutes } from "@/utils/eventDurationUtils";
 import { getCategoryName } from "@/utils/categoryUtils";
 import { eventApi } from "@/api/EventApi";
 
@@ -34,7 +35,7 @@ export const getEventsText = async (startDate, endDate) => {
     // 总数和总时长
     const totalEventsCount = events?.length;
     const totalDurationMinutes = events?.reduce((total, e) => {
-      return total + getTotalMinutes(e.start_datetime, e.end_datetime);
+      return total + getEventDurationMinutes(e);
     }, 0);
     const formattedTotalDuration = formatDurationByMinutes(totalDurationMinutes);
     
@@ -49,16 +50,16 @@ export const getEventsText = async (startDate, endDate) => {
     const categoriesText = Object.entries(eventsByCategory)
       .map(([category, events]) => {
         const totalCategoryDurationMinutes = events.reduce((total, event) => {
-          return total + getTotalMinutes(event.start_datetime, event.end_datetime);
+          return total + getEventDurationMinutes(event);
         }, 0);
         
         const formattedCategoryDuration = formatDurationByMinutes(totalCategoryDurationMinutes);
         
         const eventItems = events
           .map(e => {
-            const startTimeStr = e.start_datetime.split(' ')[1];
-            const endTimeStr = e.end_datetime.split(' ')[1];
-            const durationMinutes = getTotalMinutes(e.start_datetime, e.end_datetime);
+            const startTimeStr = (e.startDatetime || e.start_datetime).split(' ')[1];
+            const endTimeStr = (e.endDatetime || e.end_datetime).split(' ')[1];
+            const durationMinutes = getEventDurationMinutes(e);
             const formattedDuration = formatDurationByMinutes(durationMinutes);
             const descPart = e.description ? `：${e.description}` : '';
             return `[${startTimeStr}~${endTimeStr} ${formattedDuration}] ${e.title || getCategoryName(category)}${descPart}`;
