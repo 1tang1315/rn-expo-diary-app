@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { statisticsColors as colors } from "@/constants/commonConstans";
 import { getEventDurationMinutes } from "@/utils/eventDurationUtils";
 import { getCategoryName } from "@/utils/categoryUtils";
