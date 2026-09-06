@@ -5,6 +5,7 @@ export const ImageDirType = {
   STORAGE: 'storage',    // 储物相关图片
   DIARY: 'diary',        // 日记相关图片
   SYSTEM: 'system',      // 系统x相关图片
+  EVENT: 'event',        // 事件相关图片
 };
 
 /**

@@ -31,11 +31,30 @@ export async function getDB() {
             description    TEXT,
             status         TEXT, /* early / upcoming / inProgress / completed / notCompleted */
             icon           TEXT,
+            time_kind      TEXT, /* instant | interval；NULL 视为 interval */
+            extras         TEXT, /* JSON object */
+            images         TEXT, /* JSON string array of relative keys */
             created_at     TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at     TEXT DEFAULT CURRENT_TIMESTAMP,
             deleted_at     TEXT DEFAULT NULL /* 软删除字段，NULL表示未删除 */
         );
     `);
+
+        const eventAlters = [
+            'ALTER TABLE event ADD COLUMN time_kind TEXT',
+            'ALTER TABLE event ADD COLUMN extras TEXT',
+            'ALTER TABLE event ADD COLUMN images TEXT',
+        ];
+        for (const sql of eventAlters) {
+            try {
+                await db.execAsync(sql);
+            } catch (e) {
+                const msg = String(e?.message || e);
+                if (!msg.includes('duplicate column')) {
+                    throw e;
+                }
+            }
+        }
 
         // 文件夹/笔记本表
         await db.execAsync(`
