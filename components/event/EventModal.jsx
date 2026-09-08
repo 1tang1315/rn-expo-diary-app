@@ -25,6 +25,14 @@ import EventImagePicker from '@/components/event/EventImagePicker';
 import EventCategoryFields from '@/components/event/EventCategoryFields';
 import { saveImageToLocal, ImageDirType } from '@/core/db/imageDB';
 import { toEventImageKey } from '@/utils/eventImageUtils';
+import {
+  createDefaultDietExtras,
+  normalizeDietExtras,
+  suggestIconForDietExtras,
+  suggestTimeKindForDietExtras,
+} from '@/utils/dietExtrasUtils';
+import { findWaterContainer, getWaterContainers } from '@/utils/waterContainerStorage';
+import { DIET_RECORD_TYPES } from '@/constants/dietConstants';
 import { eventApi } from "@/api";
 import { parseInt } from "lodash/string";
 
@@ -70,7 +78,9 @@ const EventModal = ({
         category: currentEvent.category,
         status: currentEvent.status || 'upcoming',
         timeKind: currentEvent.timeKind || EVENT_TIME_KIND.INTERVAL,
-        extras: currentEvent.extras || {},
+        extras: currentEvent.category === 'diet'
+          ? normalizeDietExtras(currentEvent.extras)
+          : (currentEvent.extras || {}),
         images: currentEvent.images || [],
         pendingImageUris: [],
       });
@@ -80,6 +90,13 @@ const EventModal = ({
         ? currentTab
         : categories?.find(tab => !tab.isFixed)?.id || 'daily';
       const defaultIcon = categoryIcons[defaultCategory]?.[0] || 'event-note';
+      const dietExtras = defaultCategory === 'diet' ? createDefaultDietExtras() : {};
+      const defaultTimeKind = defaultCategory === 'diet'
+        ? suggestTimeKindForDietExtras(dietExtras)
+        : resolveDefaultTimeKind(defaultCategory);
+      const resolvedIcon = defaultCategory === 'diet'
+        ? suggestIconForDietExtras(dietExtras)
+        : defaultIcon;
       const baseDate = new Date(selectedDate);
       const now = new Date();
       const defaultStart = new Date(baseDate);
@@ -91,11 +108,11 @@ const EventModal = ({
         description: '',
         startDatetime: defaultStart,
         endDatetime: defaultEnd,
-        icon: defaultIcon,
+        icon: resolvedIcon,
         category: defaultCategory,
         status: 'upcoming',
-        timeKind: resolveDefaultTimeKind(defaultCategory),
-        extras: {},
+        timeKind: defaultTimeKind,
+        extras: dietExtras,
         images: [],
         pendingImageUris: [],
       });
@@ -124,17 +141,32 @@ const EventModal = ({
 
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
+  const handleDietSuggestTimeKind = (kind) => {
+    if (!timeKindTouchedRef.current) {
+      setFormData((prev) => ({ ...prev, timeKind: kind }));
+    }
+  };
+
+  const handleDietSuggestIcon = (icon) => {
+    setFormData((prev) => ({ ...prev, icon }));
+  };
+
   const confirmCategorySelect = (categoryId) => {
     if (categoryId) {
-      const defaultIcon = categoryIcons[categoryId]?.[0] || 'event-note';
       setFormData((prev) => {
+        const dietExtras = categoryId === 'diet' ? createDefaultDietExtras() : {};
         const next = {
           ...prev,
-          icon: defaultIcon,
+          icon: categoryId === 'diet'
+            ? suggestIconForDietExtras(dietExtras)
+            : (categoryIcons[categoryId]?.[0] || 'event-note'),
           category: categoryId,
+          extras: categoryId === 'diet' ? dietExtras : {},
         };
         if (!currentEvent && !timeKindTouchedRef.current) {
-          next.timeKind = resolveDefaultTimeKind(categoryId);
+          next.timeKind = categoryId === 'diet'
+            ? suggestTimeKindForDietExtras(dietExtras)
+            : resolveDefaultTimeKind(categoryId);
         }
         return next;
       });
@@ -211,6 +243,22 @@ const EventModal = ({
 
     const images = [...formData.images, ...newImageKeys];
 
+    let extras = formData.extras || {};
+    if (formData.category === 'diet') {
+      const normalized = normalizeDietExtras(extras);
+      if (normalized.recordType === DIET_RECORD_TYPES.WATER && normalized.containerId) {
+        const containers = await getWaterContainers();
+        const container = findWaterContainer(containers, normalized.containerId);
+        extras = {
+          ...normalized,
+          containerName: container?.name || null,
+          containerMl: container?.volumeMl || null,
+        };
+      } else {
+        extras = normalized;
+      }
+    }
+
     const eventParams = {
       startDatetime: formatDatetime(startDatetime),
       endDatetime: isInstant
@@ -222,7 +270,7 @@ const EventModal = ({
       status: formData.status,
       icon: formData.icon,
       timeKind: formData.timeKind,
-      extras: formData.extras || {},
+      extras,
       images,
     };
 
@@ -378,6 +426,14 @@ const EventModal = ({
         onChangePendingUris={(uris) => handleInputChange('pendingImageUris', uris)}
       />
 
+      <EventCategoryFields
+        category={formData.category}
+        extras={formData.extras}
+        onExtrasChange={(extras) => handleInputChange('extras', extras)}
+        onSuggestTimeKind={handleDietSuggestTimeKind}
+        onSuggestIcon={handleDietSuggestIcon}
+      />
+
       <EventTimeFields
         timeKind={formData.timeKind}
         allowSwitch={timeKindPolicy.allowSwitch}
@@ -409,12 +465,6 @@ const EventModal = ({
       </View>
 
       {renderIconSelector()}
-
-      <EventCategoryFields
-        category={formData.category}
-        extras={formData.extras}
-        onExtrasChange={(extras) => handleInputChange('extras', extras)}
-      />
 
       {showDatetimePicker && targetDatetime === 'start' && (
         <DateTimePicker

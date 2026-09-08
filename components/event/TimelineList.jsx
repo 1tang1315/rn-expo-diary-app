@@ -14,6 +14,7 @@ import ThemeText from "@/components/theme/ThemeText";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeCard from "@/components/theme/ThemeCard";
 import { eventApi } from "@/api";
+import { formatDietExtrasSummary } from '@/utils/dietExtrasUtils';
 
 const formatDuration = (item) => {
   const totalMinutes = getEventDurationMinutes(item);
@@ -63,7 +64,14 @@ const TimelineList = ({
 
   const renderTimelineItem = ({ item }) => {
     const tabName = categories.find(cat => cat.id === item.category)?.name || '未分类';
-    const displayTitle = item.title || tabName;
+    const dietSummary = item.category === 'diet' && item.extras?.recordType
+      ? formatDietExtrasSummary(
+        item.extras,
+        item.extras.containerName,
+        item.extras.containerMl
+      )
+      : null;
+    const displayTitle = item.title || dietSummary || tabName;
     const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
     const statusText = statusTextMap[finalStatus];
@@ -117,6 +125,9 @@ const TimelineList = ({
               ) : null}
             </View>
             <Text style={[styles.description, theme.colors.dim]}>{item.description}</Text>
+            {dietSummary && item.title ? (
+              <ThemeSubTitleText style={styles.dietMeta}>{dietSummary}</ThemeSubTitleText>
+            ) : null}
 
             {instant ? (
               <ThemeSubTitleText style={styles.timeRange}>{item.startTime}</ThemeSubTitleText>
@@ -249,6 +260,11 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 8,
     fontSize: 14,
+  },
+  dietMeta: {
+    marginBottom: 6,
+    fontSize: 13,
+    fontStyle: 'italic',
   },
   timeRange: {
     marginBottom: 12,
