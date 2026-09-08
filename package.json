@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:event": "node --test test/event/*.test.js"
+    "test:event": "node --test test/event/*.test.js",
+    "test:diet": "node --test test/diet/*.test.js"
   },
   "dependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
