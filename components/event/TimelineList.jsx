@@ -14,7 +14,7 @@ import ThemeText from "@/components/theme/ThemeText";
 import ThemeSubTitleText from "@/components/theme/ThemeSubTitleText";
 import ThemeCard from "@/components/theme/ThemeCard";
 import { eventApi } from "@/api";
-import { formatDietExtrasSummary } from '@/utils/dietExtrasUtils';
+import { formatExtrasSummaryForCategory } from '@/utils/categoryExtrasRegistry';
 
 const formatDuration = (item) => {
   const totalMinutes = getEventDurationMinutes(item);
@@ -64,14 +64,8 @@ const TimelineList = ({
 
   const renderTimelineItem = ({ item }) => {
     const tabName = categories.find(cat => cat.id === item.category)?.name || '未分类';
-    const dietSummary = item.category === 'diet' && item.extras?.recordType
-      ? formatDietExtrasSummary(
-        item.extras,
-        item.extras.containerName,
-        item.extras.containerMl
-      )
-      : null;
-    const displayTitle = item.title || dietSummary || tabName;
+    const extrasSummary = formatExtrasSummaryForCategory(item.category, item.extras);
+    const displayTitle = item.title || extrasSummary || tabName;
     const finalStatus = getFinalStatus(item);
     const finalStatusColor = statusColors[finalStatus] || statusColors.upcoming;
     const statusText = statusTextMap[finalStatus];
@@ -125,8 +119,8 @@ const TimelineList = ({
               ) : null}
             </View>
             <Text style={[styles.description, theme.colors.dim]}>{item.description}</Text>
-            {dietSummary && item.title ? (
-              <ThemeSubTitleText style={styles.dietMeta}>{dietSummary}</ThemeSubTitleText>
+            {extrasSummary && item.title ? (
+              <ThemeSubTitleText style={styles.dietMeta}>{extrasSummary}</ThemeSubTitleText>
             ) : null}
 
             {instant ? (

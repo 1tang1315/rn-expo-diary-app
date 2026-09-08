@@ -2,6 +2,7 @@ const EVENT_TIME_KIND = { INSTANT: 'instant', INTERVAL: 'interval' };
 
 const POLICIES = {
   diet: { defaultKind: EVENT_TIME_KIND.INTERVAL, allowSwitch: true },
+  emotion: { defaultKind: EVENT_TIME_KIND.INSTANT, allowSwitch: false },
   sports: { defaultKind: EVENT_TIME_KIND.INTERVAL, allowSwitch: true },
   sleep: { defaultKind: EVENT_TIME_KIND.INTERVAL, allowSwitch: false },
   work: { defaultKind: EVENT_TIME_KIND.INTERVAL, allowSwitch: false },

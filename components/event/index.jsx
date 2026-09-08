@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native';
 import AddEventButton from '../common/AddButton';
 import EventModal from './EventModal';
 import TimelineList from './TimelineList';
+import CompileDiaryBar from './CompileDiaryBar';
 
 const TimelinePanel = ({ selectedDate }) => {
   const [currentTab, setCurrentTab] = useState('all');
@@ -64,6 +65,8 @@ const TimelinePanel = ({ selectedDate }) => {
         setCurrentTab={setCurrentTab}
       />
       
+      <CompileDiaryBar selectedDate={selectedDate} />
+
       {/* 事件列表 */}
       <TimelineList
         categorizedData={timelineData}

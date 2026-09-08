@@ -26,15 +26,16 @@ import EventCategoryFields from '@/components/event/EventCategoryFields';
 import { saveImageToLocal, ImageDirType } from '@/core/db/imageDB';
 import { toEventImageKey } from '@/utils/eventImageUtils';
 import {
-  createDefaultDietExtras,
-  normalizeDietExtras,
-  suggestIconForDietExtras,
-  suggestTimeKindForDietExtras,
-} from '@/utils/dietExtrasUtils';
-import { findWaterContainer, getWaterContainers } from '@/utils/waterContainerStorage';
-import { DIET_RECORD_TYPES } from '@/constants/dietConstants';
+  createDefaultExtrasForCategory,
+  normalizeExtrasForCategory,
+  suggestTimeKindForCategory,
+  suggestIconForCategory,
+  prepareExtrasForSave,
+} from '@/utils/categoryExtrasRegistry';
 import { eventApi } from "@/api";
 import { parseInt } from "lodash/string";
+
+const CATEGORIES_WITH_EXTRAS = ['diet', 'sports', 'emotion', 'daily'];
 
 const EventModal = ({
   visible,
@@ -64,23 +65,37 @@ const EventModal = ({
     pendingImageUris: [],
   });
 
+  const resolveCategoryDefaults = (categoryId, extras) => {
+    const defaultExtras = CATEGORIES_WITH_EXTRAS.includes(categoryId)
+      ? createDefaultExtrasForCategory(categoryId)
+      : {};
+    const mergedExtras = extras || defaultExtras;
+    const suggestedKind = suggestTimeKindForCategory(categoryId, mergedExtras)
+      ?? resolveDefaultTimeKind(categoryId);
+    const suggestedIcon = suggestIconForCategory(categoryId, mergedExtras)
+      ?? (categoryIcons[categoryId]?.[0] || 'event-note');
+    return { extras: mergedExtras, timeKind: suggestedKind, icon: suggestedIcon };
+  };
+
   useEffect(() => {
     if (!visible) return;
 
     if (currentEvent) {
       timeKindTouchedRef.current = true;
+      const category = currentEvent.category;
+      const extras = CATEGORIES_WITH_EXTRAS.includes(category)
+        ? normalizeExtrasForCategory(category, currentEvent.extras)
+        : (currentEvent.extras || {});
       setFormData({
         title: currentEvent.title || '',
         description: currentEvent.description || '',
         startDatetime: new Date(currentEvent.startDatetime || currentEvent.start_datetime),
         endDatetime: new Date(currentEvent.endDatetime || currentEvent.end_datetime),
         icon: currentEvent.icon,
-        category: currentEvent.category,
+        category,
         status: currentEvent.status || 'upcoming',
         timeKind: currentEvent.timeKind || EVENT_TIME_KIND.INTERVAL,
-        extras: currentEvent.category === 'diet'
-          ? normalizeDietExtras(currentEvent.extras)
-          : (currentEvent.extras || {}),
+        extras,
         images: currentEvent.images || [],
         pendingImageUris: [],
       });
@@ -89,14 +104,10 @@ const EventModal = ({
       const defaultCategory = currentTab && currentTab !== 'all'
         ? currentTab
         : categories?.find(tab => !tab.isFixed)?.id || 'daily';
-      const defaultIcon = categoryIcons[defaultCategory]?.[0] || 'event-note';
-      const dietExtras = defaultCategory === 'diet' ? createDefaultDietExtras() : {};
-      const defaultTimeKind = defaultCategory === 'diet'
-        ? suggestTimeKindForDietExtras(dietExtras)
-        : resolveDefaultTimeKind(defaultCategory);
-      const resolvedIcon = defaultCategory === 'diet'
-        ? suggestIconForDietExtras(dietExtras)
-        : defaultIcon;
+      const { extras, timeKind, icon } = resolveCategoryDefaults(
+        defaultCategory,
+        createDefaultExtrasForCategory(defaultCategory)
+      );
       const baseDate = new Date(selectedDate);
       const now = new Date();
       const defaultStart = new Date(baseDate);
@@ -108,11 +119,11 @@ const EventModal = ({
         description: '',
         startDatetime: defaultStart,
         endDatetime: defaultEnd,
-        icon: resolvedIcon,
+        icon,
         category: defaultCategory,
         status: 'upcoming',
-        timeKind: defaultTimeKind,
-        extras: dietExtras,
+        timeKind,
+        extras,
         images: [],
         pendingImageUris: [],
       });
@@ -141,32 +152,31 @@ const EventModal = ({
 
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-  const handleDietSuggestTimeKind = (kind) => {
+  const handleExtrasSuggestTimeKind = (kind) => {
     if (!timeKindTouchedRef.current) {
       setFormData((prev) => ({ ...prev, timeKind: kind }));
     }
   };
 
-  const handleDietSuggestIcon = (icon) => {
+  const handleExtrasSuggestIcon = (icon) => {
     setFormData((prev) => ({ ...prev, icon }));
   };
 
   const confirmCategorySelect = (categoryId) => {
     if (categoryId) {
       setFormData((prev) => {
-        const dietExtras = categoryId === 'diet' ? createDefaultDietExtras() : {};
+        const { extras, timeKind, icon } = resolveCategoryDefaults(
+          categoryId,
+          createDefaultExtrasForCategory(categoryId)
+        );
         const next = {
           ...prev,
-          icon: categoryId === 'diet'
-            ? suggestIconForDietExtras(dietExtras)
-            : (categoryIcons[categoryId]?.[0] || 'event-note'),
+          icon,
           category: categoryId,
-          extras: categoryId === 'diet' ? dietExtras : {},
+          extras: CATEGORIES_WITH_EXTRAS.includes(categoryId) ? extras : {},
         };
         if (!currentEvent && !timeKindTouchedRef.current) {
-          next.timeKind = categoryId === 'diet'
-            ? suggestTimeKindForDietExtras(dietExtras)
-            : resolveDefaultTimeKind(categoryId);
+          next.timeKind = timeKind;
         }
         return next;
       });
@@ -216,16 +226,22 @@ const EventModal = ({
       : ['group', 'video-call', 'code', 'design-services', 'event-note'];
   }, [formData.category]);
 
+  const descriptionPlaceholder = useMemo(() => {
+    if (formData.category === 'emotion') return '可选补充说明';
+    if (formData.category === 'daily' && formData.extras?.recordType === 'journal') {
+      return '记下此刻做了什么、想了什么…';
+    }
+    return '请输入日程详情（如：会议主题、任务内容）';
+  }, [formData.category, formData.extras]);
+
   const handleSave = async () => {
     const startDatetime = new Date(formData.startDatetime);
     const endDatetime = new Date(formData.endDatetime);
     const isInstant = formData.timeKind === EVENT_TIME_KIND.INSTANT;
 
-    if (!isInstant) {
-      if (startDatetime >= endDatetime) {
-        Alert.alert('时间错误', '结束时间必须晚于开始时间');
-        return;
-      }
+    if (!isInstant && startDatetime >= endDatetime) {
+      Alert.alert('时间错误', '结束时间必须晚于开始时间');
+      return;
     }
 
     let newImageKeys = [];
@@ -242,22 +258,9 @@ const EventModal = ({
     }
 
     const images = [...formData.images, ...newImageKeys];
-
-    let extras = formData.extras || {};
-    if (formData.category === 'diet') {
-      const normalized = normalizeDietExtras(extras);
-      if (normalized.recordType === DIET_RECORD_TYPES.WATER && normalized.containerId) {
-        const containers = await getWaterContainers();
-        const container = findWaterContainer(containers, normalized.containerId);
-        extras = {
-          ...normalized,
-          containerName: container?.name || null,
-          containerMl: container?.volumeMl || null,
-        };
-      } else {
-        extras = normalized;
-      }
-    }
+    const extras = CATEGORIES_WITH_EXTRAS.includes(formData.category)
+      ? await prepareExtrasForSave(formData.category, formData.extras)
+      : (formData.extras || {});
 
     const eventParams = {
       startDatetime: formatDatetime(startDatetime),
@@ -337,9 +340,7 @@ const EventModal = ({
   );
 
   const handleResetToCurrentTime = (target) => {
-    const currentTime = new Date();
-    const targetKey = target === 'start' ? 'startDatetime' : 'endDatetime';
-    handleInputChange(targetKey, currentTime);
+    handleInputChange(target === 'start' ? 'startDatetime' : 'endDatetime', new Date());
   };
 
   const renderFormContent = () => (
@@ -352,6 +353,14 @@ const EventModal = ({
         selectedCategory={formData.category}
         categories={categories}
         onSelect={confirmCategorySelect}
+      />
+
+      <EventCategoryFields
+        category={formData.category}
+        extras={formData.extras}
+        onExtrasChange={(extras) => handleInputChange('extras', extras)}
+        onSuggestTimeKind={handleExtrasSuggestTimeKind}
+        onSuggestIcon={handleExtrasSuggestIcon}
       />
 
       <View style={styles.formGroup}>
@@ -413,7 +422,7 @@ const EventModal = ({
           style={[styles.formInput, styles.multilineInput]}
           value={formData.description}
           onChangeText={(val) => handleInputChange('description', val)}
-          placeholder="请输入日程详情（如：会议主题、任务内容）"
+          placeholder={descriptionPlaceholder}
           multiline
           numberOfLines={4}
         />
@@ -424,14 +433,6 @@ const EventModal = ({
         pendingImageUris={formData.pendingImageUris}
         onChangeImages={(images) => handleInputChange('images', images)}
         onChangePendingUris={(uris) => handleInputChange('pendingImageUris', uris)}
-      />
-
-      <EventCategoryFields
-        category={formData.category}
-        extras={formData.extras}
-        onExtrasChange={(extras) => handleInputChange('extras', extras)}
-        onSuggestTimeKind={handleDietSuggestTimeKind}
-        onSuggestIcon={handleDietSuggestIcon}
       />
 
       <EventTimeFields
@@ -508,17 +509,9 @@ const EventModal = ({
 };
 
 const styles = StyleSheet.create({
-  formScrollView: {
-    flexGrow: 1
-  },
-  formGroup: {
-    marginBottom: 10
-  },
-  formLabel: {
-    marginBottom: 8,
-    fontSize: 14,
-    fontWeight: '500'
-  },
+  formScrollView: { flexGrow: 1 },
+  formGroup: { marginBottom: 10 },
+  formLabel: { marginBottom: 8, fontSize: 14, fontWeight: '500' },
   formInput: {
     minHeight: 30,
     lineHeight: 30,
@@ -528,18 +521,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlignVertical: 'center'
   },
-  multilineInput: {
-    minHeight: 100,
-    textAlignVertical: 'top'
-  },
-  commonTitlesContainer: {
-    marginBottom: 10
-  },
-  commonTitlesTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 3,
-  },
+  multilineInput: { minHeight: 100, textAlignVertical: 'top' },
+  commonTitlesContainer: { marginBottom: 10 },
+  commonTitlesTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
   commonTitleTag: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -547,12 +531,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1
   },
-  commonTitleTagText: {
-    height: 15,
-    padding: 0,
-    lineHeight: 15,
-    fontSize: 14
-  },
+  commonTitleTagText: { height: 15, padding: 0, lineHeight: 15, fontSize: 14 },
   countControl: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -562,26 +541,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden'
   },
-  countText: {
-    fontSize: 14,
-    fontWeight: '500'
-  },
-  statusSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8
-  },
-  statusOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  statusOptionText: {
-    fontSize: 14,
-    fontWeight: '500'
-  },
+  countText: { fontSize: 14, fontWeight: '500' },
+  statusSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  statusOption: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  statusOptionText: { fontSize: 14, fontWeight: '500' },
   categoryDisplay: {
     borderWidth: 1,
     borderRadius: 8,
@@ -591,16 +554,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start'
   },
-  categoryText: {
-    height: 16,
-    lineHeight: 16,
-    fontSize: 16
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
-  },
+  categoryText: { height: 16, lineHeight: 16, fontSize: 16 },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconOption: {
     width: 48,
     height: 48,

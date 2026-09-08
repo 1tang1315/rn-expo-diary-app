@@ -12,6 +12,7 @@ export const categories = [
   { id: 'sports', name: '运动健康', icon: 'fitness-center', emoji: '🏋️' },
   { id: 'sleep', name: '睡眠', icon: 'bed', emoji: '😴' },
   { id: 'diet', name: '饮食', icon: 'restaurant', emoji: '🍽️' },
+  { id: 'emotion', name: '情绪', icon: 'mood', emoji: '😊' },
   { id: 'shopping', name: '购物', icon: 'shopping-cart', emoji: '🛒' },
   { id: 'travel', name: '出行', icon: 'flight', emoji: '✈️' }
 ];
@@ -46,6 +47,10 @@ export const categoryIcons = {
   diet: [
     'breakfast-dining', 'lunch-dining', 'dinner-dining', 'restaurant', 'fastfood',
     'emoji-food-beverage', 'water-drop', 'local-drink', 'coffee', 'liquor', 'cake', 'icecream'
+  ],
+  emotion: [
+    'mood', 'sentiment-satisfied', 'sentiment-dissatisfied', 'sentiment-neutral',
+    'psychology', 'self-improvement', 'favorite', 'heart-broken'
   ],
   shopping: [
     'shopping-cart', 'local-mall', 'shopping-bag', 'attach-money', 'store',
